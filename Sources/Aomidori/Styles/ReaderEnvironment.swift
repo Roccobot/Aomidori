@@ -17,7 +17,12 @@ final class ReaderEnvironment {
         static let selectedStyle = "AomidoriSelectedStyle"
         static let overrideEnabled = "AomidoriOverrideEnabled"
         static let textScale = "AomidoriTextScale"
-        static let night = "AomidoriNight"
+        /// The light/dark override since 0.53 (`AppearanceChoice`): `true` dark, `false` light,
+        /// absent to follow macOS.
+        static let appearanceOverride = "AomidoriAppearanceOverride"
+        /// Up to 0.52: a Night/Day choice that, once made, never followed macOS again. Removed
+        /// at launch, so every reader starts 0.53 following the system.
+        static let legacyNight = "AomidoriNight"
         static let minimal = "AomidoriMinimal"
         static let customFontEnabled = "AomidoriCustomFontEnabled"
         /// The family alone; still written so earlier versions keep the family on a downgrade.
@@ -48,6 +53,7 @@ final class ReaderEnvironment {
 
     /// Prepares the folders, installs the bundled style if missing and starts watching for edits.
     func start() {
+        defaults.removeObject(forKey: Key.legacyNight)
         do {
             try library.prepare(installing: AppPaths.bundledStyle, as: AppPaths.bundledStyleName)
             try FileManager.default.createDirectory(at: AppPaths.fonts, withIntermediateDirectories: true)
@@ -65,8 +71,11 @@ final class ReaderEnvironment {
         fontsWatcher = DirectoryWatcher(url: AppPaths.fonts, latency: 0.3) { [weak self] in self?.reloadFonts() }
         appearanceObservation = NSApp.observe(\.effectiveAppearance) { [weak self] _, _ in
             MainActor.assumeIsolated {
-                guard let self, self.nightOverride == nil else { return }
-                self.notify()
+                guard let self else { return }
+                // macOS now shows what the reader had picked: follow it again from here.
+                let override = nightOverride
+                setNightOverride(AppearanceChoice.reconciled(override, systemIsDark: systemIsDark))
+                if override == nil || nightOverride == nil { notify() }
             }
         }
     }
@@ -144,13 +153,24 @@ final class ReaderEnvironment {
 
     // MARK: Appearance and size
 
-    /// `true`/`false` when the reader chose Night/Day, `nil` to follow the system.
+    /// `true`/`false` when the reader picked dark/light against the system, `nil` to follow it.
     private var nightOverride: Bool? {
-        defaults.object(forKey: Key.night) as? Bool
+        defaults.object(forKey: Key.appearanceOverride) as? Bool
+    }
+
+    private func setNightOverride(_ override: Bool?) {
+        if let override { defaults.set(override, forKey: Key.appearanceOverride) }
+        else { defaults.removeObject(forKey: Key.appearanceOverride) }
+    }
+
+    /// The system's appearance. The app sets no appearance of its own (windows do), so the
+    /// application's effective appearance is the system's.
+    private var systemIsDark: Bool {
+        NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
     }
 
     var isNight: Bool {
-        nightOverride ?? (NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua)
+        AppearanceChoice.isDark(override: nightOverride, systemIsDark: systemIsDark)
     }
 
     /// The appearance reader windows use; `nil` follows the system.
@@ -158,8 +178,10 @@ final class ReaderEnvironment {
         nightOverride.map { NSAppearance(named: $0 ? .darkAqua : .aqua) } ?? nil
     }
 
+    /// `⇧⌘N` and the toolbar's sun: the other appearance; back to following macOS when that
+    /// is the system's.
     func toggleNight() {
-        defaults.set(!isNight, forKey: Key.night)
+        setNightOverride(AppearanceChoice.override(afterSwapping: nightOverride, systemIsDark: systemIsDark))
         notify()
     }
 
