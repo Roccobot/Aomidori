@@ -4,7 +4,7 @@ A minimal, fast EPUB reader for macOS (Apple Silicon, macOS 27 Golden Gate and l
 in the spirit of Murasaki: each chapter is one web page that scrolls vertically, `←`/`→`
 move between chapters, and the reader's own CSS can replace the book's at any moment.
 
-## Features (v0.2.0)
+## Features (v0.2.1)
 
 - One window per book (`NSDocument`); macOS window tabs work out of the box.
 - Web-style reading: a chapter scrolls vertically as a single entity. No pages, no
@@ -33,6 +33,7 @@ move between chapters, and the reader's own CSS can replace the book's at any mo
 - Minimal mode: no toolbar, title or window buttons, only text.
 - Book info window (`⌘I`): metadata and cover image.
 - English and Italian interface, following the system language.
+- Liquid Glass app icon by Graphe, with light, dark, tinted and clear appearances.
 
 ## Architecture
 
@@ -140,7 +141,8 @@ with the Command Line Tools only.)
 
 ## Build
 
-Requirements: Apple Silicon, macOS 27, Swift 6.4 Command Line Tools (Xcode not needed).
+Requirements: Apple Silicon, macOS 27, Swift 6.4 Command Line Tools. Xcode is optional: with
+it, `scripts/bundle.sh` also compiles the Liquid Glass icon (see [Icon](#icon)).
 
 ```sh
 swift build -c release        # build
@@ -148,7 +150,7 @@ scripts/test.sh               # unit tests (Swift Testing; `swift test` plus the
                               # Command Line Tools need to find the Testing framework)
 scripts/bundle.sh             # build/Aomidori.app, ad-hoc signed, arm64 only
 scripts/smoke.sh book.epub    # open a book and save a snapshot of the page to build/smoke.png
-ditto -c -k --keepParent build/Aomidori.app Aomidori-0.2.0.zip   # release archive
+ditto -c -k --keepParent build/Aomidori.app Aomidori-0.2.1.zip   # release archive
 ```
 
 `EPUBKit` and `AomidoriCore` also build and test on Linux (the app target is macOS-only);
@@ -242,12 +244,30 @@ or code are taken from it.
 
 ## Icon
 
-The app icon (J3 *Tategaki*) is by Graphe; sources in `Resources/Icon/` (see its README):
-`AppIcon.icns` and `AppIcon.iconset` (flat, with simplified 16 and 32 px sizes) are what the
-app ships (`CFBundleIconFile`), the SVGs are the artwork, and `J3-layers/` holds the layers for
-a Liquid Glass icon. **Future work:** build the layered `.icon` with Icon Composer and compile
-it with Xcode's `actool` (not part of the Command Line Tools), then ship it as `Assets.car`
-with `CFBundleIconName`, keeping the `.icns` as fallback.
+The app icon (J3 *Tategaki*) is by Graphe; sources in `Resources/Icon/` (see its README).
+
+- `AppIcon.icon` is the Liquid Glass icon (Icon Composer format: `icon.json` plus `Assets/`),
+  built from Graphe's `J3-layers/` SVGs, unaltered. With Xcode installed, `scripts/bundle.sh`
+  compiles it with `actool` into `Contents/Resources/Assets.car`, found through
+  `CFBundleIconName`. The system renders the light, dark, tinted and clear appearances from it.
+- `AppIcon.icns` and `AppIcon.iconset` (flat, with simplified 16 and 32 px sizes) ship as the
+  fallback (`CFBundleIconFile`), and are the only icon in builds made with the Command Line
+  Tools alone.
+
+How `icon.json` maps Graphe's settings (check renders with Icon Composer's `ictool`, e.g.
+`ictool AppIcon.icon --export-image --output-file x.png --platform macOS --rendition Dark
+--width 512 --height 512 --scale 1`):
+
+| Graphe | `icon.json` |
+| --- | --- |
+| Canvas gradient #5FD6BD → #1F8E78 (dark #1F3A34 → #0B1714) | document `fill-specializations` |
+| `01-pages` white (dark #5FD3BA), Liquid Glass | layer `Pages`, `glass: true`, solid fills |
+| `02-lines` #43B59E at 60 % (dark #0E2420, mono #8C8C8C), no glass | layer `Lines`, `glass: false`, `opacity: 0.6` |
+| Artwork on a 1024 canvas with an 824-point tile | `position.scale` 1024 / 824 |
+
+Notes from building it: in `layers` the **first entry is drawn on top**; layer colours come
+from `fill-specializations`, not from the SVGs (their colours were not honoured in our renders); the
+gradient's diagonal direction cannot be expressed in `icon.json`, so it runs top to bottom.
 
 ## Licenses
 

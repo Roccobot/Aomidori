@@ -22,8 +22,28 @@ cp "$BIN_DIR/Aomidori" "$APP/Contents/MacOS/Aomidori"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp Resources/ReadingRoccobot.css "$APP/Contents/Resources/ReadingRoccobot.css"
 cp THIRD_PARTY.md "$APP/Contents/Resources/THIRD_PARTY.md"
-# Flat icon (Resources/Icon/AppIcon.icns, by Graphe); the layered Liquid Glass .icon needs actool.
+# App icon by Graphe. The flat AppIcon.icns (CFBundleIconFile) is always shipped as the fallback;
+# the layered Liquid Glass AppIcon.icon is compiled into Assets.car (CFBundleIconName) by Xcode's
+# actool, which the Command Line Tools lack. actool also emits an .icns of its own: it is
+# discarded, because Graphe's has hand-tuned 16 and 32 px sizes.
 cp Resources/Icon/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+if xcrun --find actool >/dev/null 2>&1; then
+  ICON_WORK="$(mktemp -d)"
+  trap 'rm -rf "$ICON_WORK"' EXIT
+  xcrun actool "$PWD/Resources/Icon/AppIcon.icon" \
+    --compile "$ICON_WORK" \
+    --platform macosx --target-device mac --minimum-deployment-target 27.0 \
+    --app-icon AppIcon \
+    --output-partial-info-plist "$ICON_WORK/partial.plist" \
+    --errors --warnings --output-format human-readable-text >/dev/null
+  if [[ ! -f "$ICON_WORK/Assets.car" ]]; then
+    echo "actool did not produce Assets.car." >&2
+    exit 1
+  fi
+  cp "$ICON_WORK/Assets.car" "$APP/Contents/Resources/Assets.car"
+else
+  echo "warning: actool not found (Command Line Tools only); shipping the flat icon only." >&2
+fi
 # Exactly two localizations: English (development language) and Italian, with the same keys.
 for LANG_DIR in en.lproj it.lproj; do
   plutil -lint "Resources/$LANG_DIR/Localizable.strings" "Resources/$LANG_DIR/InfoPlist.strings" >/dev/null
