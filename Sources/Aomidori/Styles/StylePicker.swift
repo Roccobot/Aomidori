@@ -243,4 +243,7 @@ enum KeyCode {
     static let rightArrow: UInt16 = 124
     static let downArrow: UInt16 = 125
     static let upArrow: UInt16 = 126
+    static let space: UInt16 = 49
+    static let pageUp: UInt16 = 116
+    static let pageDown: UInt16 = 121
 }

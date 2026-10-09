@@ -150,6 +150,35 @@ const assert = (cond, msg) => { console.log((cond ? 'PASS ' : 'FAIL ') + msg); i
   assert(await page.evaluate(() => scrollY) === 0, 'fraction 0 is the top');
   await apply({ scale: 1, overrideEnabled: false });
 
+  // 7. Edges and position reports, as native code receives them.
+  {
+    const p = await browser.newPage({ viewport: { width: 900, height: 700 } });
+    await p.route('http://book/**', route => {
+      const f = fixture(decodeURIComponent(new URL(route.request().url()).pathname.slice(1)));
+      if (!fs.existsSync(f)) return route.fulfill({ status: 404, body: '' });
+      route.fulfill({ body: fs.readFileSync(f), contentType: f.endsWith('.jpg') ? 'image/jpeg' : f.endsWith('.css') ? 'text/css' : 'application/xhtml+xml' });
+    });
+    await p.addInitScript(() => { window.__messages = []; window.webkit = { messageHandlers: { aomidori: { postMessage: (m) => window.__messages.push(m) } } }; });
+    await p.addInitScript(script + `\nAomidori.apply(${JSON.stringify(base)});`);
+    const edges = () => p.evaluate(() => window.__messages.filter(m => m.type === 'edges').map(m => `${m.atTop} ${m.atBottom}`));
+    await p.goto('http://book/c.html');
+    await p.waitForLoadState('load');
+    await p.waitForTimeout(100);
+    assert((await edges()).join('|') === 'true false', `a long chapter starts at the top edge only (${(await edges()).join('|')})`);
+    await p.evaluate(() => scrollTo(0, 300));
+    await p.waitForTimeout(100);
+    await p.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+    await p.waitForTimeout(400);
+    assert((await edges()).join('|') === 'true false|false false|false true', `edges follow scrolling, once per change (${(await edges()).join('|')})`);
+    const report = await p.evaluate(() => window.__messages.filter(m => m.type === 'position').pop());
+    assert(report && report.href === 'http://book/c.html' && report.fraction === 1, `position reports carry the document and fraction (${JSON.stringify(report)})`);
+    await p.goto('http://book/cover-img.html');
+    await p.waitForLoadState('load');
+    await p.waitForTimeout(100);
+    assert((await edges()).pop() === 'true true', 'an image page is at both edges');
+    await p.close();
+  }
+
   // 5. Image pages (covers): centred in the viewport, whole, not scrollable, in every mode.
   userCSS = 'body { max-width: 34em; margin: 0 auto; padding: 0 1.2em; } img { width: 50%; margin-top: 4em; } p { margin: 2em 0; }';
   const coverPages = ['cover-img.html', 'cover-svg.html', 'cover-marked.html', 'cover-small.html'];

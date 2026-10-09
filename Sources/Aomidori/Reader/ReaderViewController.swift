@@ -11,7 +11,8 @@ protocol ReaderViewControllerDelegate: AnyObject {
 /// Shows one spine item at a time as a real web document that scrolls vertically.
 /// `←`/`→` move through the reading order; links between chapters are followed in place.
 /// Every chapter remembers where it was left: coming back to it (arrows, table of contents,
-/// links without a fragment) lands there.
+/// links without a fragment) lands there. Pushing past either end of a chapter offers the
+/// next or previous one in a toast; see `ChapterEdgeDetector`.
 @MainActor
 final class ReaderViewController: NSViewController, WKNavigationDelegate {
     weak var delegate: ReaderViewControllerDelegate?
@@ -29,6 +30,12 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
     /// A search hit to reveal once its chapter has loaded.
     private var pendingFind: (hit: SearchHit, query: String)?
     private var findTask: Task<Void, Never>?
+    private var edges = ChapterEdgeDetector()
+    private let toast = ChapterToastView()
+    private var toastTimer: Task<Void, Never>?
+    private var isPointerOverToast = false
+    /// How long the toast stays when left alone.
+    private static let toastDuration: Duration = .seconds(3)
 
     var book: EPUBBook { publication.book }
     var webView: WKWebView { renderer.webView }
@@ -39,6 +46,10 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
         renderer = PageRenderer(provider: publication, configuration: ReaderEnvironment.shared.configuration())
         super.init(nibName: nil, bundle: nil)
         renderer.onPosition = { [weak self] path, position in self?.record(position, path: path) }
+        renderer.onEdges = { [weak self] path, edges in
+            guard let self, path == currentPath else { return }
+            perform(self.edges.update(edges))
+        }
     }
 
     @available(*, unavailable)
@@ -49,12 +60,20 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
         webView.navigationDelegate = self
         webView.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(webView)
-        // The page runs under the toolbar (Liquid Glass scroll edge) and starts below it.
+        toast.translatesAutoresizingMaskIntoConstraints = false
+        toast.onClick = { [weak self] in self?.activateToast() }
+        toast.onHoverChange = { [weak self] inside in self?.pointerOverToastChanged(inside) }
+        container.addSubview(toast)
         NSLayoutConstraint.activate([
+            // The page runs under the toolbar (Liquid Glass scroll edge) and starts below it.
             webView.topAnchor.constraint(equalTo: container.topAnchor),
             webView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
             webView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             webView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            // The toast floats low and centred over the page.
+            toast.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            toast.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -24),
+            toast.widthAnchor.constraint(lessThanOrEqualTo: container.widthAnchor, constant: -40),
         ])
         view = container
     }
@@ -200,6 +219,93 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
         environment.saveStateSoon()
     }
 
+    // MARK: Chapter edges
+
+    /// Space, `↓`, Page Down (forward) or Shift-Space, `↑`, Page Up (backward) while reading.
+    /// Returns whether the key was used (it took the reader to another chapter).
+    func handleEdgeKey(_ direction: EdgeDirection) -> Bool {
+        edges.isPointerOverToast = toast.containsPointer
+        return perform(edges.key(direction))
+    }
+
+    /// A scroll event over the page. Returns whether it was used.
+    func handleEdgeScroll(_ event: NSEvent) -> Bool {
+        guard abs(event.scrollingDeltaY) >= abs(event.scrollingDeltaX) else { return false }
+        let phase: EdgeScroll.Phase =
+            if event.phase.contains(.began) || event.phase.contains(.mayBegin) { .began }
+            else if event.phase.contains(.ended) || event.phase.contains(.cancelled) { .ended }
+            else if event.phase.contains(.changed) || event.phase.contains(.stationary) { .changed }
+            else { .none }
+        let scroll = EdgeScroll(deltaY: event.scrollingDeltaY, isPrecise: event.hasPreciseScrollingDeltas,
+                                phase: phase, isMomentum: !event.momentumPhase.isEmpty)
+        edges.isPointerOverToast = toast.containsPointer
+        return perform(edges.scroll(scroll))
+    }
+
+    @discardableResult
+    private func perform(_ action: EdgeAction) -> Bool {
+        switch action {
+        case .none:
+            return false
+        case .show(let direction):
+            let kind: ChapterToastView.Kind = direction == .backward ? .previous : (canGoToNextChapter ? .next : .endOfBook)
+            toast.show(kind)
+            scheduleToastHide()
+            return false
+        case .hide:
+            hideToast()
+            return false
+        case .activate(let direction):
+            hideToast()
+            go(past: direction)
+            return true
+        }
+    }
+
+    private func activateToast() {
+        guard let direction = edges.toast else { return }
+        hideToast()
+        go(past: direction)
+    }
+
+    /// Forward: the top of the next chapter or, at the end of the book, its table of contents
+    /// page (or its start). Backward: where the reader left the previous chapter.
+    private func go(past direction: EdgeDirection) {
+        switch direction {
+        case .forward:
+            if let next = nextChapterIndex {
+                showSpineItem(at: next, landing: .top)
+            } else if let target = book.tableOfContentsIndex ?? (book.spine.isEmpty ? nil : 0) {
+                showSpineItem(at: target, landing: .top)
+            }
+        case .backward:
+            if let previous = previousChapterIndex { showSpineItem(at: previous, landing: .remembered) }
+        }
+    }
+
+    private func hideToast() {
+        toastTimer?.cancel()
+        toastTimer = nil
+        edges.toastDidHide()
+        toast.hide()
+    }
+
+    private func scheduleToastHide() {
+        toastTimer?.cancel()
+        toastTimer = Task { [weak self] in
+            try? await Task.sleep(for: Self.toastDuration)
+            guard !Task.isCancelled, let self else { return }
+            // Never pulled away from under the pointer: it goes once the pointer leaves.
+            if isPointerOverToast || toast.containsPointer { return }
+            hideToast()
+        }
+    }
+
+    private func pointerOverToastChanged(_ inside: Bool) {
+        isPointerOverToast = inside
+        if !inside, toast.isShown { scheduleToastHide() }
+    }
+
     // MARK: WKNavigationDelegate
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
@@ -225,7 +331,9 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
         let path = currentPath
         let index = path.flatMap(book.spineIndex(forPath:))
         currentSpineIndex = index
-        let landing = pendingLanding ?? (webView.url?.fragment == nil ? .remembered : nil)
+        hideToast()
+        edges.reset(hasPrevious: previousChapterIndex != nil)
+        let landing: Landing? = pendingLanding ?? (webView.url?.fragment == nil ? .remembered : nil)
         pendingLanding = nil
         pendingRestore = nil
         if let index, let path, webView.url?.fragment == nil, let landing {

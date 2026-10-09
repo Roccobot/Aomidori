@@ -234,9 +234,15 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
 
     // MARK: Keyboard
 
-    /// Keys handled outside the menu bar: plain `←` `→` `+` `-` `0` while reading, and the
-    /// style list shortcuts, whose hold-to-cycle behaviour needs key-up and modifier tracking.
+    /// Keys handled outside the menu bar: plain `←` `→` `+` `-` `0` while reading, the
+    /// style list shortcuts, whose hold-to-cycle behaviour needs key-up and modifier tracking,
+    /// and the keys and scrolling that push past the edge of a chapter (seen, not consumed,
+    /// unless they take the reader to another chapter).
     func handle(_ event: NSEvent) -> Bool {
+        if event.type == .scrollWheel {
+            guard event.window === window, reader.view.bounds.contains(reader.view.convert(event.locationInWindow, from: nil)) else { return false }
+            return reader.handleEdgeScroll(event)
+        }
         if picker.handle(event) { return true }
         guard event.type == .keyDown, let window else { return false }
 
@@ -246,6 +252,10 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         }
 
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask).subtracting([.capsLock, .numericPad, .function])
+        if isReadingFocused, !event.isARepeat, let direction = Self.edgeDirection(keyCode: event.keyCode, flags: flags),
+           reader.handleEdgeKey(direction) {
+            return true
+        }
         guard flags.isEmpty, isReadingFocused else { return false }
         switch event.keyCode {
         case KeyCode.leftArrow: reader.goToPreviousChapter(); return true
@@ -259,6 +269,18 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         default: return false
         }
         return true
+    }
+
+    /// The page-scrolling keys that can push past the edge of a chapter. They still scroll the
+    /// page; the reader only acts on them at an edge.
+    private static func edgeDirection(keyCode: UInt16, flags: NSEvent.ModifierFlags) -> EdgeDirection? {
+        if flags == [.shift] { return keyCode == KeyCode.space ? .backward : nil }
+        guard flags.isEmpty else { return nil }
+        switch keyCode {
+        case KeyCode.space, KeyCode.downArrow, KeyCode.pageDown: return .forward
+        case KeyCode.upArrow, KeyCode.pageUp: return .backward
+        default: return nil
+        }
     }
 
     /// Whether keystrokes are meant for the page (not the table of contents).

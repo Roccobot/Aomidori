@@ -18,6 +18,8 @@ final class PageRenderer: NSObject {
     /// Called with the document's path and position after the reader stops scrolling. The path
     /// says which document it was: a report may arrive after the next one has started loading.
     var onPosition: ((_ path: String, _ position: ChapterPosition) -> Void)?
+    /// Called when the document's ability to scroll further up or down changes.
+    var onEdges: ((_ path: String, _ edges: ScrollEdges) -> Void)?
 
     init(provider: any PageResourceProvider, configuration: ReaderConfiguration) {
         let host = UUID().uuidString.lowercased()
@@ -116,6 +118,10 @@ final class PageRenderer: NSObject {
             guard let href = message["href"] as? String, let path = path(for: URL(string: href)),
                   let position = Self.chapterPosition(from: message) else { return }
             onPosition?(path, position)
+        case "edges":
+            guard let href = message["href"] as? String, let path = path(for: URL(string: href)),
+                  let atTop = message["atTop"] as? Bool, let atBottom = message["atBottom"] as? Bool else { return }
+            onEdges?(path, ScrollEdges(atTop: atTop, atBottom: atBottom))
         default:
             break
         }

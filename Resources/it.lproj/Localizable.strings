@@ -159,3 +159,8 @@
 "playground.toolbar.text.help" = "Anteprima sul testo di esempio o su un libro";
 "playground.toolbar.night.help" = "Giorno o Notte nell'anteprima, per prefers-color-scheme (⇧⌘N)";
 "playground.toolbar.save.help" = "Salva negli stili (⌘S) o Salva CSS come (⇧⌘S)";
+
+/* Chapter edges */
+"reader.toast.next" = "Vai al capitolo successivo";
+"reader.toast.previous" = "Vai al capitolo precedente";
+"reader.toast.end" = "Fine del libro";

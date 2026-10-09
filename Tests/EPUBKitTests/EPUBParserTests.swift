@@ -39,6 +39,23 @@ struct EPUBParserTests {
         #expect(try EPUBPublication(contentsOf: epub2URL).book.coverPath == "images/c.png")
     }
 
+    @Test func tableOfContentsPageInTheSpine() {
+        func book(manifest: [(String, String, Set<String>)], spine: [(String, String)]) -> EPUBBook {
+            EPUBBook(identifier: "x", title: nil, language: nil, packagePath: "OEBPS/content.opf",
+                     manifest: manifest.map { ManifestItem(id: $0.0, path: $0.1, mediaType: "application/xhtml+xml", properties: $0.2) },
+                     spine: spine.map { SpineItem(idref: $0.0, path: $0.1, mediaType: "application/xhtml+xml", isLinear: true) },
+                     toc: [])
+        }
+        let nav = book(manifest: [("cover", "OEBPS/cover.xhtml", []), ("n", "OEBPS/nav.xhtml", ["nav"]), ("c1", "OEBPS/c1.xhtml", [])],
+                       spine: [("cover", "OEBPS/cover.xhtml"), ("n", "OEBPS/nav.xhtml"), ("c1", "OEBPS/c1.xhtml")])
+        #expect(nav.tableOfContentsIndex == 1)
+        let navOutsideSpine = book(manifest: [("n", "OEBPS/nav.xhtml", ["nav"]), ("c1", "OEBPS/c1.xhtml", []), ("i", "OEBPS/Text/Indice.html", [])],
+                                   spine: [("c1", "OEBPS/c1.xhtml"), ("i", "OEBPS/Text/Indice.html")])
+        #expect(navOutsideSpine.tableOfContentsIndex == 1, "an HTML contents page by name")
+        let none = book(manifest: [("c1", "OEBPS/c1.xhtml", [])], spine: [("c1", "OEBPS/c1.xhtml")])
+        #expect(none.tableOfContentsIndex == nil)
+    }
+
     @Test func linearNavigationSkipsNonLinearItems() throws {
         let url = try EPUBFixture.epub3().write()
         defer { try? FileManager.default.removeItem(at: url) }

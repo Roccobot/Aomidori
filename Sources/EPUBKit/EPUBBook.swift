@@ -106,6 +106,21 @@ public struct EPUBBook: Sendable {
         return candidates.first(where: { spine[$0].isLinear }) ?? (hasLinearItems ? nil : candidates.first)
     }
 
+    /// The spine item that is the book's table of contents, if it has one in the reading order:
+    /// the EPUB 3 navigation document, or else an item named like a contents page
+    /// (`toc`, `contents`, `indice`, `sommario`).
+    public var tableOfContentsIndex: Int? {
+        if let nav = manifest.first(where: { $0.properties.contains("nav") }), let index = spineIndex(forPath: nav.path) {
+            return index
+        }
+        let names: Set<String> = ["toc", "contents", "content", "indice", "sommario"]
+        return spine.indices.first { index in
+            let item = spine[index]
+            let stem = ((item.path as NSString).lastPathComponent as NSString).deletingPathExtension.lowercased()
+            return names.contains(item.idref.lowercased()) || names.contains(stem)
+        }
+    }
+
     /// The title of the first TOC entry that points at `path`, searched depth-first.
     public func tocTitle(forPath path: String) -> String? {
         func search(_ entries: [TOCEntry]) -> String? {

@@ -487,9 +487,29 @@ enum ReaderScript {
       };
       const reportPosition = () => post(Object.assign({ type: 'position', href: location.href }, position()));
       addEventListener('scroll', () => {
+        reportEdges();
         clearTimeout(reportTimer);
         reportTimer = setTimeout(reportPosition, 250);
       }, { passive: true });
+
+      // MARK: Edges
+
+      // Whether the page can scroll further, reported when it changes, so native code knows
+      // when Space or a swipe pushes past the end of the chapter. Image pages never scroll.
+      let lastEdges = '';
+      function reportEdges() {
+        const scroller = doc.scrollingElement || root;
+        const max = scroller.scrollHeight - innerHeight;
+        const still = max <= 1 || root.classList.contains(IMAGE_PAGE);
+        const atTop = still || scrollY <= 1;
+        const atBottom = still || scrollY >= max - 1;
+        const key = `${atTop} ${atBottom}`;
+        if (key === lastEdges) return;
+        lastEdges = key;
+        post({ type: 'edges', href: location.href, atTop, atBottom });
+      }
+      addEventListener('resize', reportEdges, { passive: true });
+      const sizeObserver = new ResizeObserver(() => reportEdges());
 
       // MARK: Lifecycle
 
@@ -507,9 +527,12 @@ enum ReaderScript {
         refreshPalette();
         refreshScale();
         refreshFont();
+        sizeObserver.observe(root);
+        if (doc.body) sizeObserver.observe(doc.body);
+        reportEdges();
       }, { once: true });
 
-      addEventListener('load', refreshPalette, { once: true });
+      addEventListener('load', () => { refreshPalette(); reportEdges(); }, { once: true });
 
       window.Aomidori = Object.freeze({
         apply(next) {

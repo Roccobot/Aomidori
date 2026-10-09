@@ -47,9 +47,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool { true }
 
-    /// Routes keys to the active reader window before the menu bar and the web view see them.
+    /// Routes keys (and scrolling, for the chapter-edge toast) to the active reader window before
+    /// the menu bar and the web view see them.
     private func installKeyMonitor() {
-        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged, .leftMouseDown, .rightMouseDown]) { event in
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged, .leftMouseDown, .rightMouseDown, .scrollWheel]) { event in
             let consumed = MainActor.assumeIsolated {
                 (NSApp.keyWindow?.windowController as? ReaderWindowController)?.handle(event) ?? false
             }
