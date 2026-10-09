@@ -149,8 +149,11 @@ final class ReaderSmokeTest {
     /// A link to another chapter and a link to an anchor in the same chapter, each clicked from
     /// partway down the page: Back must return there (±2%), Forward to where the link went.
     private func checkHistory() async {
-        guard let reader, let from = reader.book.nextReadableIndex(after: 0),
-              let to = reader.book.nextReadableIndex(after: from) else { return }
+        // The chapter after the cover, linking to the next one (or back to the cover, in a
+        // two-item book like the test book).
+        guard let reader, let from = reader.book.nextReadableIndex(after: 0) else { return }
+        let to = reader.book.nextReadableIndex(after: from) ?? 0
+        guard to != from else { return }
         let book = reader.book
         var result: [String: Any] = [:]
         reader.showSpineItem(at: from, landing: .top)

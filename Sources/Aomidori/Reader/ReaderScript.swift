@@ -544,6 +544,21 @@ enum ReaderScript {
         }
       }
 
+      // MARK: Links
+
+      // Where a link was clicked, read before the click's navigation: an anchor in the same
+      // document scrolls before the native side can ask the page where it was.
+      let linkDeparture = null;
+      addEventListener('click', (event) => {
+        const link = event.target && event.target.closest ? event.target.closest('a[href]') : null;
+        if (link) linkDeparture = position();
+      }, true);
+      function takeLinkDeparture() {
+        const value = linkDeparture;
+        linkDeparture = null;
+        return value;
+      }
+
       let reportTimer = 0;
       const post = (message) => {
         try { webkit.messageHandlers.aomidori.postMessage(message); } catch (_) { /* not attached */ }
@@ -613,6 +628,7 @@ enum ReaderScript {
         scrollToFraction,
         position,
         restorePosition,
+        takeLinkDeparture,
       });
 
       if (!mount()) {

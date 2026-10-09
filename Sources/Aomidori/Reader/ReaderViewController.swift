@@ -375,9 +375,11 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
             let followsLink = isMainFrame && navigationAction.navigationType == .linkActivated
             // Leaving a chapter: note exactly where, since the last scroll report may be pending.
             if let current = currentPath, isMainFrame, followsLink || current != path {
+                // A link in the same document has already scrolled: the page noted where it was.
+                let departure = followsLink ? await renderer.takeLinkDeparture() : nil
                 let position = await renderer.currentPosition()
                 if followsLink {
-                    history.departed(from: ReadingPlace(path: current, position: position ?? ChapterPosition(fraction: currentFraction)))
+                    history.departed(from: ReadingPlace(path: current, position: departure ?? position ?? ChapterPosition(fraction: currentFraction)))
                 }
                 if current != path, let position { record(position, path: current) }
             }

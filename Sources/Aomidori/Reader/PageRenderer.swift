@@ -102,6 +102,13 @@ final class PageRenderer: NSObject {
         return Self.chapterPosition(from: value as? [String: Any])
     }
 
+    /// Where the page was when a link was last clicked (once: reading it clears it).
+    func takeLinkDeparture() async -> ChapterPosition? {
+        let value = try? await webView.callAsyncJavaScript(
+            "return window.Aomidori ? Aomidori.takeLinkDeparture() : null", arguments: [:], in: nil, contentWorld: .defaultClient)
+        return Self.chapterPosition(from: value as? [String: Any])
+    }
+
     private static func chapterPosition(from message: [String: Any]?) -> ChapterPosition? {
         guard let message, let fraction = (message["fraction"] as? NSNumber)?.doubleValue else { return nil }
         return ChapterPosition(fraction: fraction, anchor: message["anchor"] as? String)
