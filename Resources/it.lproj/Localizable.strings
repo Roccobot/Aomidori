@@ -169,3 +169,9 @@
 "reader.toast.next" = "Vai al capitolo successivo";
 "reader.toast.previous" = "Vai al capitolo precedente";
 "reader.toast.end" = "Fine del libro";
+
+/* Empty window */
+"empty.title" = "Aomidori";
+"empty.message" = "Apri un EPUB o trascinalo qui";
+"empty.open" = "Apri…";
+"empty.open.help" = "Scegli un libro EPUB da leggere (⌘O)";

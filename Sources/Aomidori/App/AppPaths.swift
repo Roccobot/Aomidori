@@ -16,9 +16,11 @@ enum AppPaths {
     static let positions = stateFolder.appendingPathComponent("Positions.json")
     /// Bookmarks and other per-book state.
     static let books = stateFolder.appendingPathComponent("Books.json")
-    /// A scripted smoke session (`-AomidoriReaderSmoke <folder>`) keeps reading state in its own
-    /// folder, so it never moves the user's places in their books.
-    private static let stateFolder: URL = UserDefaults.standard.string(forKey: ReaderSmokeTest.defaultsKey)
+    /// A scripted smoke session (`-AomidoriReaderSmoke <folder>`, `-AomidoriLaunchSmoke
+    /// <folder>`) keeps reading state in its own folder, so it never moves the user's places in
+    /// their books.
+    private static let stateFolder: URL = (UserDefaults.standard.string(forKey: ReaderSmokeTest.defaultsKey)
+        ?? UserDefaults.standard.string(forKey: LaunchSmokeTest.defaultsKey))
         .map { URL(fileURLWithPath: $0, isDirectory: true) } ?? support
 
     /// The style shipped inside the app bundle and installed on first launch.

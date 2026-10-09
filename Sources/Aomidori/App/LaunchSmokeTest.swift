@@ -1,0 +1,132 @@
+import AppKit
+import Carbon
+
+/// A scripted session for `scripts/smoke-launch.sh`, enabled by the launch argument
+/// `-AomidoriLaunchSmoke <folder>` (with `-AomidoriLaunchSmokeBook <epub>`). The app is
+/// launched with no book: it checks that the empty window is shown, that a book opened from it
+/// takes its place (frame included), that the drop target accepts only EPUB files, and that
+/// the Dock's reopen event brings the empty window back once the book is closed. Reading state
+/// is kept in the folder (see `AppPaths`) and window frames are not remembered meanwhile.
+@MainActor
+final class LaunchSmokeTest {
+    nonisolated static let defaultsKey = "AomidoriLaunchSmoke"
+    static var isActive: Bool { UserDefaults.standard.string(forKey: defaultsKey) != nil }
+
+    private let folder: URL
+    private let book: URL?
+    private var report: [String: Any] = [:]
+    private var failures: [String] = []
+    private let activity = ProcessInfo.processInfo.beginActivity(options: [.userInitiated, .latencyCritical], reason: "Launch smoke test")
+
+    init?() {
+        guard let path = UserDefaults.standard.string(forKey: Self.defaultsKey) else { return nil }
+        folder = URL(fileURLWithPath: path, isDirectory: true)
+        book = UserDefaults.standard.string(forKey: "AomidoriLaunchSmokeBook").map { URL(fileURLWithPath: $0) }
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        Task { await run() }
+    }
+
+    private func run() async {
+        try? await Task.sleep(for: .milliseconds(1500))
+
+        // 1. Launch with no book: the empty window, and nothing else.
+        report["atLaunch"] = windows()
+        report["activeAtLaunch"] = NSApp.isActive
+        guard let empty = EmptyReaderWindowController.current, let emptyWindow = empty.window, emptyWindow.isVisible else {
+            failures.append("no empty window at launch")
+            return finish()
+        }
+        report["placeholder"] = empty.smokePlaceholderText
+        report["emptyToolbar"] = emptyWindow.toolbar?.items.map(\.itemIdentifier.rawValue) ?? []
+        snapshot(emptyWindow, name: "empty.png")
+        let emptyFrame = emptyWindow.frame
+
+        // 2. The drop target takes EPUB files only.
+        let pasteboard = NSPasteboard(name: .init("AomidoriLaunchSmoke-\(ProcessInfo.processInfo.processIdentifier)"))
+        pasteboard.clearContents()
+        let other = folder.appendingPathComponent("progress.log")
+        log("drop check")
+        pasteboard.writeObjects([(book ?? other) as NSURL, other as NSURL])
+        let accepted = EmptyReaderView.epubURLs(on: pasteboard)
+        report["dropAccepts"] = accepted.map(\.lastPathComponent)
+        if accepted.count != (book == nil ? 0 : 1) { failures.append("drop filter") }
+        pasteboard.releaseGlobally()
+
+        // 3. A book opened from the empty window takes its place.
+        guard let book else { failures.append("no book given"); return finish() }
+        empty.open([book])
+        for _ in 0..<40 where readerWindows().isEmpty { try? await Task.sleep(for: .milliseconds(100)) }
+        try? await Task.sleep(for: .milliseconds(800))
+        report["afterOpen"] = windows()
+        let readers = readerWindows()
+        if readers.count != 1 { failures.append("one reader window after opening") }
+        if EmptyReaderWindowController.current != nil || emptyWindow.isVisible { failures.append("empty window replaced") }
+        if let reader = readers.first {
+            report["frames"] = ["empty": NSStringFromRect(emptyFrame), "reader": NSStringFromRect(reader.frame)]
+            if reader.frame != emptyFrame { failures.append("reader takes the empty window's frame") }
+        }
+
+        // 4. Book closed, then the Dock's reopen event: the empty window again.
+        NSDocumentController.shared.documents.forEach { $0.close() }
+        try? await Task.sleep(for: .milliseconds(600))
+        report["afterClose"] = windows()
+        do {
+            try sendReopenEvent()
+        } catch {
+            report["reopenError"] = "\(error)"
+        }
+        for _ in 0..<30 where EmptyReaderWindowController.current == nil { try? await Task.sleep(for: .milliseconds(100)) }
+        try? await Task.sleep(for: .milliseconds(400))
+        report["afterReopen"] = windows()
+        if EmptyReaderWindowController.current?.window?.isVisible != true { failures.append("empty window on reopen") }
+        finish()
+    }
+
+    /// The `rapp` Apple event the Dock sends when its icon is clicked, sent to this process.
+    private func sendReopenEvent() throws {
+        let target = NSAppleEventDescriptor(processIdentifier: ProcessInfo.processInfo.processIdentifier)
+        let event = NSAppleEventDescriptor.appleEvent(
+            withEventClass: AEEventClass(kCoreEventClass), eventID: AEEventID(kAEReopenApplication),
+            targetDescriptor: target, returnID: AEReturnID(kAutoGenerateReturnID), transactionID: AETransactionID(kAnyTransactionID)
+        )
+        _ = try event.sendEvent(options: [.noReply], timeout: 5)
+    }
+
+    private func readerWindows() -> [NSWindow] {
+        NSApp.windows.filter { $0.isVisible && $0.windowController is ReaderWindowController }
+    }
+
+    private func windows() -> [String] {
+        NSApp.windows.filter(\.isVisible).map { window in
+            "\(window.windowController.map { String(describing: type(of: $0)) } ?? String(describing: type(of: window))) \"\(window.title)\""
+        }
+    }
+
+    private func finish() {
+        report["failures"] = failures
+        report["finished"] = true
+        if let json = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) {
+            try? json.write(to: folder.appendingPathComponent("report.json"))
+        }
+        log("finished")
+    }
+
+    private func snapshot(_ window: NSWindow, name: String) {
+        guard let frameView = window.contentView?.superview,
+              let rep = frameView.bitmapImageRepForCachingDisplay(in: frameView.bounds) else { return }
+        frameView.cacheDisplay(in: frameView.bounds, to: rep)
+        try? rep.representation(using: .png, properties: [:])?.write(to: folder.appendingPathComponent(name))
+    }
+
+    private func log(_ message: String) {
+        let url = folder.appendingPathComponent("progress.log")
+        let line = Data("\(Date().timeIntervalSince1970) \(message)\n".utf8)
+        if let handle = try? FileHandle(forWritingTo: url) {
+            handle.seekToEndOfFile()
+            handle.write(line)
+            try? handle.close()
+        } else {
+            try? line.write(to: url)
+        }
+    }
+}

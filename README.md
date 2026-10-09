@@ -7,6 +7,10 @@ move between chapters, and the reader's own CSS can replace the book's at any mo
 ## Features (v0.4.0)
 
 - One window per book (`NSDocument`); macOS window tabs work out of the box.
+- With no book open (at launch, or clicking the Dock icon with no windows) an empty reader
+  window, with the same toolbar, says *Open an EPUB or drag it here*: its Open button (`⌘O`)
+  or an `.epub` dropped on it opens the book in its place (same frame, same tab). Opening a
+  book any other way while it is shown replaces it too.
 - Web-style reading: a chapter scrolls vertically as a single entity. No pages, no
   horizontal scrolling, a single view mode.
 - Internal links between chapters, history (`⌘[` / `⌘]`).
@@ -180,6 +184,7 @@ scripts/bundle.sh             # build/Aomidori.app, ad-hoc signed, arm64 only
 scripts/smoke.sh book.epub    # open a book and save a snapshot of the page to build/smoke.png
 scripts/smoke-playground.sh build/pg [book.epub]   # scripted Playground session: snapshots, report.json
 scripts/smoke-reader.sh build/rd book.epub         # cover at 3 window sizes, chapter memory, edge toast
+scripts/smoke-launch.sh build/ln book.epub         # launch with no book: empty window, open, Dock reopen
 ditto -c -k --keepParent build/Aomidori.app Aomidori-0.4.0.zip   # release archive
 ```
 

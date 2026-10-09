@@ -31,7 +31,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         false
     }
 
-    /// Launching (or clicking the Dock icon) with no book open shows the Open panel.
+    /// AppKit asks for an untitled file only when nothing else opens: at launch with no book
+    /// to open (from Finder or restored), and when the Dock icon is clicked with no windows.
+    /// Aomidori has no untitled books: it shows the empty reader window instead.
     func applicationShouldOpenUntitledFile(_ sender: NSApplication) -> Bool { true }
 
     func applicationOpenUntitledFile(_ sender: NSApplication) -> Bool {
@@ -40,10 +42,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         if defaults.bool(forKey: "AomidoriPlayground") || defaults.string(forKey: PlaygroundSmokeTest.defaultsKey) != nil {
             showPlayground(nil)
         } else {
-            NSDocumentController.shared.openDocument(nil)
+            EmptyReaderWindowController.show()
         }
         return true
     }
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        if LaunchSmokeTest.isActive { launchSmokeTest = LaunchSmokeTest() }
+        // AppKit does not always ask for the untitled file (a background launch, `open -g`, got
+        // no window): once launching is over, the empty window is shown if nothing opened. A book
+        // that arrives later takes its place.
+        Task { @MainActor in
+            guard NSDocumentController.shared.documents.isEmpty, !NSApp.windows.contains(where: \.isVisible) else { return }
+            _ = applicationOpenUntitledFile(NSApp)
+        }
+    }
+
+    private var launchSmokeTest: LaunchSmokeTest?
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool { true }
 

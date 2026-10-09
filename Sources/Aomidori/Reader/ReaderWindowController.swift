@@ -63,7 +63,7 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         window.delegate = self
         window.isRestorable = false
         // A smoke session resizes the window: its frame is not remembered.
-        if !ReaderSmokeTest.isActive { window.setFrameAutosaveName(Self.frameAutosaveName) }
+        if !ReaderSmokeTest.isActive && !LaunchSmokeTest.isActive { window.setFrameAutosaveName(Self.frameAutosaveName) }
 
         let toolbar = NSToolbar(identifier: "AomidoriReaderToolbar")
         toolbar.delegate = self
@@ -97,6 +97,7 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
+    /// Shared with the empty window, which stands where the next book will open.
     static let frameAutosaveName = "AomidoriReaderWindow"
 
     override func windowTitle(forDocumentDisplayName displayName: String) -> String {
