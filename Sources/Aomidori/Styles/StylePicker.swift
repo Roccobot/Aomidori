@@ -1,11 +1,11 @@
 import AppKit
 import AomidoriCore
 
-/// The style list HUD (`⌘1` / `⌃⇥`).
+/// The style list HUD (`⌘1`).
 ///
 /// - Quick press: the list stays open; pick with a click, or `↑`/`↓` and `↩`; `esc` cancels.
-/// - Hold the modifier: each further press of `1` / `⇥` (with `⇧`: backwards) moves to the next
-///   style with a live preview; releasing the modifier keeps the last one (like `⌘⇥`).
+/// - Hold `⌘`: each further press of `1` (with `⇧`: backwards) moves to the next style with a
+///   live preview; releasing `⌘` keeps the last one (like `⌘⇥`).
 @MainActor
 final class StylePicker: NSObject, NSTableViewDataSource, NSTableViewDelegate {
     private enum Mode: Equatable {
@@ -81,7 +81,6 @@ final class StylePicker: NSObject, NSTableViewDataSource, NSTableViewDelegate {
     /// `⌘1` or `⌃⇥`, with or without `⇧`.
     static func isPickerShortcut(_ event: NSEvent) -> Bool {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask).subtracting([.shift, .capsLock, .function, .numericPad])
-        if flags == .control, event.keyCode == KeyCode.tab { return true }
         return flags == .command && event.keyCode == KeyCode.digit1
     }
 

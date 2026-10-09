@@ -62,12 +62,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         NSWorkspace.shared.open(AppPaths.styles)
     }
 
+    /// `⌘R`: reads the active style (and the fonts folder) from disk again.
+    @objc func reloadStyle(_ sender: Any?) { environment.reloadStyle() }
+
+    // MARK: Custom font
+
+    private lazy var fontPicker = FontPickerWindowController()
+
+    /// `⇧⌘F`: the custom font on or off; the first time, the font panel opens to choose one.
+    @objc func toggleCustomFont(_ sender: Any?) {
+        if !environment.toggleCustomFont() { showFontPicker(sender) }
+    }
+
+    /// `⌥⌘F`
+    @objc func showFontPicker(_ sender: Any?) {
+        fontPicker.showWindow(sender)
+    }
+
+    @objc func loadFontFile(_ sender: Any?) {
+        let window = fontPicker.window?.isVisible == true ? fontPicker.window : NSApp.keyWindow
+        FontPickerWindowController.runLoadPanel(attachedTo: window) { [weak self] families in
+            guard let self else { return }
+            fontPicker.didLoad(families: families)
+            fontPicker.showWindow(nil)
+        }
+    }
+
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         switch menuItem.action {
         case #selector(toggleNight(_:)):
             menuItem.state = environment.isNight ? .on : .off
         case #selector(toggleStyleOverride(_:)):
             menuItem.state = environment.overrideEnabled ? .on : .off
+        case #selector(toggleCustomFont(_:)):
+            menuItem.state = environment.customFontEnabled ? .on : .off
+            menuItem.title = environment.customFontFamily.map { L10n.format("menu.style.customFont.named", $0) }
+                ?? L10n.string("menu.style.customFont")
         case #selector(previousStyle(_:)), #selector(nextStyle(_:)):
             return environment.styles.count > 0
         case #selector(increaseTextSize(_:)):

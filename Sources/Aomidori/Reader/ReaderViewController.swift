@@ -73,6 +73,9 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
 
     func applyEnvironment() {
         renderer.update(environment.configuration())
+        if let path = UserDefaults.standard.string(forKey: Self.snapshotDefaultsKey) {
+            writeDiagnosticSnapshot(to: URL(fileURLWithPath: path))
+        }
     }
 
     // MARK: Navigation
@@ -208,16 +211,56 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
 
     // MARK: Diagnostics
 
-    /// Launch argument `-AomidoriSnapshotPath <file.png>`: after each chapter loads, the page is
-    /// saved there (and the window chrome next to it, as `<file>-window.png`). Used by
-    /// `scripts/smoke.sh`, because a command-line process may not capture other apps' windows.
+    /// Launch argument `-AomidoriFontProbe "Family A,Family B"` (with a snapshot path): writes
+    /// `<file>.fonts.json`, telling for each family whether the web view can draw it by name
+    /// (canvas text width differs from every generic fallback), and the load status of the
+    /// custom font's faces.
+    static let fontProbeDefaultsKey = "AomidoriFontProbe"
+
+    private func writeFontProbe(families: String, to url: URL) {
+        let names = families.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        guard let data = try? JSONEncoder().encode(names), let list = String(data: data, encoding: .utf8) else { return }
+        let script = """
+        (async () => {
+          await new Promise(r => setTimeout(r, 800)); await document.fonts.ready;
+          const c = document.createElement('canvas').getContext('2d');
+          const text = 'mmmmmmmmmmlli WWW 0123 Aomidori';
+          const width = (font) => { c.font = `72px ${font}`; return c.measureText(text).width; };
+          const byName = {};
+          for (const family of \(list)) {
+            byName[family] = ['monospace', 'serif', 'sans-serif'].every(g => width(`"${family}", ${g}`) !== width(g));
+          }
+          const faces = [];
+          document.fonts.forEach(f => faces.push(`${f.family} ${f.weight} ${f.style}: ${f.status}`));
+          const body = document.body ? getComputedStyle(document.body).fontFamily : '';
+          return JSON.stringify({ byName, faces, bodyFontFamily: body }, null, 1);
+        })()
+        """
+        webView.callAsyncJavaScript("return await \(script);", arguments: [:], in: nil, in: .defaultClient) { result in
+            guard case .success(let value) = result, let text = value as? String else { return }
+            try? Data(text.utf8).write(to: url)
+        }
+    }
+
+
+    /// Launch argument `-AomidoriSnapshotPath <file.png>`: after each chapter loads and after each
+    /// settings or style change, the page is saved there and as `<file>-<n>.png` (n = 1, 2, …),
+    /// with the window chrome as `<file>.window.png`. Used by `scripts/smoke.sh`, because a
+    /// command-line process may not capture other apps' windows.
     static let snapshotDefaultsKey = "AomidoriSnapshotPath"
+    private static var snapshotCount = 0
 
     private func writeDiagnosticSnapshot(to url: URL) {
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(600))
             guard let self, let image = try? await webView.takeSnapshot(configuration: nil) else { return }
-            Self.writePNG(image.cgImage(forProposedRect: nil, context: nil, hints: nil), to: url)
+            let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil)
+            Self.snapshotCount += 1
+            Self.writePNG(cgImage, to: URL(fileURLWithPath: url.deletingPathExtension().path + "-\(Self.snapshotCount).png"))
+            Self.writePNG(cgImage, to: url)
+            if let families = UserDefaults.standard.string(forKey: Self.fontProbeDefaultsKey) {
+                writeFontProbe(families: families, to: url.deletingPathExtension().appendingPathExtension("fonts.json"))
+            }
             if let frameView = view.window?.contentView?.superview,
                let rep = frameView.bitmapImageRepForCachingDisplay(in: frameView.bounds) {
                 frameView.cacheDisplay(in: frameView.bounds, to: rep)

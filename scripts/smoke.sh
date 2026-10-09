@@ -13,7 +13,7 @@ OUT="$(cd "$(dirname "${2:-build/smoke.png}")" && pwd)/$(basename "${2:-build/sm
 APP="$(cd "$(dirname "${APP:-build/Aomidori.app}")" && pwd)/$(basename "${APP:-build/Aomidori.app}")"
 
 pkill -x Aomidori 2>/dev/null && sleep 1 || true
-rm -f "$OUT" "${OUT%.png}.window.png"
+rm -f "$OUT" "${OUT%.png}.window.png" "${OUT%.png}"-*.png
 open -a "$APP" "$EPUB" --args -AomidoriSnapshotPath "$OUT"
 for _ in {1..30}; do
   [[ -s "$OUT" ]] && break

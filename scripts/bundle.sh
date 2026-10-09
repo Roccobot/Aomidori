@@ -22,6 +22,8 @@ cp "$BIN_DIR/Aomidori" "$APP/Contents/MacOS/Aomidori"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp Resources/ReadingRoccobot.css "$APP/Contents/Resources/ReadingRoccobot.css"
 cp THIRD_PARTY.md "$APP/Contents/Resources/THIRD_PARTY.md"
+# Flat icon (Resources/Icon/AppIcon.icns, by Graphe); the layered Liquid Glass .icon needs actool.
+cp Resources/Icon/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 # Exactly two localizations: English (development language) and Italian, with the same keys.
 for LANG_DIR in en.lproj it.lproj; do
   plutil -lint "Resources/$LANG_DIR/Localizable.strings" "Resources/$LANG_DIR/InfoPlist.strings" >/dev/null
@@ -43,4 +45,6 @@ fi
 plutil -lint "$APP/Contents/Info.plist" >/dev/null
 codesign --force --sign - --timestamp=none "$APP"
 codesign --verify --strict "$APP"
+# Finder and the Dock cache icons by bundle modification date.
+touch "$APP"
 echo "Built $APP"

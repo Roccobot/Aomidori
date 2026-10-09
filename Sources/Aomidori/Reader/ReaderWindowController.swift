@@ -241,8 +241,7 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         guard event.type == .keyDown, let window else { return false }
 
         if StylePicker.isPickerShortcut(event) {
-            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            picker.show(over: window, heldModifier: flags.contains(.command) ? .command : .control)
+            picker.show(over: window, heldModifier: .command)
             return true
         }
 
@@ -341,7 +340,10 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
             let menu = NSMenu(title: L10n.string("menu.style"))
             menu.delegate = styleMenuUpdater
             menu.addItem(withTitle: L10n.string("menu.style.list"), action: #selector(showStyleList(_:)), keyEquivalent: "")
+            menu.addItem(withTitle: L10n.string("menu.style.reload"), action: #selector(AppDelegate.reloadStyle(_:)), keyEquivalent: "")
             menu.addItem(withTitle: L10n.string("menu.style.showFolder"), action: #selector(AppDelegate.showStylesFolder(_:)), keyEquivalent: "")
+            menu.addItem(.separator())
+            MainMenu.fontItems().forEach { $0.keyEquivalent = ""; menu.addItem($0) }
             menu.addItem(.separator())
             StyleMenu.refresh(menu)
             item.menu = menu

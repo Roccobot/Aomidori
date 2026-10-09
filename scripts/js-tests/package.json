@@ -1,0 +1,7 @@
+{
+  "name": "aomidori-reader-script-tests",
+  "private": true,
+  "description": "WebKit tests for the page-side script of Aomidori",
+  "scripts": { "test": "node run.js" },
+  "devDependencies": { "playwright-core": "^1.48.0" }
+}

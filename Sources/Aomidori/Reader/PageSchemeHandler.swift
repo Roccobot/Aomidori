@@ -14,6 +14,8 @@ extension EPUBPublication: PageResourceProvider {}
 /// - `/<path>`: a resource of the open book, read lazily from the archive off the main thread.
 /// - `/.aomidori/Styles/<file>` and `/.aomidori/Fonts/<file>`: the user's styles and fonts folders,
 ///   so a user style's relative URLs (`../Fonts/MiSans-Regular.otf`) resolve next to it.
+/// - `/.aomidori/SystemFonts/<token>`: the files of the installed family chosen as custom font
+///   (see `SystemFontFiles`); nothing else on disk is reachable.
 @MainActor
 final class PageSchemeHandler: NSObject, WKURLSchemeHandler {
     nonisolated static let scheme = "aomidori"
@@ -62,6 +64,10 @@ final class PageSchemeHandler: NSObject, WKURLSchemeHandler {
     nonisolated private static func load(_ path: String, from provider: any PageResourceProvider) throws -> EPUBResource {
         guard path.hasPrefix(userPrefix) else { return try provider.resource(at: path) }
         let components = path.dropFirst(userPrefix.count).split(separator: "/").map(String.init)
+        if components.count == 2, components[0] == "SystemFonts" {
+            guard let url = SystemFontFiles.shared.url(forToken: components[1]) else { throw EPUBError.missingResource(path: path) }
+            return EPUBResource(data: try Data(contentsOf: url), mediaType: MediaType.forPath(url.path))
+        }
         guard components.count >= 2, userFolders.contains(components[0]),
               !components.contains(where: { $0 == ".." || $0 == "." }) else {
             throw EPUBError.missingResource(path: path)

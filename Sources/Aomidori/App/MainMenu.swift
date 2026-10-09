@@ -109,8 +109,20 @@ enum MainMenu {
         menu.addItem(.separator())
         StyleMenu.refresh(menu)
         menu.addItem(.separator())
+        menu.addItem(item(L10n.string("menu.style.reload"), #selector(AppDelegate.reloadStyle(_:)), "r"))
         menu.addItem(item(L10n.string("menu.style.showFolder"), #selector(AppDelegate.showStylesFolder(_:))))
+        menu.addItem(.separator())
+        for fontItem in fontItems() { menu.addItem(fontItem) }
         return menu
+    }
+
+    /// The custom font commands, shared by the Style menu and the toolbar's style menu.
+    static func fontItems() -> [NSMenuItem] {
+        [
+            item(L10n.string("menu.style.customFont"), #selector(AppDelegate.toggleCustomFont(_:)), "f", [.command, .shift]),
+            item(L10n.string("menu.style.chooseFont"), #selector(AppDelegate.showFontPicker(_:)), "f", [.command, .option]),
+            item(L10n.string("menu.style.loadFont"), #selector(AppDelegate.loadFontFile(_:))),
+        ]
     }
 
     private static func windowMenu() -> NSMenu {
@@ -122,7 +134,7 @@ enum MainMenu {
         return menu
     }
 
-    private static func item(_ title: String, _ action: Selector?, _ key: String = "",
+    static func item(_ title: String, _ action: Selector?, _ key: String = "",
                              _ modifiers: NSEvent.ModifierFlags = .command) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
         item.keyEquivalentModifierMask = modifiers

@@ -2,7 +2,10 @@ import CoreServices
 import Foundation
 
 /// Watches a folder tree with FSEvents and reports changes on the main thread, coalesced.
-/// File-level events catch in-place edits as well as the atomic saves most editors make.
+/// File-level events catch in-place edits as well as the atomic saves most editors make
+/// (temporary file renamed over the original). FSEvents waits `latency` after the first event
+/// and delivers the burst at once: a debounce done by the kernel, with no polling and no
+/// per-file descriptors.
 ///
 /// `@unchecked Sendable`: the stream is created in `init`, released in `deinit`, and its callback
 /// only reads the immutable `onChange` on the main queue.
@@ -10,7 +13,7 @@ final class DirectoryWatcher: @unchecked Sendable {
     private var stream: FSEventStreamRef?
     private let onChange: @MainActor () -> Void
 
-    init?(url: URL, latency: TimeInterval = 0.2, onChange: @escaping @MainActor () -> Void) {
+    init?(url: URL, latency: TimeInterval = 0.1, onChange: @escaping @MainActor () -> Void) {
         self.onChange = onChange
         var context = FSEventStreamContext(
             version: 0,
@@ -23,7 +26,7 @@ final class DirectoryWatcher: @unchecked Sendable {
             // The stream is scheduled on the main queue.
             MainActor.assumeIsolated { watcher.onChange() }
         }
-        let flags = FSEventStreamCreateFlags(kFSEventStreamCreateFlagFileEvents | kFSEventStreamCreateFlagNoDefer)
+        let flags = FSEventStreamCreateFlags(kFSEventStreamCreateFlagFileEvents)
         guard let stream = FSEventStreamCreate(
             kCFAllocatorDefault, callback, &context, [url.path] as CFArray,
             FSEventStreamEventId(kFSEventStreamEventIdSinceNow), latency, flags

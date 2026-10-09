@@ -19,6 +19,8 @@ final class ReaderEnvironment {
         static let textScale = "AomidoriTextScale"
         static let night = "AomidoriNight"
         static let minimal = "AomidoriMinimal"
+        static let customFontEnabled = "AomidoriCustomFontEnabled"
+        static let customFontFamily = "AomidoriCustomFontFamily"
     }
 
     private let defaults = UserDefaults.standard
@@ -29,7 +31,13 @@ final class ReaderEnvironment {
     private(set) var styles: [StyleFile] = []
     private(set) var nightPaletteCSS = ""
     private var colorSchemeCache: [String: Bool] = [:]
+    let fonts = CustomFonts()
     private var watcher: DirectoryWatcher?
+    private var fontsWatcher: DirectoryWatcher?
+    /// Bumped by every change in the styles folder and by Reload Style: part of the style's URL,
+    /// so the page fetches the file again even when an `@import`ed file is what changed.
+    private var styleRevision = 0
+    private var fontCache: (family: String, css: String)?
     private var appearanceObservation: NSKeyValueObservation?
     private var stateSaveTask: Task<Void, Never>?
 
@@ -44,7 +52,14 @@ final class ReaderEnvironment {
             NSLog("Aomidori: cannot prepare %@: %@", AppPaths.support.path, error.localizedDescription)
         }
         reloadStyles(notify: false)
-        watcher = DirectoryWatcher(url: AppPaths.styles) { [weak self] in self?.reloadStyles(notify: true) }
+        fonts.rescan()
+        // Editors save in place or atomically (write a temporary file, then rename it over the
+        // original): both show up as file events in the folder, coalesced over 0.1 s.
+        watcher = DirectoryWatcher(url: AppPaths.styles, latency: 0.1) { [weak self] in
+            self?.styleRevision += 1
+            self?.reloadStyles(notify: true)
+        }
+        fontsWatcher = DirectoryWatcher(url: AppPaths.fonts, latency: 0.3) { [weak self] in self?.reloadFonts() }
         appearanceObservation = NSApp.observe(\.effectiveAppearance) { [weak self] _, _ in
             MainActor.assumeIsolated {
                 guard let self, self.nightOverride == nil else { return }
@@ -95,6 +110,15 @@ final class ReaderEnvironment {
     func toggleOverride() {
         defaults.set(!overrideEnabled, forKey: Key.overrideEnabled)
         notify()
+    }
+
+    /// Reads the styles and fonts folders again and re-applies the active style everywhere,
+    /// keeping each window's reading position.
+    func reloadStyle() {
+        styleRevision += 1
+        fonts.rescan()
+        fontCache = nil
+        reloadStyles(notify: true)
     }
 
     private func reloadStyles(notify shouldNotify: Bool) {
@@ -152,27 +176,79 @@ final class ReaderEnvironment {
         set { defaults.set(newValue, forKey: Key.minimal) }
     }
 
+    // MARK: Custom font
+
+    var customFontEnabled: Bool { defaults.bool(forKey: Key.customFontEnabled) && customFontFamily != nil }
+
+    /// The chosen family, kept when the custom font is turned off.
+    var customFontFamily: String? { defaults.string(forKey: Key.customFontFamily) }
+
+    /// Turns the custom font on or off. Returns `false` if no family was chosen yet.
+    @discardableResult
+    func toggleCustomFont() -> Bool {
+        guard customFontFamily != nil else { return false }
+        defaults.set(!customFontEnabled, forKey: Key.customFontEnabled)
+        notify()
+        return true
+    }
+
+    /// Chooses the custom font family and turns the custom font on.
+    func setCustomFont(family: String) {
+        defaults.set(family, forKey: Key.customFontFamily)
+        defaults.set(true, forKey: Key.customFontEnabled)
+        notify()
+    }
+
+    func setCustomFontEnabled(_ enabled: Bool) {
+        defaults.set(enabled, forKey: Key.customFontEnabled)
+        notify()
+    }
+
+    /// Copies font files into the fonts folder; returns the families they contain.
+    func installFonts(_ urls: [URL]) throws -> [String] {
+        let families = try fonts.install(urls)
+        fontCache = nil
+        notify()
+        return families
+    }
+
+    private func reloadFonts() {
+        fonts.rescan()
+        fontCache = nil
+        notify()
+    }
+
+    private func fontFaceCSS(for family: String) -> String {
+        if let fontCache, fontCache.family == family { return fontCache.css }
+        let css = CustomFontCSS.fontFaceCSS(fonts.faces(forFamily: family))
+        fontCache = (family, css)
+        return css
+    }
+
     // MARK: Rendering
 
     func configuration() -> ReaderConfiguration {
         let style = activeStyle
+        let fontFamily = customFontEnabled ? customFontFamily : nil
         return ReaderConfiguration(
             overrideEnabled: overrideEnabled,
-            styleHref: style.map(Self.href(for:)),
+            styleHref: style.map { Self.href(for: $0, revision: styleRevision) },
             styleHandlesColorScheme: style.map(handlesColorScheme) ?? false,
             night: isNight,
             nightPaletteCSS: nightPaletteCSS,
-            scale: textScale
+            scale: textScale,
+            fontFamily: fontFamily.map(CustomFontCSS.familyList),
+            fontFaceCSS: fontFamily.map(fontFaceCSS(for:)) ?? ""
         )
     }
 
-    /// Origin-relative URL of a style; the modification time busts the web view's cache.
-    private static func href(for style: StyleFile) -> String {
+    /// Origin-relative URL of a style; the modification time and the revision bust the web view's cache.
+    private static func href(for style: StyleFile, revision: Int) -> String {
         var allowed = CharacterSet.urlPathAllowed
         allowed.remove(charactersIn: "/?#;")
         let name = style.name.addingPercentEncoding(withAllowedCharacters: allowed) ?? style.name
         let version = Int((style.modificationDate?.timeIntervalSince1970 ?? 0) * 1000)
-        return "/\(PageSchemeHandler.userPrefix)Styles/\(name)?v=\(version)"
+        return "/\(PageSchemeHandler.userPrefix)Styles/\(name)?v=\(version)-\(revision)"
     }
 
     // MARK: Per-book state

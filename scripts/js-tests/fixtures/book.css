@@ -1,0 +1,6 @@
+@font-face { font-family: "UserFam"; src: url("book-font.ttf"); }
+@font-face { font-family: "BookFam"; src: url("book-font.ttf"); }
+body { font-size: min(1.6em, 26px); line-height: 1.4; }
+p { font-family: "BookFam", fantasy; font-size: 20px; line-height: 30px; }
+#x p.y { font-family: "BookFam" !important; }
+h1 { font-size: clamp(10px, 2em, 24px) !important; }
