@@ -48,7 +48,7 @@ public enum ShortcutCommand: String, CaseIterable, Sendable {
     // View
     case sidebar, minimal, night, larger, smaller, actualSize, fullScreen
     // Go
-    case previousChapter, nextChapter, back, forward, addBookmark
+    case previousChapter, nextChapter, back, forward, backAlternate, forwardAlternate, addBookmark
     // Style
     case override, previousStyle, nextStyle, styleList, reload, playground
     case customFont, defineFont
@@ -95,8 +95,13 @@ public enum Shortcuts {
 
         .previousChapter: KeyShortcut(KeyShortcut.leftArrow, []),
         .nextChapter: KeyShortcut(KeyShortcut.rightArrow, []),
-        .back: KeyShortcut("["),
-        .forward: KeyShortcut("]"),
+        // The reader's own history of links followed (notes, chapters, anchors), since 0.53;
+        // `⌘[` `⌘]` (0.5x) stay as hidden alternatives. Off while typing, so text fields and
+        // the Playground editor keep `⌘←` `⌘→` for the cursor.
+        .back: KeyShortcut(KeyShortcut.leftArrow),
+        .forward: KeyShortcut(KeyShortcut.rightArrow),
+        .backAlternate: KeyShortcut("["),
+        .forwardAlternate: KeyShortcut("]"),
         .addBookmark: KeyShortcut("d"),
 
         .override: KeyShortcut("."),
@@ -106,8 +111,9 @@ public enum Shortcuts {
         // The chapter from the book and the style from disk, keeping the reading position.
         .reload: KeyShortcut("r"),
         .playground: KeyShortcut("p", [.command, .shift]),
-        // Book or style font ↔ custom font. ⌘S is Save in the Playground window (see `scope`).
-        .customFont: KeyShortcut("s"),
+        // Book or style font ↔ custom font. ⌘S until 0.52; since 0.53 ⌘S is left free in the
+        // reader (for Split) and is Save only in the Playground.
+        .customFont: KeyShortcut("y"),
         // The custom font chooser, with a button for the system Font panel.
         .defineFont: KeyShortcut("t", [.command, .shift]),
 
@@ -120,7 +126,9 @@ public enum Shortcuts {
         case everywhere
         /// The CSS Playground window.
         case playground
-        /// Any window but the Playground (reader windows, the empty window, panels).
+        /// Any window but the Playground (reader windows, the empty window, panels). No command
+        /// uses it since `⌘S` left the custom font (0.53); kept for keys that will mean one
+        /// thing in the reader and another in the Playground.
         case outsidePlayground
 
         func overlaps(_ other: Scope) -> Bool {
@@ -134,7 +142,6 @@ public enum Shortcuts {
     public static func scope(_ command: ShortcutCommand) -> Scope {
         switch command {
         case .playgroundOpenCSS, .playgroundLoadEPUB, .playgroundSample, .playgroundSave, .playgroundSaveAs: .playground
-        case .customFont: .outsidePlayground
         default: .everywhere
         }
     }

@@ -139,6 +139,11 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
     @objc func goToPreviousChapter(_ sender: Any?) { reader.goToPreviousChapter() }
     @objc func goToNextChapter(_ sender: Any?) { reader.goToNextChapter() }
 
+    /// `⌘←` (`⌘[`): back to where the last link was followed, at the exact position.
+    @objc func goBackInHistory(_ sender: Any?) { reader.goBack() }
+    /// `⌘→` (`⌘]`).
+    @objc func goForwardInHistory(_ sender: Any?) { reader.goForward() }
+
     @objc func showStyleList(_ sender: Any?) {
         guard let window else { return }
         picker.show(over: window, heldModifier: nil)
@@ -173,6 +178,16 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
     @objc func showSearch(_ sender: Any?) {
         show(.search)
         search.focusSearchField()
+    }
+
+    /// `⌘G` / `⇧⌘G`: the next or previous search result, in whatever chapter it is; with no
+    /// results yet, the search pane with the cursor in its field.
+    @objc func findNextMatch(_ sender: Any?) { findAdjacentMatch(1) }
+    @objc func findPreviousMatch(_ sender: Any?) { findAdjacentMatch(-1) }
+
+    private func findAdjacentMatch(_ step: Int) {
+        if search.showAdjacentHit(step) { return }
+        showSearch(nil)
     }
 
     private func show(_ pane: SidebarPane) {
@@ -275,6 +290,14 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
            reader.handleEdgeKey(direction) {
             return true
         }
+        // `⌘←` `⌘→` while reading: the history, before the web view can take them for the page.
+        if flags == [.command], isReadingFocused {
+            switch event.keyCode {
+            case KeyCode.leftArrow where reader.canGoBack: reader.goBack(); return true
+            case KeyCode.rightArrow where reader.canGoForward: reader.goForward(); return true
+            default: break
+            }
+        }
         guard flags.isEmpty, isReadingFocused else { return false }
         switch event.keyCode {
         case KeyCode.leftArrow: reader.goToPreviousChapter(); return true
@@ -327,6 +350,10 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
             menuItem.state = !sidebarItem.isCollapsed && pane == sidebar.pane ? .on : .off
             return pane?.isAvailable == true && !isMinimal
         case #selector(showSearch(_:)): return !isMinimal
+        case #selector(findNextMatch(_:)), #selector(findPreviousMatch(_:)): return search.hasResults || !isMinimal
+        // `⌘←` `⌘→` move the cursor in text fields: off while typing.
+        case #selector(goBackInHistory(_:)): return reader.canGoBack && !isEditingText
+        case #selector(goForwardInHistory(_:)): return reader.canGoForward && !isEditingText
         case #selector(addBookmark(_:)): return reader.currentSpineIndex != nil
         default: return true
         }

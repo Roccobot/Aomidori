@@ -417,6 +417,17 @@ final class PlaygroundWindowController: NSWindowController, NSWindowDelegate, NS
         editor.textView.performTextFinderAction(item)
     }
 
+    /// `⌘G` / `⇧⌘G`: the editor's next or previous match (the reader's selectors, so one menu
+    /// item serves both windows).
+    @objc func findNextMatch(_ sender: Any?) { performEditorFind(.nextMatch) }
+    @objc func findPreviousMatch(_ sender: Any?) { performEditorFind(.previousMatch) }
+
+    private func performEditorFind(_ action: NSTextFinder.Action) {
+        let item = NSMenuItem()
+        item.tag = action.rawValue
+        editor.textView.performTextFinderAction(item)
+    }
+
     @objc private func styleDoubleClicked(_ sender: NSTableView) {
         guard styles.indices.contains(sender.clickedRow) else { return }
         switchToStyle(styles[sender.clickedRow])

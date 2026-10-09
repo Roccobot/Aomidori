@@ -75,26 +75,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private func installKeyMonitor() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged, .leftMouseDown, .rightMouseDown, .scrollWheel]) { event in
             let consumed = MainActor.assumeIsolated {
-                AppDelegate.handleWindowScopedShortcut(event)
-                    || (NSApp.keyWindow?.windowController as? ReaderWindowController)?.handle(event) ?? false
+                (NSApp.keyWindow?.windowController as? ReaderWindowController)?.handle(event) ?? false
             }
             return consumed ? nil : event
         }
-    }
-
-    /// `⌘S` toggles the custom font everywhere but in the CSS Playground, where the same key
-    /// is Save (see `Shortcuts.scope`). Both menu items show it; this routes the key so the
-    /// outcome does not depend on how AppKit picks between two items with one shortcut.
-    private static func handleWindowScopedShortcut(_ event: NSEvent) -> Bool {
-        guard event.type == .keyDown, !event.isARepeat, !isPlaygroundInFront,
-              Shortcuts.matches(Shortcuts.shortcut(.customFont), characters: event.charactersIgnoringModifiers ?? "",
-                                modifiers: KeyShortcut.Modifiers(event.modifierFlags)) else { return false }
-        NSApp.sendAction(#selector(toggleCustomFont(_:)), to: nil, from: nil)
-        return true
-    }
-
-    private static var isPlaygroundInFront: Bool {
-        NSApp.keyWindow?.windowController is PlaygroundWindowController
     }
 
     // MARK: Updates
@@ -197,8 +181,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             menuItem.state = environment.overrideEnabled ? .on : .off
         case #selector(toggleCustomFont(_:)):
             menuItem.state = environment.customFontEnabled ? .on : .off
-            // ⌘S is Save in the Playground: the toggle stays off the key there.
-            if Self.isPlaygroundInFront, menuItem.keyEquivalent == Shortcuts.shortcut(.customFont).key { return false }
             menuItem.title = environment.customFontChoice.map {
                 L10n.format("menu.style.customFont.named", FontChoiceConversion.displayName(of: $0))
             } ?? L10n.string("menu.style.customFont")

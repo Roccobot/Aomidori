@@ -7,10 +7,11 @@ import WebKit
 /// A scripted reader session for `scripts/smoke-reader.sh`, enabled by the launch argument
 /// `-AomidoriReaderSmoke <folder>`. With the book's first spine item (usually the cover) it
 /// measures the picture at three window sizes and three rendering modes; then it checks the
-/// per-chapter position memory and the chapter-edge toast; last, the custom font: AppKit fonts
-/// turned into choices, and choices rendered in a chapter. Snapshots and `report.json` go in
-/// the folder. Reading state is kept there too (see `AppPaths`), settings are never changed,
-/// and the window frame is put back at the end.
+/// per-chapter position memory and the chapter-edge toast; then the custom font (AppKit fonts
+/// turned into choices, and choices rendered in a chapter), the book information window, and
+/// last the history of followed links (`⌘←` `⌘→`). Snapshots and `report.json` go in the
+/// folder. Reading state is kept there too (see `AppPaths`), settings are never changed, and
+/// the window frame is put back at the end.
 @MainActor
 final class ReaderSmokeTest {
     nonisolated static let defaultsKey = "AomidoriReaderSmoke"
@@ -138,7 +139,77 @@ final class ReaderSmokeTest {
 
         // 6. Book information: the book's title, and both tabs laid out from the top.
         await checkInspector()
+
+        // 7. The reader's history: links followed from partway down a chapter, then back and
+        // forward to the exact places.
+        await checkHistory()
         finish(window: window, originalFrame: originalFrame)
+    }
+
+    /// A link to another chapter and a link to an anchor in the same chapter, each clicked from
+    /// partway down the page: Back must return there (±2%), Forward to where the link went.
+    private func checkHistory() async {
+        guard let reader, let from = reader.book.nextReadableIndex(after: 0),
+              let to = reader.book.nextReadableIndex(after: from) else { return }
+        let book = reader.book
+        var result: [String: Any] = [:]
+        reader.showSpineItem(at: from, landing: .top)
+        await waitForLoad()
+
+        func click(href: String, addingTargetAtEnd: Bool) async {
+            let script = """
+            if (addTarget) {
+              const target = document.createElement('p'); target.id = 'aomidori-smoke-target'; target.textContent = '·';
+              document.body.appendChild(target);
+            }
+            const a = document.createElement('a');
+            a.href = href.startsWith('#') ? href : new URL('/' + href, location.href).href;
+            a.textContent = '·';
+            document.body.insertBefore(a, document.body.firstChild);
+            a.click();
+            return a.href;
+            """
+            _ = try? await reader.webView.callAsyncJavaScript(script, arguments: ["href": href, "addTarget": addingTargetAtEnd],
+                                                              in: nil, contentWorld: .defaultClient)
+        }
+
+        // A chapter link.
+        reader.smokeScroll(toFraction: 0.4)
+        try? await Task.sleep(for: .milliseconds(600))
+        let before = await reader.smokeCurrentPosition()
+        await click(href: book.spine[to].path, addingTargetAtEnd: false)
+        await waitForLoad()
+        result["chapterLinkLandsIn"] = reader.currentPath ?? "nil"
+        result["canGoBackAfterLink"] = reader.canGoBack
+        reader.goBack()
+        await waitForLoad()
+        try? await Task.sleep(for: .milliseconds(500))
+        let back = await reader.smokeCurrentPosition()
+        result["backTo"] = "\(reader.currentPath ?? "nil") \(back?.fraction ?? -1) (left at \(before?.fraction ?? -1))"
+        if reader.currentPath != book.spine[from].path { failures.append("history: back to the chapter") }
+        if let before, let back, abs(before.fraction - back.fraction) > 0.02 { failures.append("history: back to the exact place") }
+        reader.goForward()
+        await waitForLoad()
+        result["forwardTo"] = reader.currentPath ?? "nil"
+        if reader.currentPath != book.spine[to].path { failures.append("history: forward") }
+
+        // An anchor in the same chapter (a same-document navigation).
+        reader.goBack()
+        await waitForLoad()
+        try? await Task.sleep(for: .milliseconds(500))
+        let anchorFrom = await reader.smokeCurrentPosition()
+        await click(href: "#aomidori-smoke-target", addingTargetAtEnd: true)
+        try? await Task.sleep(for: .milliseconds(700))
+        let atAnchor = await reader.smokeCurrentPosition()
+        result["canGoBackAfterAnchor"] = reader.canGoBack
+        reader.goBack()
+        try? await Task.sleep(for: .milliseconds(900))
+        let anchorBack = await reader.smokeCurrentPosition()
+        result["anchor"] = "from \(anchorFrom?.fraction ?? -1) to \(atAnchor?.fraction ?? -1) back \(anchorBack?.fraction ?? -1)"
+        if let anchorFrom, let anchorBack, abs(anchorFrom.fraction - anchorBack.fraction) > 0.02 {
+            failures.append("history: back from an anchor in the same chapter")
+        }
+        report["history"] = result
     }
 
     /// Choices to render: a light face (bold must come out at 600), a condensed face, a feature,

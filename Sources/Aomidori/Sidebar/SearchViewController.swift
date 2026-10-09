@@ -1,3 +1,4 @@
+import AomidoriCore
 import AppKit
 import EPUBKit
 
@@ -108,6 +109,19 @@ final class SearchViewController: NSViewController, NSTableViewDataSource, NSTab
         guard selector == #selector(NSResponder.moveDown(_:)), !hits.isEmpty else { return false }
         view.window?.makeFirstResponder(tableView)
         tableView.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
+        return true
+    }
+
+    var hasResults: Bool { !hits.isEmpty }
+
+    /// `⌘G` / `⇧⌘G`: selects and shows the result after (or before) the selected one, wrapping
+    /// round. Returns `false` when there are no results.
+    func showAdjacentHit(_ step: Int) -> Bool {
+        let selected = tableView.selectedRow >= 0 ? tableView.selectedRow : nil
+        guard let row = ResultStepping.index(from: selected, count: hits.count, step: step) else { return false }
+        tableView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+        tableView.scrollRowToVisible(row)
+        activate(row)
         return true
     }
 

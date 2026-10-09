@@ -31,6 +31,9 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
     private var pendingFind: (hit: SearchHit, query: String)?
     private var findTask: Task<Void, Never>?
     private var reloadTask: Task<Void, Never>?
+    /// Places links were followed from (`⌘←` `⌘→`), for this window only.
+    private var history = PositionHistory<ReadingPlace>()
+    private var historyTask: Task<Void, Never>?
     private var edges = ChapterEdgeDetector()
     private let toast = ChapterToastView()
     private var toastTimer: Task<Void, Never>?
@@ -146,6 +149,41 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
         guard book.spine.indices.contains(index) else { return }
         pendingLanding = landing
         renderer.load(path: book.spine[index].path)
+    }
+
+    // MARK: History
+
+    var canGoBack: Bool { history.canGoBack }
+    var canGoForward: Bool { history.canGoForward }
+
+    /// Back to where the last link was followed from, at the exact position.
+    func goBack() { travel(back: true) }
+    func goForward() { travel(back: false) }
+
+    private func travel(back: Bool) {
+        guard historyTask == nil else { return }
+        historyTask = Task { [weak self] in
+            guard let self else { return }
+            defer { historyTask = nil }
+            guard let here = await currentPlace() else { return }
+            guard let target = back ? history.back(from: here) : history.forward(from: here) else { NSSound.beep(); return }
+            go(to: target)
+        }
+    }
+
+    /// Where the reader is now, read from the page (the last report may be pending).
+    private func currentPlace() async -> ReadingPlace? {
+        guard let path = currentPath else { return nil }
+        let position = await renderer.currentPosition() ?? ChapterPosition(fraction: currentFraction)
+        return ReadingPlace(path: path, position: position)
+    }
+
+    private func go(to place: ReadingPlace) {
+        if place.path == currentPath, !webView.isLoading {
+            renderer.restore(place.position)
+        } else if let index = book.spineIndex(forPath: place.path) {
+            showSpineItem(at: index, landing: .position(place.position))
+        }
     }
 
     /// Reloads the current document from the book and the styles and fonts from disk, then
@@ -331,10 +369,17 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
         let url = navigationAction.request.url
         if let path = renderer.path(for: url) {
+            let isMainFrame = navigationAction.targetFrame?.isMainFrame != false
+            // A link in the book (a note, a chapter, an anchor in this chapter): where it was
+            // followed from goes in the history.
+            let followsLink = isMainFrame && navigationAction.navigationType == .linkActivated
             // Leaving a chapter: note exactly where, since the last scroll report may be pending.
-            if let current = currentPath, current != path, navigationAction.targetFrame?.isMainFrame != false,
-               let position = await renderer.currentPosition() {
-                record(position, path: current)
+            if let current = currentPath, isMainFrame, followsLink || current != path {
+                let position = await renderer.currentPosition()
+                if followsLink {
+                    history.departed(from: ReadingPlace(path: current, position: position ?? ChapterPosition(fraction: currentFraction)))
+                }
+                if current != path, let position { record(position, path: current) }
             }
             return .allow
         }

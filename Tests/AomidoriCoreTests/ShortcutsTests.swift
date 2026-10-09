@@ -16,16 +16,32 @@ struct ShortcutsTests {
     @Test func finalShortcuts() {
         #expect(Shortcuts.shortcut(.newTab).description == "⌘T")
         #expect(Shortcuts.shortcut(.defineFont).description == "⇧⌘T")
-        #expect(Shortcuts.shortcut(.customFont).description == "⌘S")
+        #expect(Shortcuts.shortcut(.customFont).description == "⌘Y")
         #expect(Shortcuts.shortcut(.reload).description == "⌘R")
         #expect(!Shortcuts.all.contains { $0.shortcut == KeyShortcut("f", [.command, .shift]) }, "⇧⌘F is free")
     }
 
-    @Test func commandSIsSaveOnlyInThePlayground() {
+    @Test func commandSIsSaveInThePlaygroundAndFreeInTheReader() {
         let uses = Shortcuts.all.filter { $0.shortcut == KeyShortcut("s") }
-        #expect(Set(uses.map(\.name)) == ["playgroundSave", "customFont"])
-        #expect(Shortcuts.scope(.playgroundSave) == .playground && Shortcuts.scope(.customFont) == .outsidePlayground)
-        #expect(Shortcuts.conflicts[KeyShortcut("s")] == nil)
+        #expect(uses.map(\.name) == ["playgroundSave"], "⌘S is kept free in the reader for Split")
+        #expect(Shortcuts.scope(.playgroundSave) == .playground)
+        #expect(Shortcuts.scope(.customFont) == .everywhere)
+        #expect(Shortcuts.all.filter { $0.shortcut == KeyShortcut("y") }.map(\.name) == ["customFont"])
+    }
+
+    @Test func historyIsCommandArrowWithBracketsAsAlternatives() {
+        #expect(Shortcuts.shortcut(.back).description == "⌘←")
+        #expect(Shortcuts.shortcut(.forward).description == "⌘→")
+        #expect(Shortcuts.shortcut(.backAlternate).description == "⌘[")
+        #expect(Shortcuts.shortcut(.forwardAlternate).description == "⌘]")
+        // Plain arrows stay with the chapters.
+        #expect(Shortcuts.shortcut(.previousChapter) == KeyShortcut(KeyShortcut.leftArrow, []))
+        #expect(Shortcuts.shortcut(.back) != Shortcuts.shortcut(.previousChapter))
+    }
+
+    @Test func findNextAndPreviousAreCommandG() {
+        #expect(Shortcuts.shortcut(.findNext).description == "⌘G")
+        #expect(Shortcuts.shortcut(.findPrevious).description == "⇧⌘G")
     }
 
     @Test func overlappingScopesConflict() {

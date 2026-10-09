@@ -74,16 +74,14 @@ enum MainMenu {
         menu.addItem(.separator())
         // The reader's search pane, or the Playground editor's find bar.
         menu.addItem(item(L10n.string("menu.edit.find"), #selector(ReaderWindowController.showSearch(_:)), .find))
-        let finder: [(String, NSTextFinder.Action, ShortcutCommand)] = [
-            ("menu.edit.findNext", .nextMatch, .findNext),
-            ("menu.edit.findPrevious", .previousMatch, .findPrevious),
-            ("menu.edit.useSelectionForFind", .setSearchString, .useSelectionForFind),
-        ]
-        for (key, action, command) in finder {
-            let finderItem = item(L10n.string(key), #selector(NSTextView.performTextFinderAction(_:)), command)
-            finderItem.tag = action.rawValue
-            menu.addItem(finderItem)
-        }
+        // Next / previous: the reader's search results (across chapters), or the editor's matches.
+        // Window controller actions, not `performTextFinderAction:`, so the reader gets them
+        // whatever has the focus (the page, the search field, the results).
+        menu.addItem(item(L10n.string("menu.edit.findNext"), #selector(ReaderWindowController.findNextMatch(_:)), .findNext))
+        menu.addItem(item(L10n.string("menu.edit.findPrevious"), #selector(ReaderWindowController.findPreviousMatch(_:)), .findPrevious))
+        let useSelection = item(L10n.string("menu.edit.useSelectionForFind"), #selector(NSTextView.performTextFinderAction(_:)), .useSelectionForFind)
+        useSelection.tag = NSTextFinder.Action.setSearchString.rawValue
+        menu.addItem(useSelection)
         return menu
     }
 
@@ -115,9 +113,19 @@ enum MainMenu {
         menu.addItem(item(L10n.string("menu.go.previousChapter"), #selector(ReaderWindowController.goToPreviousChapter(_:)), .previousChapter))
         menu.addItem(item(L10n.string("menu.go.nextChapter"), #selector(ReaderWindowController.goToNextChapter(_:)), .nextChapter))
         menu.addItem(.separator())
-        // WKWebView implements goBack:/goForward: over its history of chapters and links.
-        menu.addItem(item(L10n.string("menu.go.back"), Selector(("goBack:")), .back))
-        menu.addItem(item(L10n.string("menu.go.forward"), Selector(("goForward:")), .forward))
+        // The reader's own history of followed links, to exact positions (not WKWebView's
+        // goBack:/goForward:, which reload pages and land where the chapter was left).
+        let back = #selector(ReaderWindowController.goBackInHistory(_:))
+        let forward = #selector(ReaderWindowController.goForwardInHistory(_:))
+        menu.addItem(item(L10n.string("menu.go.back"), back, .back))
+        menu.addItem(item(L10n.string("menu.go.forward"), forward, .forward))
+        // ⌘[ ⌘], as up to 0.52: hidden, still working.
+        for (action, command) in [(back, ShortcutCommand.backAlternate), (forward, .forwardAlternate)] {
+            let alternate = item(L10n.string(command == .backAlternate ? "menu.go.back" : "menu.go.forward"), action, command)
+            alternate.isHidden = true
+            alternate.allowsKeyEquivalentWhenHidden = true
+            menu.addItem(alternate)
+        }
         menu.addItem(.separator())
         menu.addItem(item(L10n.string("menu.go.addBookmark"), #selector(ReaderWindowController.addBookmark(_:)), .addBookmark))
         return menu
