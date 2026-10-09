@@ -76,7 +76,7 @@ final class FontPickerWindowController: NSWindowController, NSTableViewDataSourc
         enabledCheckbox.toolTip = L10n.string("font.enabled.help")
         let loadButton = NSButton(title: L10n.string("font.load"), target: nil, action: #selector(AppDelegate.loadFontFile(_:)))
         let panelButton = NSButton(title: L10n.string("font.panel"), target: nil, action: #selector(AppDelegate.showFontPanel(_:)))
-        panelButton.toolTip = L10n.string("font.panel.help")
+        panelButton.toolTip = L10n.format("font.panel.help", Shortcuts.shortcut(.fontPanel).description)
         let buttons = NSStackView(views: [panelButton, NSView(), loadButton])
         buttons.orientation = .horizontal
 

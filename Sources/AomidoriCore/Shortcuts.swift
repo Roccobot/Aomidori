@@ -1,0 +1,136 @@
+import Foundation
+
+/// A key equivalent: the key (as AppKit's `keyEquivalent` string) and its modifiers.
+public struct KeyShortcut: Hashable, Sendable, CustomStringConvertible {
+    public struct Modifiers: OptionSet, Hashable, Sendable {
+        public let rawValue: Int
+        public init(rawValue: Int) { self.rawValue = rawValue }
+        public static let command = Modifiers(rawValue: 1 << 0)
+        public static let shift = Modifiers(rawValue: 1 << 1)
+        public static let option = Modifiers(rawValue: 1 << 2)
+        public static let control = Modifiers(rawValue: 1 << 3)
+    }
+
+    public let key: String
+    public let modifiers: Modifiers
+
+    public init(_ key: String, _ modifiers: Modifiers = .command) {
+        self.key = key
+        self.modifiers = modifiers
+    }
+
+    /// `NSLeftArrowFunctionKey` and `NSRightArrowFunctionKey` as key equivalents.
+    public static let leftArrow = String(UnicodeScalar(0xF702)!)
+    public static let rightArrow = String(UnicodeScalar(0xF703)!)
+
+    /// "⌥⌘T", for messages and tests.
+    public var description: String {
+        let symbols: [(Modifiers, String)] = [(.control, "⌃"), (.option, "⌥"), (.shift, "⇧"), (.command, "⌘")]
+        let keyName = switch key {
+        case Self.leftArrow: "←"
+        case Self.rightArrow: "→"
+        default: key.uppercased()
+        }
+        return symbols.filter { modifiers.contains($0.0) }.map(\.1).joined() + keyName
+    }
+}
+
+/// Every menu command that has a shortcut. The keys live in `Shortcuts.table`, in one place,
+/// so a shortcut is moved with a one-line change and conflicts are caught by a test.
+public enum ShortcutCommand: String, CaseIterable, Sendable {
+    // App
+    case hide, hideOthers, quit
+    // File
+    case open, newTab, inspector, playgroundOpenCSS, playgroundLoadEPUB, playgroundSample, close
+    case playgroundSave, playgroundSaveAs
+    // Edit
+    case undo, redo, cut, copy, paste, selectAll, find, findNext, findPrevious, useSelectionForFind
+    // View
+    case sidebar, minimal, night, larger, smaller, actualSize, fullScreen
+    // Go
+    case previousChapter, nextChapter, back, forward, addBookmark
+    // Style
+    case override, previousStyle, nextStyle, styleList, reloadStyle, playground
+    case customFont, chooseFont, fontPanel
+    // Window
+    case minimize
+}
+
+public enum Shortcuts {
+    /// The shortcuts, designed for the Italian keyboard layout (`⌘'`, `⌘ì`).
+    public static let table: [ShortcutCommand: KeyShortcut] = [
+        .hide: KeyShortcut("h"),
+        .hideOthers: KeyShortcut("h", [.command, .option]),
+        .quit: KeyShortcut("q"),
+
+        .open: KeyShortcut("o"),
+        // ⌘T was the Font panel's in 0.4: New Tab takes it, as in Safari and Finder.
+        .newTab: KeyShortcut("t"),
+        .inspector: KeyShortcut("i"),
+        .playgroundOpenCSS: KeyShortcut("o", [.command, .shift]),
+        .playgroundLoadEPUB: KeyShortcut("o", [.command, .option]),
+        .playgroundSample: KeyShortcut("e", [.command, .shift]),
+        .close: KeyShortcut("w"),
+        .playgroundSave: KeyShortcut("s"),
+        .playgroundSaveAs: KeyShortcut("s", [.command, .shift]),
+
+        .undo: KeyShortcut("z"),
+        .redo: KeyShortcut("z", [.command, .shift]),
+        .cut: KeyShortcut("x"),
+        .copy: KeyShortcut("c"),
+        .paste: KeyShortcut("v"),
+        .selectAll: KeyShortcut("a"),
+        .find: KeyShortcut("f"),
+        .findNext: KeyShortcut("g"),
+        .findPrevious: KeyShortcut("g", [.command, .shift]),
+        .useSelectionForFind: KeyShortcut("e"),
+
+        .sidebar: KeyShortcut("\\"),
+        .minimal: KeyShortcut("m", [.command, .control]),
+        .night: KeyShortcut("n", [.command, .shift]),
+        .larger: KeyShortcut("+"),
+        .smaller: KeyShortcut("-"),
+        .actualSize: KeyShortcut("0"),
+        .fullScreen: KeyShortcut("f", [.command, .control]),
+
+        .previousChapter: KeyShortcut(KeyShortcut.leftArrow, []),
+        .nextChapter: KeyShortcut(KeyShortcut.rightArrow, []),
+        .back: KeyShortcut("["),
+        .forward: KeyShortcut("]"),
+        .addBookmark: KeyShortcut("d"),
+
+        .override: KeyShortcut("."),
+        .previousStyle: KeyShortcut("'"),
+        .nextStyle: KeyShortcut("\u{00EC}"),
+        .styleList: KeyShortcut("1"),
+        .reloadStyle: KeyShortcut("r"),
+        .playground: KeyShortcut("p", [.command, .shift]),
+        .customFont: KeyShortcut("f", [.command, .shift]),
+        .chooseFont: KeyShortcut("f", [.command, .option]),
+        .fontPanel: KeyShortcut("t", [.command, .option]),
+
+        .minimize: KeyShortcut("m"),
+    ]
+
+    /// The shortcut of a command.
+    public static func shortcut(_ command: ShortcutCommand) -> KeyShortcut {
+        table[command]!
+    }
+
+    /// `⌥⌘1`…: the sidebar panes, by digit.
+    public static func sidebarPane(_ digit: Int) -> KeyShortcut {
+        KeyShortcut("\(digit)", [.command, .option])
+    }
+
+    /// Every shortcut in the menus, the sidebar panes' included, with what it does; a
+    /// shortcut listed twice is a conflict.
+    public static var all: [(name: String, shortcut: KeyShortcut)] {
+        ShortcutCommand.allCases.map { ($0.rawValue, shortcut($0)) }
+            + SidebarPane.allCases.map { ("sidebar.\($0)", sidebarPane($0.shortcutDigit)) }
+    }
+
+    /// Shortcuts used by more than one command.
+    public static var conflicts: [KeyShortcut: [String]] {
+        Dictionary(grouping: all, by: \.shortcut).mapValues { $0.map(\.name) }.filter { $0.value.count > 1 }
+    }
+}
