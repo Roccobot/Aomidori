@@ -9,9 +9,6 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
 
     private enum ToolbarID {
         static let chapters = NSToolbarItem.Identifier("Aomidori.chapters")
-        static let night = NSToolbarItem.Identifier("Aomidori.night")
-        static let style = NSToolbarItem.Identifier("Aomidori.style")
-        static let override = NSToolbarItem.Identifier("Aomidori.override")
         static let info = NSToolbarItem.Identifier("Aomidori.info")
     }
 
@@ -24,10 +21,8 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
     private let sidebarItem: NSSplitViewItem
     private let picker = StylePicker()
     private let environment = ReaderEnvironment.shared
-    private let styleMenuUpdater = StyleMenuUpdater()
+    private let globalItems = GlobalToolbarItems()
     private var chaptersItem: NSToolbarItemGroup?
-    private var nightItem: NSToolbarItem?
-    private var overrideItem: NSToolbarItem?
     private var inspector: InspectorWindowController?
     private var environmentObserver: (any NSObjectProtocol)?
     private var isMinimal = false
@@ -68,7 +63,7 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         window.delegate = self
         window.isRestorable = false
         // A smoke session resizes the window: its frame is not remembered.
-        if !ReaderSmokeTest.isActive { window.setFrameAutosaveName("AomidoriReaderWindow") }
+        if !ReaderSmokeTest.isActive { window.setFrameAutosaveName(Self.frameAutosaveName) }
 
         let toolbar = NSToolbar(identifier: "AomidoriReaderToolbar")
         toolbar.delegate = self
@@ -101,6 +96,8 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+    static let frameAutosaveName = "AomidoriReaderWindow"
 
     override func windowTitle(forDocumentDisplayName displayName: String) -> String {
         reader.book.title ?? displayName
@@ -319,8 +316,8 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
     // MARK: Toolbar
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.toggleSidebar, .sidebarTrackingSeparator, ToolbarID.chapters, ToolbarID.info, .flexibleSpace,
-         ToolbarID.night, ToolbarID.style, ToolbarID.override]
+        [.toggleSidebar, .sidebarTrackingSeparator, ToolbarID.chapters, ToolbarID.info, .flexibleSpace]
+            + GlobalToolbarItems.identifiers
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -348,31 +345,6 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
             chaptersItem = group
             updateToolbar()
             return group
-        case ToolbarID.night:
-            let item = NSToolbarItem(itemIdentifier: identifier)
-            item.label = L10n.string("toolbar.night")
-            item.toolTip = L10n.string("toolbar.night.help")
-            item.action = #selector(AppDelegate.toggleNight(_:))
-            item.isBordered = true
-            nightItem = item
-            updateToolbar()
-            return item
-        case ToolbarID.style:
-            let item = NSMenuToolbarItem(itemIdentifier: identifier)
-            item.label = L10n.string("menu.style")
-            item.toolTip = L10n.string("menu.style")
-            item.image = Self.symbol("textformat", L10n.string("menu.style"))
-            let menu = NSMenu(title: L10n.string("menu.style"))
-            menu.delegate = styleMenuUpdater
-            menu.addItem(withTitle: L10n.string("menu.style.list"), action: #selector(showStyleList(_:)), keyEquivalent: "")
-            menu.addItem(withTitle: L10n.string("menu.style.reload"), action: #selector(AppDelegate.reloadStyle(_:)), keyEquivalent: "")
-            menu.addItem(withTitle: L10n.string("menu.style.showFolder"), action: #selector(AppDelegate.showStylesFolder(_:)), keyEquivalent: "")
-            menu.addItem(.separator())
-            MainMenu.fontItems().forEach { $0.keyEquivalent = ""; menu.addItem($0) }
-            menu.addItem(.separator())
-            StyleMenu.refresh(menu)
-            item.menu = menu
-            return item
         case ToolbarID.info:
             let item = NSToolbarItem(itemIdentifier: identifier)
             item.label = L10n.string("menu.file.inspector")
@@ -382,32 +354,19 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
             item.target = self
             item.isBordered = true
             return item
-        case ToolbarID.override:
-            let item = NSToolbarItem(itemIdentifier: identifier)
-            item.label = L10n.string("toolbar.override")
-            item.toolTip = L10n.string("toolbar.override.help")
-            item.action = #selector(AppDelegate.toggleStyleOverride(_:))
-            item.isBordered = true
-            overrideItem = item
-            updateToolbar()
-            return item
         default:
-            return nil
+            return globalItems.item(for: identifier)
         }
     }
 
     private func updateToolbar() {
         chaptersItem?.subitems.first?.isEnabled = reader.canGoToPreviousChapter
         chaptersItem?.subitems.last?.isEnabled = reader.canGoToNextChapter
-        let night = environment.isNight
-        nightItem?.image = Self.symbol(night ? "moon.fill" : "sun.max", L10n.string(night ? "a11y.night" : "a11y.day"))
-        let overriding = environment.overrideEnabled
-        overrideItem?.image = Self.symbol(overriding ? "paintbrush.pointed.fill" : "paintbrush.pointed",
-                                          L10n.string(overriding ? "a11y.styleOverridden" : "a11y.bookStyle"))
+        globalItems.update()
     }
 
     private static func symbol(_ name: String, _ description: String) -> NSImage {
-        NSImage(systemSymbolName: name, accessibilityDescription: description) ?? NSImage()
+        GlobalToolbarItems.symbol(name, description)
     }
 
     // MARK: Window delegate
