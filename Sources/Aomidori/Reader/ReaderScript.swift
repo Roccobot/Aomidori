@@ -397,15 +397,19 @@ enum ReaderScript {
         }
         return factor;
       }
-      const visualTop = (el) => {
+      const visualRect = (el) => {
         const factor = zoomFactor(el);
-        const top = el.getBoundingClientRect().top;
-        return factor === 1 ? top : (top + scrollY) * factor - scrollY;
+        const rect = el.getBoundingClientRect();
+        const top = factor === 1 ? rect.top : (rect.top + scrollY) * factor - scrollY;
+        return { top, height: rect.height * factor };
       };
+      const visualTop = (el) => visualRect(el).top;
+      // The line the reader is looking at, as a distance from the top of the window.
+      const readingLine = () => Math.round(innerHeight * 0.3);
 
       // Keeps the line the reader is looking at in place while styles or size change.
       function captureAnchor() {
-        const el = doc.elementFromPoint(innerWidth / 2, Math.round(innerHeight * 0.3));
+        const el = doc.elementFromPoint(innerWidth / 2, readingLine());
         if (!el || el === root || el === doc.body) return { fraction: fraction() };
         return { el, top: visualTop(el), fraction: fraction() };
       }
@@ -415,13 +419,76 @@ enum ReaderScript {
         else scrollToFraction(anchor.fraction);
       }
 
+      // MARK: Saved positions
+
+      // Child indices from the body down to `el`: stable across styles, text sizes and sessions.
+      function elementPath(el) {
+        const parts = [];
+        let node = el;
+        for (; node && node !== doc.body; node = node.parentElement) {
+          const parent = node.parentElement;
+          if (!parent) return null;
+          parts.unshift(Array.prototype.indexOf.call(parent.children, node));
+        }
+        return node === doc.body && parts.length ? parts.join('.') : null;
+      }
+
+      function elementAt(path) {
+        let node = doc.body;
+        for (const part of path.split('.')) {
+          node = node && node.children[Number(part)];
+        }
+        return node || null;
+      }
+
+      // `{ fraction, anchor }`, anchor being `"<element path>@<how far down it the reading line is>"`.
+      function position() {
+        const value = fraction();
+        if (value <= 0 || value >= 1 || root.classList.contains(IMAGE_PAGE)) return { fraction: value, anchor: null };
+        const line = readingLine();
+        for (const y of [line, line + 16, line - 16, line + 40]) {
+          let el = doc.elementFromPoint(innerWidth / 2, y);
+          if (el && el.closest) el = el.closest('svg') ? el.closest('svg') : el;
+          if (!el || el === root || el === doc.body || el.hasAttribute(OWN)) continue;
+          const path = elementPath(el);
+          if (!path) continue;
+          const rect = visualRect(el);
+          const offset = rect.height > 0 ? (line - rect.top) / rect.height : 0;
+          return { fraction: value, anchor: `${path}@${Math.round(offset * 10000) / 10000}` };
+        }
+        return { fraction: value, anchor: null };
+      }
+
+      function scrollToPosition(saved) {
+        const value = Number(saved && saved.fraction) || 0;
+        const match = saved && typeof saved.anchor === 'string' && /^([\d.]+)@(-?[\d.]+)$/.exec(saved.anchor);
+        const el = match && value > 0 && value < 1 ? elementAt(match[1]) : null;
+        if (el) {
+          const rect = visualRect(el);
+          scrollBy(0, rect.top + Number(match[2]) * rect.height - readingLine());
+        } else {
+          scrollToFraction(value);
+        }
+      }
+
+      // Goes back to a saved position, and again once web fonts have loaded and changed the
+      // layout, unless the reader has scrolled in the meantime.
+      function restorePosition(saved) {
+        scrollToPosition(saved);
+        const landed = scrollY;
+        if (doc.fonts && doc.fonts.status !== 'loaded') {
+          doc.fonts.ready.then(() => { if (scrollY === landed) scrollToPosition(saved); });
+        }
+      }
+
       let reportTimer = 0;
       const post = (message) => {
         try { webkit.messageHandlers.aomidori.postMessage(message); } catch (_) { /* not attached */ }
       };
+      const reportPosition = () => post(Object.assign({ type: 'position', href: location.href }, position()));
       addEventListener('scroll', () => {
         clearTimeout(reportTimer);
-        reportTimer = setTimeout(() => post({ type: 'position', fraction: fraction() }), 250);
+        reportTimer = setTimeout(reportPosition, 250);
       }, { passive: true });
 
       // MARK: Lifecycle
@@ -458,6 +525,8 @@ enum ReaderScript {
         },
         fraction,
         scrollToFraction,
+        position,
+        restorePosition,
       });
 
       if (!mount()) {

@@ -10,6 +10,8 @@ protocol ReaderViewControllerDelegate: AnyObject {
 
 /// Shows one spine item at a time as a real web document that scrolls vertically.
 /// `←`/`→` move through the reading order; links between chapters are followed in place.
+/// Every chapter remembers where it was left: coming back to it (arrows, table of contents,
+/// links without a fragment) lands there.
 @MainActor
 final class ReaderViewController: NSViewController, WKNavigationDelegate {
     weak var delegate: ReaderViewControllerDelegate?
@@ -19,7 +21,11 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
     private let renderer: PageRenderer
     private let environment = ReaderEnvironment.shared
     private(set) var currentSpineIndex: Int?
-    private var pendingFraction: Double?
+    /// Where the document being loaded should land; `nil` for navigations the page started
+    /// itself (links), which land where the chapter was left unless they carry a fragment.
+    private var pendingLanding: Landing?
+    /// Applied once the document has loaded.
+    private var pendingRestore: ChapterPosition?
     /// A search hit to reveal once its chapter has loaded.
     private var pendingFind: (hit: SearchHit, query: String)?
     private var findTask: Task<Void, Never>?
@@ -32,7 +38,7 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
         self.bookKey = bookKey
         renderer = PageRenderer(provider: publication, configuration: ReaderEnvironment.shared.configuration())
         super.init(nibName: nil, bundle: nil)
-        renderer.onScrollFraction = { [weak self] fraction in self?.recordPosition(fraction: fraction) }
+        renderer.onPosition = { [weak self] path, position in self?.record(position, path: path) }
     }
 
     @available(*, unavailable)
@@ -61,13 +67,21 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
         }
     }
 
+    /// Where to land in a chapter.
+    enum Landing {
+        /// Where the reader left it, or the top.
+        case remembered
+        case top
+        case position(ChapterPosition)
+    }
+
     /// Opens the book where the reader left it, or at the first linear item.
     func start() {
         if let saved = environment.positions.position(forBook: bookKey),
            let index = book.spineIndex(forPath: saved.spinePath) ?? (book.spine.indices.contains(saved.spineIndex) ? saved.spineIndex : nil) {
-            showSpineItem(at: index, fraction: saved.fraction)
+            showSpineItem(at: index, landing: .position(saved.chapterPosition))
         } else if let first = book.firstReadableIndex {
-            showSpineItem(at: first)
+            showSpineItem(at: first, landing: .top)
         }
     }
 
@@ -80,28 +94,37 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
 
     // MARK: Navigation
 
-    var canGoToNextChapter: Bool { currentSpineIndex.flatMap(book.nextReadableIndex(after:)) != nil }
-    var canGoToPreviousChapter: Bool { currentSpineIndex.flatMap(book.previousReadableIndex(before:)) != nil }
+    var nextChapterIndex: Int? { currentSpineIndex.flatMap(book.nextReadableIndex(after:)) }
+    var previousChapterIndex: Int? { currentSpineIndex.flatMap(book.previousReadableIndex(before:)) }
+    var canGoToNextChapter: Bool { nextChapterIndex != nil }
+    var canGoToPreviousChapter: Bool { previousChapterIndex != nil }
 
+    /// Lands where the reader left the next chapter (the top, the first time).
     func goToNextChapter() {
-        guard let next = currentSpineIndex.flatMap(book.nextReadableIndex(after:)) else { NSSound.beep(); return }
-        showSpineItem(at: next)
+        guard let next = nextChapterIndex else { NSSound.beep(); return }
+        showSpineItem(at: next, landing: .remembered)
     }
 
-    /// Lands at the top of the previous chapter.
+    /// Lands where the reader left the previous chapter.
     func goToPreviousChapter() {
-        guard let previous = currentSpineIndex.flatMap(book.previousReadableIndex(before:)) else { NSSound.beep(); return }
-        showSpineItem(at: previous)
+        guard let previous = previousChapterIndex else { NSSound.beep(); return }
+        showSpineItem(at: previous, landing: .remembered)
     }
 
+    /// Entries with a fragment go to it; others land where the reader left that chapter.
     func go(to entry: TOCEntry) {
         guard let path = entry.path else { return }
-        renderer.load(path: path, fragment: entry.fragment)
+        if entry.fragment == nil, let index = book.spineIndex(forPath: path) {
+            showSpineItem(at: index, landing: .remembered)
+        } else {
+            pendingLanding = .top
+            renderer.load(path: path, fragment: entry.fragment)
+        }
     }
 
-    func showSpineItem(at index: Int, fraction: Double? = nil) {
+    func showSpineItem(at index: Int, landing: Landing) {
         guard book.spine.indices.contains(index) else { return }
-        pendingFraction = fraction.flatMap { $0 > 0 ? $0 : nil }
+        pendingLanding = landing
         renderer.load(path: book.spine[index].path)
     }
 
@@ -112,7 +135,7 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
         if index == currentSpineIndex {
             renderer.scroll(toFraction: bookmark.fraction)
         } else {
-            showSpineItem(at: index, fraction: bookmark.fraction)
+            showSpineItem(at: index, landing: .position(ChapterPosition(fraction: bookmark.fraction)))
         }
     }
 
@@ -125,7 +148,7 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
             reveal(hit, query: query)
         } else {
             pendingFind = (hit, query)
-            showSpineItem(at: hit.spineIndex)
+            showSpineItem(at: hit.spineIndex, landing: .top)
         }
     }
 
@@ -162,12 +185,18 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
 
     var currentPath: String? { renderer.path(for: webView.url) }
 
-    private func recordPosition(fraction: Double) {
-        guard let index = currentSpineIndex else { return }
-        environment.positions.setPosition(
-            ReadingPosition(spinePath: book.spine[index].path, spineIndex: index, fraction: fraction),
-            forBook: bookKey
-        )
+    /// A position reported by the page. Reports from a chapter already left only update that
+    /// chapter's entry in the map.
+    private func record(_ position: ChapterPosition, path: String) {
+        guard let index = book.spineIndex(forPath: path) else { return }
+        if index == currentSpineIndex, path == currentPath {
+            environment.positions.setPosition(
+                ReadingPosition(spinePath: path, spineIndex: index, fraction: position.fraction, anchor: position.anchor),
+                forBook: bookKey
+            )
+        } else {
+            environment.positions.setChapterPosition(position, spinePath: path, forBook: bookKey)
+        }
         environment.saveStateSoon()
     }
 
@@ -175,9 +204,15 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
         let url = navigationAction.request.url
-        if renderer.path(for: url) != nil || url?.scheme == "about" {
+        if let path = renderer.path(for: url) {
+            // Leaving a chapter: note exactly where, since the last scroll report may be pending.
+            if let current = currentPath, current != path, navigationAction.targetFrame?.isMainFrame != false,
+               let position = await renderer.currentPosition() {
+                record(position, path: current)
+            }
             return .allow
         }
+        if url?.scheme == "about" { return .allow }
         // Links that leave the book open in the default browser or mail client.
         if navigationAction.navigationType == .linkActivated, let url,
            ["http", "https", "mailto"].contains(url.scheme?.lowercased() ?? "") {
@@ -187,18 +222,29 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
     }
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
-        let index = currentPath.flatMap(book.spineIndex(forPath:))
+        let path = currentPath
+        let index = path.flatMap(book.spineIndex(forPath:))
         currentSpineIndex = index
-        if index != nil, pendingFraction == nil, webView.url?.fragment == nil {
-            recordPosition(fraction: 0)
+        let landing = pendingLanding ?? (webView.url?.fragment == nil ? .remembered : nil)
+        pendingLanding = nil
+        pendingRestore = nil
+        if let index, let path, webView.url?.fragment == nil, let landing {
+            let target: ChapterPosition = switch landing {
+            case .top: .top
+            case .position(let position): position
+            case .remembered: environment.positions.chapterPosition(forBook: bookKey, spinePath: path) ?? .top
+            }
+            if target.fraction > 0 { pendingRestore = target }
+            // The page reports positions only when it scrolls: the top is recorded now.
+            record(target, path: book.spine[index].path)
         }
         delegate?.readerDidShowChapter(self)
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        if let fraction = pendingFraction {
-            pendingFraction = nil
-            renderer.scroll(toFraction: fraction)
+        if let position = pendingRestore {
+            pendingRestore = nil
+            renderer.restore(position)
         }
         if let find = pendingFind {
             pendingFind = nil
@@ -277,7 +323,7 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         // Recover from a crashed web process where the reader was.
         if let index = currentSpineIndex {
-            showSpineItem(at: index, fraction: environment.positions.position(forBook: bookKey)?.fraction)
+            showSpineItem(at: index, landing: .remembered)
         }
     }
 }

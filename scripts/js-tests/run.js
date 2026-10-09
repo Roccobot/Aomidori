@@ -122,6 +122,34 @@ const assert = (cond, msg) => { console.log((cond ? 'PASS ' : 'FAIL ') + msg); i
   assert(after.links === 1, 'one user link after the swap');
   assert(Math.abs(after.top - before) < 10, 'reading line kept across reload');
 
+  // 6. Saved positions: the element anchor brings back the reading line after a reload with
+  // another text size and style; the fraction is the fallback.
+  await apply({ overrideEnabled: false, scale: 1 });
+  await page.evaluate(() => { const el = document.getElementById('p30'); scrollTo(0, el.getBoundingClientRect().top + scrollY - innerHeight * 0.3 + 7); });
+  await page.waitForTimeout(100);
+  const saved = await page.evaluate(() => Aomidori.position());
+  console.log('saved position', JSON.stringify(saved));
+  assert(/^\d+(\.\d+)*@-?[\d.]+$/.test(saved.anchor || '') && saved.fraction > 0 && saved.fraction < 1, 'position has a fraction and an element anchor');
+  const lineElement = () => page.evaluate(() => {
+    const el = document.elementFromPoint(innerWidth / 2, Math.round(innerHeight * 0.3));
+    return el && (el.id || (el.parentElement && el.parentElement.id));
+  });
+  const before6 = await lineElement();
+  for (const mode of [{ scale: 1.8 }, { scale: 0.7, overrideEnabled: true }]) {
+    await page.goto('http://book/c.html');
+    await page.waitForTimeout(300);
+    await apply(mode);
+    await page.evaluate(p => Aomidori.restorePosition(p), saved);
+    await page.waitForTimeout(100);
+    assert(await lineElement() === before6, `restored to the same paragraph (${before6}) with ${JSON.stringify(mode)}`);
+  }
+  await page.evaluate(p => Aomidori.restorePosition(p), { fraction: 0.5, anchor: '999.3@0.5' });
+  const fallback = await page.evaluate(() => Aomidori.fraction());
+  assert(Math.abs(fallback - 0.5) < 0.01, `an anchor that no longer resolves falls back to the fraction (${fallback.toFixed(3)})`);
+  await page.evaluate(p => Aomidori.restorePosition(p), { fraction: 0, anchor: null });
+  assert(await page.evaluate(() => scrollY) === 0, 'fraction 0 is the top');
+  await apply({ scale: 1, overrideEnabled: false });
+
   // 5. Image pages (covers): centred in the viewport, whole, not scrollable, in every mode.
   userCSS = 'body { max-width: 34em; margin: 0 auto; padding: 0 1.2em; } img { width: 50%; margin-top: 4em; } p { margin: 2em 0; }';
   const coverPages = ['cover-img.html', 'cover-svg.html', 'cover-marked.html', 'cover-small.html'];

@@ -89,7 +89,9 @@ struct ReaderSettingsTests {
         try store.save()
 
         let reloaded = ReadingPositionStore(fileURL: url)
-        #expect(reloaded.position(forBook: "book") == ReadingPosition(spinePath: "OEBPS/c2.xhtml", spineIndex: 2, fraction: 1, updated: date))
+        #expect(reloaded.position(forBook: "book") == ReadingPosition(
+            spinePath: "OEBPS/c2.xhtml", spineIndex: 2, fraction: 1, updated: date,
+            chapters: ["OEBPS/c2.xhtml": ChapterPosition(fraction: 1)]))
         #expect(reloaded.position(forBook: "other") == nil)
     }
 

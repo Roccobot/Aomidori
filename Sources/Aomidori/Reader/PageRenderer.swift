@@ -15,8 +15,9 @@ final class PageRenderer: NSObject {
     private let messageProxy = ScriptMessageProxy()
     private(set) var configuration: ReaderConfiguration
 
-    /// Called with the vertical scroll fraction after the reader stops scrolling.
-    var onScrollFraction: ((Double) -> Void)?
+    /// Called with the document's path and position after the reader stops scrolling. The path
+    /// says which document it was: a report may arrive after the next one has started loading.
+    var onPosition: ((_ path: String, _ position: ChapterPosition) -> Void)?
 
     init(provider: any PageResourceProvider, configuration: ReaderConfiguration) {
         let host = UUID().uuidString.lowercased()
@@ -80,6 +81,24 @@ final class PageRenderer: NSObject {
         webView.evaluateJavaScript("window.Aomidori && Aomidori.scrollToFraction(\(fraction))", in: nil, in: .defaultClient)
     }
 
+    /// Scrolls the current document to a saved position (element anchor first, then fraction).
+    func restore(_ position: ChapterPosition) {
+        guard let data = try? JSONEncoder().encode(position), let json = String(data: data, encoding: .utf8) else { return }
+        webView.evaluateJavaScript("window.Aomidori && Aomidori.restorePosition(\(json))", in: nil, in: .defaultClient)
+    }
+
+    /// The current document's position, read from the page now.
+    func currentPosition() async -> ChapterPosition? {
+        let value = try? await webView.callAsyncJavaScript(
+            "return window.Aomidori ? Aomidori.position() : null", arguments: [:], in: nil, contentWorld: .defaultClient)
+        return Self.chapterPosition(from: value as? [String: Any])
+    }
+
+    private static func chapterPosition(from message: [String: Any]?) -> ChapterPosition? {
+        guard let message, let fraction = (message["fraction"] as? NSNumber)?.doubleValue else { return nil }
+        return ChapterPosition(fraction: fraction, anchor: message["anchor"] as? String)
+    }
+
     private func installScript() {
         userContent.removeAllUserScripts()
         userContent.addUserScript(WKUserScript(
@@ -92,8 +111,13 @@ final class PageRenderer: NSObject {
 
     fileprivate func didReceive(_ body: Any) {
         guard let message = body as? [String: Any], let type = message["type"] as? String else { return }
-        if type == "position", let fraction = message["fraction"] as? Double {
-            onScrollFraction?(fraction)
+        switch type {
+        case "position":
+            guard let href = message["href"] as? String, let path = path(for: URL(string: href)),
+                  let position = Self.chapterPosition(from: message) else { return }
+            onPosition?(path, position)
+        default:
+            break
         }
     }
 }
