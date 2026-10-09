@@ -6,7 +6,7 @@ move between chapters, and the reader's own CSS can replace the book's at any mo
 
 Download: <https://roccobot.github.io/Aomidori/> (the latest release, from `publish/`).
 
-## Features (v0.51)
+## Features (v0.52)
 
 - Automatic updates with Sparkle 2 (from 0.52): *Check for Updates…* in the app menu, and a
   daily check once allowed (Sparkle asks on the second launch). See [Updates](#updates).
