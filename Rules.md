@@ -169,8 +169,9 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
   pubblicare l'appcast. La release si verifica col suo tag e lo ZIP allegato; il sito la trova da
   sé (§ '🌐 Il sito').
 - **L'app è firmata ad hoc**, non con Developer ID: alla prima apertura macOS la blocca, e si apre
-  col clic destro e Apri (o da Impostazioni di Sistema, Privacy e sicurezza). Chi scrive note o
-  pagine per altri lo dice. Gli aggiornamenti installati da Sparkle non chiedono di nuovo.
+  da Impostazioni di Sistema, Privacy e sicurezza, *Apri comunque* (oppure togliendo la quarantena
+  con `xattr -dr com.apple.quarantine` sull'app). Il clic destro e Apri non basta più sui macOS
+  recenti. Chi scrive note o pagine per altri lo dice. Gli aggiornamenti installati da Sparkle non chiedono di nuovo.
 
 ## 🔄 Aggiornamenti automatici
 

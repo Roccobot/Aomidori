@@ -247,7 +247,7 @@
       scarica: 'Scarica Aomidori',
       sistema: 'macOS 27 o successivo, Apple Silicon',
       sorgente: 'codice sorgente',
-      installa: 'L\'app non arriva dall\'App Store e non è autenticata da Apple, quindi la prima volta macOS non la apre: estrai lo ZIP, sposta Aomidori in Applicazioni, fai clic destro sull\'app e scegli Apri. In alternativa: Impostazioni di Sistema, Privacy e sicurezza, Apri comunque.',
+      installa: 'L\'app non arriva dall\'App Store e non è autenticata da Apple, quindi la prima volta macOS può bloccarla: estrai lo ZIP, sposta Aomidori in Applicazioni e aprila; se macOS la blocca, vai in Impostazioni di Sistema, Privacy e sicurezza, e scegli Apri comunque. In alternativa, nel Terminale: xattr -dr com.apple.quarantine /Applications/Aomidori.app',
       fatti: [
         ['Un capitolo, una pagina', 'Ogni capitolo scorre in verticale come una pagina web, e le frecce cambiano capitolo. Niente impaginazione, niente modalità.'],
         ['Il tuo CSS comanda', 'Gli stili si ricaricano appena li salvi, e con un tasto scavalcano tutta la tipografia del libro.'],
@@ -267,7 +267,7 @@
       scarica: 'Download Aomidori',
       sistema: 'macOS 27 or later, Apple Silicon',
       sorgente: 'source',
-      installa: 'The app does not come from the App Store and is not notarized by Apple, so macOS will not open it the first time: unzip it, move Aomidori to Applications, right-click the app and choose Open. Or: System Settings, Privacy & Security, Open Anyway.',
+      installa: 'The app does not come from the App Store and is not notarized by Apple, so macOS may block it the first time: unzip it, move Aomidori to Applications and open it; if macOS blocks it, go to System Settings, Privacy & Security, and choose Open Anyway. Or, in Terminal: xattr -dr com.apple.quarantine /Applications/Aomidori.app',
       fatti: [
         ['One chapter, one page', 'Each chapter scrolls vertically like a web page, and the arrow keys change chapter. No pagination, no modes.'],
         ['Your CSS rules', 'Styles reload as soon as you save them, and one key lets them override the book\'s whole typography.'],

@@ -218,8 +218,10 @@ positions, scroll edges, covers centred at three viewport sizes in every mode):
 cd scripts/js-tests && npm install && npx playwright-core install webkit && node run.js
 ```
 
-The app is ad-hoc signed, not notarized: on another Mac, the first launch needs right-click
-› Open (or removing the quarantine attribute).
+The app is ad-hoc signed, not notarized: if macOS blocks the first launch, open it from System
+Settings › Privacy & Security › Open Anyway, or remove the quarantine attribute with
+`xattr -dr com.apple.quarantine /path/to/Aomidori.app`. Right-click › Open no longer bypasses
+Gatekeeper on recent macOS.
 
 **Continuous integration (not set up yet).** A GitHub Actions workflow on a `macos` runner
 could run `swift test` and `scripts/bundle.sh` on each push and attach the zip to tagged
@@ -249,7 +251,7 @@ package fetched by SwiftPM (macOS only; Linux builds of the libraries do not see
   lives in the maintainer's Keychain and is never committed.
 - Sparkle's installer clears the quarantine attribute of the new bundle, so an update does not
   bring the Gatekeeper prompt back. Only the first install of an ad-hoc signed build needs
-  right-click › Open.
+  System Settings › Privacy & Security › Open Anyway (or `xattr`).
 - 0.52 is the first version with Sparkle: it has to be installed by hand once, and updates
   itself from then on.
 
