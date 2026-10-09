@@ -4,7 +4,7 @@ A minimal, fast EPUB reader for macOS (Apple Silicon, macOS 27 Golden Gate and l
 in the spirit of Murasaki: each chapter is one web page that scrolls vertically, `←`/`→`
 move between chapters, and the reader's own CSS can replace the book's at any moment.
 
-## Features (v0.4.1)
+## Features (v0.5.0)
 
 - One window per book (`NSDocument`), as native tabs: books open as tabs of the front reader
   window (tabbing mode *preferred*), and `⌘T` (or the tab bar's `+`) adds an empty tab.
@@ -195,7 +195,7 @@ scripts/smoke-playground.sh build/pg [book.epub]   # scripted Playground session
 scripts/smoke-reader.sh build/rd book.epub         # cover at 3 window sizes, chapter memory, edge toast
 scripts/smoke-launch.sh build/ln book.epub         # launch with no book: empty window, open, new tab, Dock reopen
 scripts/check-icon.sh build/icon                   # icon in its six appearances (ictool), Assets.car contents
-ditto -c -k --keepParent build/Aomidori.app Aomidori-0.4.1.zip   # release archive
+ditto -c -k --keepParent build/Aomidori.app Aomidori-0.5.0.zip   # release archive
 ```
 
 `EPUBKit` and `AomidoriCore` also build and test on Linux (the app target is macOS-only);
