@@ -20,7 +20,10 @@ final class ReaderEnvironment {
         static let night = "AomidoriNight"
         static let minimal = "AomidoriMinimal"
         static let customFontEnabled = "AomidoriCustomFontEnabled"
+        /// The family alone; still written so earlier versions keep the family on a downgrade.
         static let customFontFamily = "AomidoriCustomFontFamily"
+        /// The whole choice (`CustomFontChoice`) as JSON, since 0.4.0.
+        static let customFont = "AomidoriCustomFont"
     }
 
     private let defaults = UserDefaults.standard
@@ -178,10 +181,15 @@ final class ReaderEnvironment {
 
     // MARK: Custom font
 
-    var customFontEnabled: Bool { defaults.bool(forKey: Key.customFontEnabled) && customFontFamily != nil }
+    var customFontEnabled: Bool { defaults.bool(forKey: Key.customFontEnabled) && customFontChoice != nil }
 
-    /// The chosen family, kept when the custom font is turned off.
-    var customFontFamily: String? { defaults.string(forKey: Key.customFontFamily) }
+    /// The chosen font, kept when the custom font is turned off. Preferences from before 0.4.0
+    /// (a family name only) read as that family with the style's own weights.
+    var customFontChoice: CustomFontChoice? {
+        CustomFontChoice.stored(record: defaults.data(forKey: Key.customFont), legacyFamily: defaults.string(forKey: Key.customFontFamily))
+    }
+
+    var customFontFamily: String? { customFontChoice?.family }
 
     /// Turns the custom font on or off. Returns `false` if no family was chosen yet.
     @discardableResult
@@ -192,9 +200,16 @@ final class ReaderEnvironment {
         return true
     }
 
-    /// Chooses the custom font family and turns the custom font on.
+    /// Chooses a family with the style's own weights and turns the custom font on.
     func setCustomFont(family: String) {
-        defaults.set(family, forKey: Key.customFontFamily)
+        setCustomFont(CustomFontChoice(family: family))
+    }
+
+    /// Chooses the custom font (family, face, weight, width, axes, features) and turns it on.
+    func setCustomFont(_ choice: CustomFontChoice) {
+        guard choice != customFontChoice || !customFontEnabled else { return }
+        defaults.set(choice.record(), forKey: Key.customFont)
+        defaults.set(choice.family, forKey: Key.customFontFamily)
         defaults.set(true, forKey: Key.customFontEnabled)
         notify()
     }
@@ -228,18 +243,22 @@ final class ReaderEnvironment {
     // MARK: Rendering
 
     func configuration() -> ReaderConfiguration {
+        configuration(customFont: customFontEnabled ? customFontChoice : nil)
+    }
+
+    /// The configuration with a given custom font (or none), whatever is saved.
+    func configuration(customFont choice: CustomFontChoice?) -> ReaderConfiguration {
         let style = activeStyle
-        let fontFamily = customFontEnabled ? customFontFamily : nil
-        return ReaderConfiguration(
+        var configuration = ReaderConfiguration(
             overrideEnabled: overrideEnabled,
             styleHref: style.map { Self.href(for: $0, revision: styleRevision) },
             styleHandlesColorScheme: style.map(handlesColorScheme) ?? false,
             night: isNight,
             nightPaletteCSS: nightPaletteCSS,
-            scale: textScale,
-            fontFamily: fontFamily.map(CustomFontCSS.familyList),
-            fontFaceCSS: fontFamily.map(fontFaceCSS(for:)) ?? ""
+            scale: textScale
         )
+        configuration.setCustomFont(choice, faceCSS: choice.map { fontFaceCSS(for: $0.family) } ?? "")
+        return configuration
     }
 
     /// Origin-relative URL of a style; the modification time and the revision bust the web view's cache.

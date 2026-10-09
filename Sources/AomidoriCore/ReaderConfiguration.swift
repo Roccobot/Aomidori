@@ -23,10 +23,23 @@ public struct ReaderConfiguration: Codable, Equatable, Sendable {
     public var fontFamily: String?
     /// `@font-face` rules the custom font needs (see `CustomFontCSS`).
     public var fontFaceCSS: String
+    /// Custom font: CSS weight of regular text, or `nil` to keep the CSS's weights.
+    public var fontWeight: Double?
+    /// Custom font: CSS weight of text the CSS makes bold (600 or more); see `CustomFontChoice`.
+    public var fontBoldWeight: Double?
+    /// Custom font: regular text in italic, italic text upright.
+    public var fontItalic: Bool
+    /// Custom font: `font-stretch` percentage, or `nil` to keep the CSS's.
+    public var fontStretch: Double?
+    /// Custom font: `font-feature-settings` and `font-variation-settings` values, empty for none.
+    public var fontFeatureSettings: String
+    public var fontVariationSettings: String
 
     public init(overrideEnabled: Bool = false, styleHref: String? = nil, styleHandlesColorScheme: Bool = false,
                 night: Bool = false, nightPaletteCSS: String = "", scale: Double = 1,
-                fontFamily: String? = nil, fontFaceCSS: String = "") {
+                fontFamily: String? = nil, fontFaceCSS: String = "", fontWeight: Double? = nil,
+                fontBoldWeight: Double? = nil, fontItalic: Bool = false, fontStretch: Double? = nil,
+                fontFeatureSettings: String = "", fontVariationSettings: String = "") {
         self.overrideEnabled = overrideEnabled
         self.styleHref = styleHref
         self.styleHandlesColorScheme = styleHandlesColorScheme
@@ -35,10 +48,49 @@ public struct ReaderConfiguration: Codable, Equatable, Sendable {
         self.scale = scale
         self.fontFamily = fontFamily
         self.fontFaceCSS = fontFaceCSS
+        self.fontWeight = fontWeight
+        self.fontBoldWeight = fontBoldWeight
+        self.fontItalic = fontItalic
+        self.fontStretch = fontStretch
+        self.fontFeatureSettings = fontFeatureSettings
+        self.fontVariationSettings = fontVariationSettings
+    }
+
+    /// Turns the custom font on with a choice and its `@font-face` rules, or off with `nil`.
+    public mutating func setCustomFont(_ choice: CustomFontChoice?, faceCSS: String) {
+        fontFamily = choice.map { CustomFontCSS.familyList($0.family) }
+        fontFaceCSS = choice == nil ? "" : faceCSS
+        fontWeight = choice?.weight
+        fontBoldWeight = choice?.boldWeight
+        fontItalic = choice?.italic ?? false
+        fontStretch = choice?.stretch
+        fontFeatureSettings = choice?.featureSettingsCSS ?? ""
+        fontVariationSettings = choice?.variationSettingsCSS ?? ""
     }
 
     private enum CodingKeys: String, CodingKey {
         case overrideEnabled, styleHref, styleHandlesColorScheme, night, nightPaletteCSS, scale, fontFamily, fontFaceCSS
+        case fontWeight, fontBoldWeight, fontItalic, fontStretch, fontFeatureSettings, fontVariationSettings
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            overrideEnabled: try container.decode(Bool.self, forKey: .overrideEnabled),
+            styleHref: try container.decodeIfPresent(String.self, forKey: .styleHref),
+            styleHandlesColorScheme: try container.decode(Bool.self, forKey: .styleHandlesColorScheme),
+            night: try container.decode(Bool.self, forKey: .night),
+            nightPaletteCSS: try container.decode(String.self, forKey: .nightPaletteCSS),
+            scale: try container.decode(Double.self, forKey: .scale),
+            fontFamily: try container.decodeIfPresent(String.self, forKey: .fontFamily),
+            fontFaceCSS: try container.decode(String.self, forKey: .fontFaceCSS),
+            fontWeight: try container.decodeIfPresent(Double.self, forKey: .fontWeight),
+            fontBoldWeight: try container.decodeIfPresent(Double.self, forKey: .fontBoldWeight),
+            fontItalic: try container.decodeIfPresent(Bool.self, forKey: .fontItalic) ?? false,
+            fontStretch: try container.decodeIfPresent(Double.self, forKey: .fontStretch),
+            fontFeatureSettings: try container.decodeIfPresent(String.self, forKey: .fontFeatureSettings) ?? "",
+            fontVariationSettings: try container.decodeIfPresent(String.self, forKey: .fontVariationSettings) ?? ""
+        )
     }
 
     /// Absent values are written as `null`: the page merges each configuration into the previous
@@ -53,6 +105,12 @@ public struct ReaderConfiguration: Codable, Equatable, Sendable {
         try container.encode(scale, forKey: .scale)
         try container.encode(fontFamily, forKey: .fontFamily)
         try container.encode(fontFaceCSS, forKey: .fontFaceCSS)
+        try container.encode(fontWeight, forKey: .fontWeight)
+        try container.encode(fontBoldWeight, forKey: .fontBoldWeight)
+        try container.encode(fontItalic, forKey: .fontItalic)
+        try container.encode(fontStretch, forKey: .fontStretch)
+        try container.encode(fontFeatureSettings, forKey: .fontFeatureSettings)
+        try container.encode(fontVariationSettings, forKey: .fontVariationSettings)
     }
 
     /// JSON text, which is also a valid JavaScript expression.

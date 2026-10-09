@@ -20,7 +20,8 @@ const assert = (cond, msg) => { console.log((cond ? 'PASS ' : 'FAIL ') + msg); i
     route.fulfill({ body: fs.readFileSync(p), contentType: type });
   });
   page.on('pageerror', e => console.log('pageerror:', e.message));
-  const base = { overrideEnabled: false, styleHref: '/.aomidori/Styles/u.css?v=1', styleHandlesColorScheme: false, night: false, nightPaletteCSS: '', scale: 1, fontFamily: null, fontFaceCSS: '' };
+  const base = { overrideEnabled: false, styleHref: '/.aomidori/Styles/u.css?v=1', styleHandlesColorScheme: false, night: false, nightPaletteCSS: '', scale: 1, fontFamily: null, fontFaceCSS: '',
+    fontWeight: null, fontBoldWeight: null, fontItalic: false, fontStretch: null, fontFeatureSettings: '', fontVariationSettings: '' };
   await page.addInitScript(script + `\nAomidori.apply(${JSON.stringify(base)});`);
   await page.goto('http://book/c.html');
   await page.waitForTimeout(300);
@@ -176,6 +177,64 @@ const assert = (cond, msg) => { console.log((cond ? 'PASS ' : 'FAIL ') + msg); i
     await p.waitForLoadState('load');
     await p.waitForTimeout(100);
     assert((await edges()).pop() === 'true true', 'an image page is at both edges');
+    await p.close();
+  }
+
+  // 8. Custom font weight, width, italic and features: bold stays relative to the chosen weight.
+  {
+    const p = await browser.newPage({ viewport: { width: 900, height: 700 } });
+    await p.route('http://book/**', route => {
+      const url = new URL(route.request().url());
+      if (url.pathname.startsWith('/.aomidori/Styles/')) return route.fulfill({ body: 'p { font-weight: 400; } h2 { font-weight: 700; }', contentType: 'text/css' });
+      const f = fixture(decodeURIComponent(url.pathname.slice(1)));
+      if (!fs.existsSync(f)) return route.fulfill({ status: 404, body: '' });
+      route.fulfill({ body: fs.readFileSync(f), contentType: 'application/xhtml+xml' });
+    });
+    await p.addInitScript(script + `\nAomidori.apply(${JSON.stringify(base)});`);
+    await p.goto('http://book/font.html');
+    await p.waitForLoadState('load');
+    const font = { fontFamily: '"aomidori-custom-font", "Georgia"', fontFaceCSS: '' };
+    const read = () => p.evaluate(() => {
+      const cs = (id) => getComputedStyle(document.getElementById(id));
+      const out = {};
+      for (const id of ['h2', 'p', 'b', 'strong', 'heavy', 'light', 'em', 'slanted', 'code']) {
+        const s = cs(id); out[id] = { w: s.fontWeight, i: s.fontStyle, st: s.fontStretch, f: s.fontFeatureSettings, v: s.fontVariationSettings, fam: s.fontFamily };
+      }
+      return out;
+    });
+    const set = async (c) => { await p.evaluate(c => Aomidori.apply(c), c); await p.waitForTimeout(150); };
+
+    await set(Object.assign({}, font, { fontWeight: null, fontBoldWeight: null }));
+    let r = await read();
+    assert(r.p.w === '400' && r.b.w === '700' && r.light.w === '300' && /aomidori-custom-font/.test(r.p.fam),
+      `no chosen weight: the CSS weights stay (${r.p.w} ${r.b.w} ${r.light.w})`);
+
+    await set(Object.assign({}, font, { fontWeight: 300, fontBoldWeight: 600, fontStretch: 75, fontFeatureSettings: '"smcp" 1, "onum" 1', fontVariationSettings: '"opsz" 20' }));
+    r = await read();
+    console.log(JSON.stringify(r));
+    assert(r.p.w === '300' && r.light.w === '300' && r.em.w === '300', `light choice: regular text at 300 (${r.p.w} ${r.light.w} ${r.em.w})`);
+    assert(['h2', 'b', 'strong', 'heavy'].every(k => r[k].w === '600'), `bold text at 600 (${['h2', 'b', 'strong', 'heavy'].map(k => r[k].w)})`);
+    assert(r.p.st === '75%' && /smcp/.test(r.p.f) && /opsz/.test(r.p.v), `width, features and axes apply (${r.p.st} ${r.p.f} ${r.p.v})`);
+    assert(!/aomidori/.test(r.code.fam) && r.code.st === '100%' && r.code.f === 'normal' && r.code.v === 'normal',
+      `code keeps its own family, no width, features or axes (${r.code.fam} ${r.code.st} ${r.code.f})`);
+    assert(r.em.i === 'italic' && r.p.i === 'normal', 'emphasis stays italic');
+
+    await set(Object.assign({}, font, { fontWeight: 700, fontBoldWeight: 900, fontItalic: true, fontStretch: null, fontFeatureSettings: '', fontVariationSettings: '' }));
+    r = await read();
+    assert(r.p.w === '700' && r.b.w === '900', `heavy choice: 700 and bold 900 (${r.p.w} ${r.b.w})`);
+    assert(r.p.i === 'italic' && r.em.i === 'normal' && r.slanted.i === 'normal', `italic choice: text italic, emphasis upright (${r.p.i} ${r.em.i} ${r.slanted.i})`);
+    assert(r.p.st === '100%' && r.p.f === 'normal', `width and features reset (${r.p.st} ${r.p.f})`);
+
+    // Under the override the user style decides what is bold: its h2 is 700, still bold.
+    await set({ overrideEnabled: true, fontWeight: 350, fontBoldWeight: 650, fontItalic: false });
+    await p.waitForTimeout(300);
+    r = await read();
+    assert(r.h2.w === '650' && r.p.w === '350' && r.b.w === '650', `override: bold from the user style maps to 650 (${r.h2.w} ${r.p.w} ${r.b.w})`);
+
+    await set({ overrideEnabled: false, fontFamily: null, fontWeight: null, fontBoldWeight: null });
+    r = await read();
+    const marks = await p.evaluate(() => document.querySelectorAll('[data-aomidori-bold], [data-aomidori-italic]').length);
+    assert(r.b.w === '700' && r.p.w === '400' && marks === 0, `custom font off: weights and marks gone (${r.b.w} ${marks})`);
     await p.close();
   }
 

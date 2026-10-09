@@ -12,7 +12,7 @@ struct CustomFontTests {
         ])
         let lines = css.split(separator: "\n")
         #expect(lines.count == 2) // a face without sources is dropped
-        #expect(lines[0] == #"@font-face { font-family: "aomidori-custom-font"; src: local("MiSans-Regular"), url("/.aomidori/SystemFonts/0-MiSans-Regular.ttf"); font-weight: 400; font-style: normal; font-display: block; }"#)
+        #expect(lines[0] == #"@font-face { font-family: "aomidori-custom-font"; src: local("MiSans-Regular"), url("/.aomidori/SystemFonts/0-MiSans-Regular.ttf"); font-weight: 400; font-style: normal; font-stretch: 100%; font-display: block; }"#)
         #expect(lines[1].contains(#"src: url("/.aomidori/Fonts/My \"Font\".otf")"#))
         #expect(lines[1].contains("font-weight: 700; font-style: italic"))
         #expect(CustomFontCSS.fontFaceCSS([]).isEmpty)

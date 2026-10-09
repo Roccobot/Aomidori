@@ -27,8 +27,27 @@ final class CustomFonts {
         let family: String
         let postScriptName: String
         let fileName: String
-        let weight: Int
-        let italic: Bool
+        let style: FaceStyle
+    }
+
+    /// How a face is declared to the page: exact weight and width, style, and the axis ranges
+    /// of a variable font.
+    struct FaceStyle: Equatable {
+        var weight: Double
+        var italic: Bool
+        var stretch: Double
+        var weightRange: ClosedRange<Double>?
+        var stretchRange: ClosedRange<Double>?
+
+        var isVariable: Bool { weightRange != nil || stretchRange != nil }
+    }
+
+    /// One axis of a variable font, as the chooser shows it.
+    struct VariationAxis: Equatable {
+        let tag: String
+        let name: String
+        let range: ClosedRange<Double>
+        let defaultValue: Double
     }
 
     static let fileExtensions: Set<String> = ["ttf", "otf", "woff", "woff2"]
@@ -56,8 +75,7 @@ final class CustomFonts {
             for descriptor in descriptors {
                 guard let family = CTFontDescriptorCopyAttribute(descriptor, kCTFontFamilyNameAttribute) as? String,
                       let name = CTFontDescriptorCopyAttribute(descriptor, kCTFontNameAttribute) as? String else { continue }
-                let (weight, italic) = Self.style(of: descriptor)
-                faces.append(FileFace(family: family, postScriptName: name, fileName: url.lastPathComponent, weight: weight, italic: italic))
+                faces.append(FileFace(family: family, postScriptName: name, fileName: url.lastPathComponent, style: Self.style(of: descriptor)))
             }
             if !descriptors.isEmpty, !registeredFiles.contains(url) {
                 CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
@@ -93,33 +111,102 @@ final class CustomFonts {
 
     /// The faces of a family as the page loads them. Loaded files are served from the fonts
     /// folder. Installed fonts are asked for by PostScript name (`local()`); their files are
-    /// also offered, in case the web view does not see fonts the user installed.
+    /// also offered, in case the web view does not see fonts the user installed. A variable
+    /// font is declared once per file and style, with its weight and width ranges, so the
+    /// page's weights drive its axes.
     func faces(forFamily family: String) -> [FontFaceSource] {
         let files = fileFaces.filter { $0.family == family }
         if !files.isEmpty {
             SystemFontFiles.shared.replace(with: [:])
-            return files.map { face in
-                FontFaceSource(url: "/\(PageSchemeHandler.userPrefix)Fonts/\(Self.pathComponent(face.fileName))",
-                               weight: face.weight, italic: face.italic)
+            var seenVariable: Set<String> = []
+            return files.compactMap { face in
+                let url = "/\(PageSchemeHandler.userPrefix)Fonts/\(Self.pathComponent(face.fileName))"
+                // Named instances of a variable font share its file: declared once.
+                if face.style.isVariable, !seenVariable.insert("\(face.fileName) \(face.style.italic)").inserted { return nil }
+                return Self.source(url: url, style: face.style)
             }
         }
         var tokens: [String: URL] = [:]
-        let members = NSFontManager.shared.availableMembers(ofFontFamily: family) ?? []
-        let faces = members.enumerated().compactMap { index, member -> FontFaceSource? in
-            guard let name = member.first as? String else { return nil }
-            let descriptor = CTFontDescriptorCreateWithNameAndSize(name as CFString, 0)
-            let (weight, italic) = Self.style(of: descriptor)
+        var seenVariable: Set<String> = []
+        let faces = Self.members(ofFamily: family).enumerated().compactMap { index, member -> FontFaceSource? in
+            let descriptor = CTFontDescriptorCreateWithNameAndSize(member.postScriptName as CFString, 0)
+            let style = Self.style(of: descriptor)
             var url: String?
-            if let file = CTFontDescriptorCopyAttribute(descriptor, kCTFontURLAttribute) as? URL,
-               ["ttf", "otf"].contains(file.pathExtension.lowercased()) {
+            let file = CTFontDescriptorCopyAttribute(descriptor, kCTFontURLAttribute) as? URL
+            // A named instance of a font whose axes the page cannot drive would be served as the
+            // file's default instance: such faces are asked for by name only.
+            let instanceOnly = !style.isVariable && CTFontDescriptorCopyAttribute(descriptor, kCTFontVariationAxesAttribute) != nil
+            if let file, !instanceOnly, ["ttf", "otf"].contains(file.pathExtension.lowercased()) {
                 let token = "\(index)-\(file.lastPathComponent)"
                 tokens[token] = file
                 url = "/\(PageSchemeHandler.userPrefix)SystemFonts/\(Self.pathComponent(token))"
             }
-            return FontFaceSource(postScriptName: name, url: url, weight: weight, italic: italic)
+            if style.isVariable, let url, let file {
+                // Named instances share one file: declared once, by URL, with its ranges.
+                guard seenVariable.insert("\(file.path) \(style.italic)").inserted else { return nil }
+                return Self.source(url: url, style: style)
+            }
+            return Self.source(postScriptName: member.postScriptName, url: url, style: style)
         }
         SystemFontFiles.shared.replace(with: tokens)
         return faces
+    }
+
+    /// A face of a family, as the font manager lists it ("Condensed Bold", "Light Italic").
+    struct Member: Equatable {
+        let postScriptName: String
+        let displayName: String
+    }
+
+    /// The faces of a family: from the fonts folder if it was loaded there, else installed.
+    func faceMembers(ofFamily family: String) -> [Member] {
+        let files = fileFaces.filter { $0.family == family }
+        if !files.isEmpty {
+            return files.map { face in
+                let font = CTFontCreateWithName(face.postScriptName as CFString, 0, nil)
+                let style = CTFontCopyName(font, kCTFontStyleNameKey) as String? ?? face.postScriptName
+                return Member(postScriptName: face.postScriptName, displayName: style)
+            }
+        }
+        return Self.members(ofFamily: family)
+    }
+
+    private static func members(ofFamily family: String) -> [Member] {
+        (NSFontManager.shared.availableMembers(ofFontFamily: family) ?? []).compactMap { member in
+            guard let name = member.first as? String else { return nil }
+            return Member(postScriptName: name, displayName: member.count > 1 ? (member[1] as? String ?? name) : name)
+        }
+    }
+
+    private static func source(postScriptName: String? = nil, url: String?, style: FaceStyle) -> FontFaceSource {
+        FontFaceSource(postScriptName: postScriptName, url: url, weight: style.weight, italic: style.italic,
+                       stretch: style.stretch, weightRange: style.weightRange, stretchRange: style.stretchRange)
+    }
+
+    /// The variable axes of a face that the page can use, if it has any.
+    static func variationAxes(ofFace postScriptName: String) -> [VariationAxis] {
+        variationAxes(of: CTFontCreateWithName(postScriptName as CFString, 12, nil))
+    }
+
+    /// The axes of a font that the page can use. Weight and width axes are kept only on the
+    /// CSS scales (`wght` 1–1000, `wdth` in percent), which they drive through `font-weight`
+    /// and `font-stretch`; older Apple fonts such as Skia use other scales (`wght`
+    /// 0.48–3.2), and for those the faces' own weights and widths are used instead.
+    static func variationAxes(of font: CTFont) -> [VariationAxis] {
+        let axes = CTFontCopyVariationAxes(font) as? [[CFString: Any]] ?? []
+        return axes.compactMap { axis in
+            guard let identifier = (axis[kCTFontVariationAxisIdentifierKey] as? NSNumber)?.uint32Value,
+                  let minimum = (axis[kCTFontVariationAxisMinimumValueKey] as? NSNumber)?.doubleValue,
+                  let maximum = (axis[kCTFontVariationAxisMaximumValueKey] as? NSNumber)?.doubleValue, minimum < maximum else { return nil }
+            let tag = FontChoiceConversion.tag(identifier)
+            let defaultValue = (axis[kCTFontVariationAxisDefaultValueKey] as? NSNumber)?.doubleValue ?? minimum
+            let name = axis[kCTFontVariationAxisNameKey] as? String ?? tag
+            switch tag {
+            case "wght" where minimum < 1 || maximum > 1000 || maximum <= 10: return nil
+            case "wdth" where minimum < 10 || maximum > 1000: return nil
+            default: return VariationAxis(tag: tag, name: name, range: minimum...maximum, defaultValue: defaultValue)
+            }
+        }
     }
 
     /// A font to preview a family in, at the given size.
@@ -127,11 +214,23 @@ final class CustomFonts {
         NSFontManager.shared.font(withFamily: family, traits: [], weight: 5, size: size)
     }
 
-    private static func style(of descriptor: CTFontDescriptor) -> (weight: Int, italic: Bool) {
+    /// Weight, width and style of a face, in CSS terms, with axis ranges for variable fonts.
+    static func style(of descriptor: CTFontDescriptor) -> FaceStyle {
         let traits = CTFontDescriptorCopyAttribute(descriptor, kCTFontTraitsAttribute) as? [CFString: Any] ?? [:]
         let weight = (traits[kCTFontWeightTrait] as? NSNumber)?.doubleValue ?? 0
+        let width = (traits[kCTFontWidthTrait] as? NSNumber)?.doubleValue ?? 0
         let symbolic = (traits[kCTFontSymbolicTrait] as? NSNumber)?.uint32Value ?? 0
-        return (CustomFontCSS.cssWeight(fromTrait: weight), symbolic & CTFontSymbolicTraits.traitItalic.rawValue != 0)
+        var style = FaceStyle(weight: CustomFontCSS.exactWeight(fromTrait: weight),
+                              italic: symbolic & CTFontSymbolicTraits.traitItalic.rawValue != 0,
+                              stretch: CustomFontCSS.stretch(fromWidthTrait: width))
+        for axis in variationAxes(of: CTFontCreateWithFontDescriptor(descriptor, 12, nil)) {
+            switch axis.tag {
+            case "wght": style.weightRange = axis.range
+            case "wdth": style.stretchRange = axis.range
+            default: break
+            }
+        }
+        return style
     }
 
     private static func pathComponent(_ name: String) -> String {

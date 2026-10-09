@@ -16,7 +16,8 @@ import AomidoriCore
 /// 4. `palette`: Night colors, only when the active CSS has no `prefers-color-scheme` rules;
 /// 5. `scale` (layer `aomidori`): the text size, as CSS `zoom` on the body with images
 ///    counter-zoomed; see `refreshScale`.
-/// 6. `font` (layer `aomidori`): the app's custom font, when on, for all text.
+/// 6. `font` (layer `aomidori`): the app's custom font, when on, for all text: family, and the
+///    chosen weight (bold text relative to it), width, italic, features and variable axes.
 ///
 /// Native code drives it with `Aomidori.apply(configuration)`; see `ReaderConfiguration`.
 enum ReaderScript {
@@ -240,6 +241,7 @@ enum ReaderScript {
             user.remove();
             user = next;
             refreshPalette();
+            refreshFont();
             restoreAnchor(anchor);
           };
           next.addEventListener('load', swap, { once: true });
@@ -248,6 +250,7 @@ enum ReaderScript {
           user.after(next);
         } else {
           user.setAttribute('href', href);
+          user.addEventListener('load', refreshFont, { once: true });
           if (!user.isConnected) container().insertBefore(user, palette.parentNode === container() ? palette : null);
         }
       }
@@ -311,13 +314,73 @@ enum ReaderScript {
 
       // MARK: Custom font
 
-      function refreshFont() {
-        let css = '';
-        if (config.fontFamily) {
-          const text = `:where(body, body *:not(${FONT_EXEMPT}))`;
-          css = `${config.fontFaceCSS || ''}\n@layer aomidori {\n` +
-            `  ${text}, ${text}::before, ${text}::after { font-family: ${config.fontFamily} !important; }\n}`;
+      // The chosen face's weight and width go on all text; text the CSS makes bold (600 or
+      // more) gets the bold weight instead, so bold keeps its contrast with any chosen weight.
+      // Which text is bold (or italic, for an italic choice) is read from the cascade without
+      // these rules, and marked on the elements; re-read whenever styles may have changed.
+      const BOLD_MARK = 'data-aomidori-bold';
+      const ITALIC_MARK = 'data-aomidori-italic';
+      const numberOrNull = (value) =>
+        value === null || value === undefined || value === '' || !Number.isFinite(Number(value)) ? null : Number(value);
+
+      function clearEmphasisMarks() {
+        for (const el of doc.querySelectorAll(`[${BOLD_MARK}], [${ITALIC_MARK}]`)) {
+          el.removeAttribute(BOLD_MARK);
+          el.removeAttribute(ITALIC_MARK);
         }
+      }
+
+      function markEmphasis() {
+        clearEmphasisMarks();
+        if (!doc.body) return;
+        const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_ELEMENT);
+        for (let el = doc.body; el; el = walker.nextNode()) {
+          if (el.namespaceURI === SVG) continue;
+          const style = getComputedStyle(el);
+          if (parseFloat(style.fontWeight) >= 600) el.setAttribute(BOLD_MARK, '');
+          if (style.fontStyle !== 'normal') el.setAttribute(ITALIC_MARK, '');
+        }
+      }
+
+      function refreshFont() {
+        if (!config.fontFamily) {
+          if (font.textContent !== '') font.textContent = '';
+          clearEmphasisMarks();
+          return;
+        }
+        const text = `:where(body, body *:not(${FONT_EXEMPT}))`;
+        const all = (selector) => `${selector}, ${selector}::before, ${selector}::after`;
+        const declarations = [`font-family: ${config.fontFamily} !important;`];
+        const stretch = numberOrNull(config.fontStretch);
+        if (stretch !== null) declarations.push(`font-stretch: ${stretch}% !important;`);
+        if (config.fontFeatureSettings) declarations.push(`font-feature-settings: ${config.fontFeatureSettings} !important;`);
+        if (config.fontVariationSettings) declarations.push(`font-variation-settings: ${config.fontVariationSettings} !important;`);
+        // Code and formulas keep their own family; the custom font's width, features and axes
+        // would only be inherited by them, so they are reset (weight and style still follow
+        // the text around them, as CSS has it).
+        const exempt = declarations.length > 1
+          ? `\n  :where(body) :is(${FONT_EXEMPT}) { font-stretch: normal; font-feature-settings: normal; font-variation-settings: normal; }`
+          : '';
+        const familyRule = `  ${all(text)} { ${declarations.join(' ')} }${exempt}`;
+        const emphasisRules = [];
+        const weight = numberOrNull(config.fontWeight);
+        if (weight !== null) {
+          const bold = numberOrNull(config.fontBoldWeight) ?? Math.max(weight, Math.min(weight + 300, 900));
+          emphasisRules.push(`  ${all(text)} { font-weight: ${weight} !important; }`,
+            `  ${all(`${text}[${BOLD_MARK}]`)} { font-weight: ${bold} !important; }`);
+        }
+        if (config.fontItalic) {
+          emphasisRules.push(`  ${all(text)} { font-style: italic !important; }`,
+            `  ${all(`${text}[${ITALIC_MARK}]`)} { font-style: normal !important; }`);
+        }
+        const sheet = (rules) => `${config.fontFaceCSS || ''}\n@layer aomidori {\n${rules.join('\n')}\n}`;
+        if (emphasisRules.length && doc.body) {
+          font.textContent = sheet([familyRule]);
+          markEmphasis();
+        } else {
+          clearEmphasisMarks();
+        }
+        const css = sheet([familyRule, ...emphasisRules]);
         if (font.textContent !== css) font.textContent = css;
       }
 
@@ -532,7 +595,7 @@ enum ReaderScript {
         reportEdges();
       }, { once: true });
 
-      addEventListener('load', () => { refreshPalette(); reportEdges(); }, { once: true });
+      addEventListener('load', () => { refreshPalette(); refreshFont(); reportEdges(); }, { once: true });
 
       window.Aomidori = Object.freeze({
         apply(next) {
