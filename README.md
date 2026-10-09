@@ -332,13 +332,13 @@ or code are taken from it.
 
 ## Icon
 
-The app icon (J3 *Tategaki*) is by Graphe; sources in `Resources/Icon/` (see its README).
+The app icon (v2, flat *Tategaki*) is by Graphe; sources in `Resources/Icon/` (see its README).
 
 - `AppIcon.icon` is the Liquid Glass icon (Icon Composer format: `icon.json` plus `Assets/`),
-  built from Graphe's `J3-layers/` SVGs, unaltered. With Xcode installed, `scripts/bundle.sh`
+  built from Graphe's `layers/` SVGs, unaltered. With Xcode installed, `scripts/bundle.sh`
   compiles it with `actool` into `Contents/Resources/Assets.car`, found through
   `CFBundleIconName`. The system renders the light, dark, tinted and clear appearances from it.
-- `AppIcon.icns` and `AppIcon.iconset` (flat, with simplified 16 and 32 px sizes) ship as the
+- `AppIcon.icns` and `AppIcon.iconset` (flat, with a simplified 16 px size) ship as the
   fallback (`CFBundleIconFile`), and are the only icon in builds made with the Command Line
   Tools alone.
 
@@ -348,14 +348,15 @@ How `icon.json` maps Graphe's settings (check renders with Icon Composer's `icto
 
 | Graphe | `icon.json` |
 | --- | --- |
-| Canvas gradient #5FD6BD → #1F8E78 (dark #1F3A34 → #0B1714) | document `fill-specializations` |
-| `01-pages` white (dark #5FD3BA), Liquid Glass | layer `Pages`, `glass: true`, solid fills |
-| `02-lines` #43B59E at 60 % (dark #0E2420, mono #8C8C8C), no glass | layer `Lines`, `glass: false`, `opacity: 0.6` |
+| Canvas gradient #5DCDB7 → #3ABCA3 around base #49C7AE (dark, near-uniform #24332F → #18221F) | document `fill-specializations` |
+| `01-pages` white (dark #49C7AE, mono white), Liquid Glass, low or no specular, light neutral shadow, low translucency | group `Pages`: layer `glass: true`, `specular: false`, shadow neutral 0.3, translucency 0.2 |
+| `02-lines` #49C7AE at about 85 % (dark #12302A, mono #8C8C8C), no glass, no specular | group `Lines` (drawn on top): layer `glass: false`, `opacity: 0.85`, `specular: false` |
 | Artwork on a 1024 canvas with an 824-point tile | `position.scale` 1024 / 824 |
 
-Notes from building it: in `layers` the **first entry is drawn on top**; layer colours come
-from `fill-specializations`, not from the SVGs (their colours were not honoured in our renders); the
-gradient's diagonal direction cannot be expressed in `icon.json`, so it runs top to bottom.
+Notes from building it: in `groups` and `layers` the **first entry is drawn on top**; layer
+colours come from `fill-specializations`, not from the SVGs (their colours were not honoured in
+our renders); the gradient's slight diagonal cannot be expressed in `icon.json`, so it runs top
+to bottom.
 
 ## Licenses
 

@@ -3,8 +3,8 @@
     {
       "value": {
         "linear-gradient": [
-          "extended-srgb:0.37255,0.83922,0.74118,1.00000",
-          "extended-srgb:0.12157,0.55686,0.47059,1.00000"
+          "extended-srgb:0.36471,0.80392,0.71765,1.00000",
+          "extended-srgb:0.22745,0.73725,0.63922,1.00000"
         ]
       }
     },
@@ -12,21 +12,21 @@
       "appearance": "dark",
       "value": {
         "linear-gradient": [
-          "extended-srgb:0.12157,0.22745,0.20392,1.00000",
-          "extended-srgb:0.04314,0.09020,0.07843,1.00000"
+          "extended-srgb:0.14118,0.20000,0.18431,1.00000",
+          "extended-srgb:0.09412,0.13333,0.12157,1.00000"
         ]
       }
     }
   ],
   "groups": [
     {
-      "name": "Book",
+      "name": "Lines",
       "layers": [
         {
           "name": "Lines",
           "image-name": "lines.svg",
           "glass": false,
-          "opacity": 0.6,
+          "opacity": 0.85,
           "position": {
             "scale": 1.24272,
             "translation-in-points": [
@@ -37,13 +37,13 @@
           "fill-specializations": [
             {
               "value": {
-                "solid": "extended-srgb:0.26275,0.70980,0.61961,1.00000"
+                "solid": "extended-srgb:0.28627,0.78039,0.68235,1.00000"
               }
             },
             {
               "appearance": "dark",
               "value": {
-                "solid": "extended-srgb:0.05490,0.14118,0.12549,1.00000"
+                "solid": "extended-srgb:0.07059,0.18824,0.16471,1.00000"
               }
             },
             {
@@ -53,7 +53,13 @@
               }
             }
           ]
-        },
+        }
+      ],
+      "specular": false
+    },
+    {
+      "name": "Pages",
+      "layers": [
         {
           "name": "Pages",
           "image-name": "pages.svg",
@@ -74,7 +80,7 @@
             {
               "appearance": "dark",
               "value": {
-                "solid": "extended-srgb:0.37255,0.82745,0.72941,1.00000"
+                "solid": "extended-srgb:0.28627,0.78039,0.68235,1.00000"
               }
             },
             {
@@ -88,13 +94,13 @@
       ],
       "shadow": {
         "kind": "neutral",
-        "opacity": 0.5
+        "opacity": 0.3
       },
       "translucency": {
         "enabled": true,
-        "value": 0.4
+        "value": 0.2
       },
-      "specular": true
+      "specular": false
     }
   ],
   "supported-platforms": {
