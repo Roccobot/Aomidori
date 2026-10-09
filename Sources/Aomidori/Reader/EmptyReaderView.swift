@@ -3,7 +3,8 @@ import AppKit
 import UniformTypeIdentifiers
 
 /// The empty window's content, from the top: the drop zone, the invitation with its Open
-/// button, and the recent books. The whole view takes dropped EPUB files; the drop zone lights
+/// button, and the recent files. The drop zone grows with the window, up to half its width and
+/// 30% of its height. The whole view takes dropped EPUB files; the drop zone lights
 /// up while one is dragged over it.
 @MainActor
 final class EmptyReaderView: NSView, NSTableViewDataSource, NSTableViewDelegate {
@@ -23,6 +24,9 @@ final class EmptyReaderView: NSView, NSTableViewDataSource, NSTableViewDelegate 
     private let scrollView = NSScrollView()
     private var tableHeight: NSLayoutConstraint?
     private var tableMinimumHeight: NSLayoutConstraint?
+    private var dropZoneWidth: NSLayoutConstraint?
+    private var dropZoneHeight: NSLayoutConstraint?
+    private var recentsHeaderLeading: NSLayoutConstraint?
     private(set) var recents: [RecentBook] = []
 
     override init(frame: NSRect) {
@@ -66,7 +70,7 @@ final class EmptyReaderView: NSView, NSTableViewDataSource, NSTableViewDelegate 
         stack.orientation = .vertical
         stack.alignment = .centerX
         stack.spacing = 12
-        stack.setCustomSpacing(16, after: dropZone)
+        stack.setCustomSpacing(24, after: dropZone)
         stack.setCustomSpacing(28, after: button)
         stack.setCustomSpacing(4, after: recentsHeader)
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -80,18 +84,24 @@ final class EmptyReaderView: NSView, NSTableViewDataSource, NSTableViewDelegate 
         tableMinimumHeight.priority = .init(740)
         self.tableHeight = tableHeight
         self.tableMinimumHeight = tableMinimumHeight
-        let columnWidth = stack.widthAnchor.constraint(equalToConstant: 420)
-        columnWidth.priority = .defaultHigh
+        // The list keeps its column; the drop zone may be wider.
+        let listWidth = scrollView.widthAnchor.constraint(equalToConstant: Self.listWidth)
+        listWidth.priority = .defaultHigh
+        let dropZoneWidth = dropZone.widthAnchor.constraint(equalToConstant: DropZoneView.minimumSize.width)
+        let dropZoneHeight = dropZone.heightAnchor.constraint(equalToConstant: DropZoneView.minimumSize.height)
+        let recentsHeaderLeading = recentsHeader.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: 16)
+        self.dropZoneWidth = dropZoneWidth
+        self.dropZoneHeight = dropZoneHeight
+        self.recentsHeaderLeading = recentsHeaderLeading
         NSLayoutConstraint.activate([
             stack.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 32),
             stack.centerXAnchor.constraint(equalTo: centerXAnchor),
             stack.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 10),
             stack.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor, constant: -24),
-            columnWidth,
-            dropZone.widthAnchor.constraint(equalToConstant: DropZoneView.size.width),
-            dropZone.heightAnchor.constraint(equalToConstant: DropZoneView.size.height),
-            scrollView.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            recentsHeader.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: 16),
+            listWidth,
+            scrollView.widthAnchor.constraint(lessThanOrEqualTo: widthAnchor, constant: -20),
+            dropZoneWidth, dropZoneHeight,
+            recentsHeaderLeading,
             tableHeight, tableMinimumHeight,
         ])
         setAccessibilityLabel(message)
@@ -99,6 +109,28 @@ final class EmptyReaderView: NSView, NSTableViewDataSource, NSTableViewDelegate 
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+    /// The column of the recent files.
+    static let listWidth: CGFloat = 420
+
+    override func layout() {
+        let size = DropZoneView.size(inWindowContent: bounds.size)
+        if dropZoneWidth?.constant != size.width { dropZoneWidth?.constant = size.width }
+        if dropZoneHeight?.constant != size.height { dropZoneHeight?.constant = size.height }
+        super.layout()
+        alignRecentsHeader()
+    }
+
+    /// The heading starts exactly where the file names start: both are labels, so their text
+    /// sits at the same distance from their frames, and the frames are lined up.
+    private func alignRecentsHeader() {
+        guard !recents.isEmpty, let constraint = recentsHeaderLeading,
+              let field = (tableView.view(atColumn: 0, row: 0, makeIfNecessary: false) as? NSTableCellView)?.textField else { return }
+        let offset = field.convert(NSPoint.zero, to: self).x - recentsHeader.convert(NSPoint.zero, to: self).x
+        guard abs(offset) > 0.25 else { return }
+        constraint.constant += offset
+        needsLayout = true
+    }
 
     /// The list, when there are recent books: arrows move the selection, Return opens.
     var initialFirstResponder: NSView? { recents.isEmpty ? nil : tableView }
@@ -197,6 +229,23 @@ final class EmptyReaderView: NSView, NSTableViewDataSource, NSTableViewDelegate 
     // MARK: Smoke test
 
     var smokeRendersSVG: Bool { dropZone.rendersSVG }
+
+    /// The drop zone's size against the window's, and the heading's text start against the
+    /// first file name's (window coordinates).
+    var smokeLayout: [String: Double] {
+        // Twice: lining up the heading can ask for one more pass.
+        layoutSubtreeIfNeeded()
+        layoutSubtreeIfNeeded()
+        var result: [String: Double] = [
+            "dropZoneWidth": Double(dropZone.frame.width), "dropZoneHeight": Double(dropZone.frame.height),
+            "contentWidth": Double(bounds.width), "contentHeight": Double(bounds.height),
+        ]
+        if !recents.isEmpty, let field = (tableView.view(atColumn: 0, row: 0, makeIfNecessary: false) as? NSTableCellView)?.textField {
+            result["headerTextX"] = Double(recentsHeader.convert(NSPoint.zero, to: nil).x)
+            result["firstTitleTextX"] = Double(field.convert(NSPoint.zero, to: nil).x)
+        }
+        return result
+    }
     func smokeHighlight(_ highlighted: Bool) { dropZone.isHighlighted = highlighted }
 }
 
@@ -215,21 +264,44 @@ final class RecentBooksTableView: NSTableView {
     }
 }
 
-/// Graphe's empty-state art (240 × 160 pt): a dashed frame round a line-drawn book. Drawn from
-/// the SVG in the window's appearance colour (`#43B59E`, `#5FD4BC` in Night or dark mode), with
-/// the PNGs as fallback; a solid, stronger frame while a book is dragged over the window.
+/// The drop zone: Graphe's line-drawn book inside a dashed frame, both drawn at the zone's
+/// size. The frame is drawn in code (`DashedFrame`: dashes spread evenly over the perimeter,
+/// one centred at the top middle) in the window's appearance colour (`#43B59E`, `#5FD4BC` in
+/// Night or dark mode); the book comes from Graphe's SVG, recoloured, with the 0.5x PNG art as
+/// fallback. While a book is dragged over the window the frame is solid, stronger and filled.
 /// Clicking it opens the Open panel.
 @MainActor
 final class DropZoneView: NSView {
-    static let size = NSSize(width: 240, height: 160)
+    /// The frame of Graphe's 240 × 160 art: the smallest the zone gets, and its proportions.
+    static let minimumSize = NSSize(width: 184, height: 128)
+    /// Corner radius at the minimum size; it grows with the zone.
+    static let minimumRadius: CGFloat = 20
+    static let lineWidth: CGFloat = 2
+    static let highlightedLineWidth: CGFloat = 2.5
+    /// The book's box in Graphe's art (viewBox 80 42 80 72 inside the 240 × 160 canvas, whose
+    /// frame starts at 28, 16): its size and its centre's offset from the frame's centre, in
+    /// units of the minimum size.
+    private static let bookSize = NSSize(width: 80, height: 72)
+    private static let bookCentreOffset = NSPoint(x: 0, y: (42 + 36) - (16 + 64))
+
+    /// Half the window's width and 30% of its height at most, in Graphe's proportions, never
+    /// smaller than the art was (nor wider than the window).
+    static func size(inWindowContent content: NSSize) -> NSSize {
+        let aspect = minimumSize.width / minimumSize.height
+        var width = min(content.width * 0.5, content.height * 0.3 * aspect)
+        width = max(width, minimumSize.width)
+        width = min(width, max(content.width - 40, 1))
+        return NSSize(width: width.rounded(), height: (width / aspect).rounded())
+    }
+
     var onClick: (() -> Void)?
     var isHighlighted = false { didSet { if isHighlighted != oldValue { needsDisplay = true } } }
-    /// Whether the art comes from the SVG (else from the PNG fallback).
-    private(set) var rendersSVG = false
+    /// Whether the book comes from the SVG (else the whole art from the PNG fallback).
+    var rendersSVG: Bool { book(dark: isDark) != nil }
 
-    private static let template: String? = Bundle.main.url(forResource: "aomidori-empty", withExtension: "svg", subdirectory: "EmptyState")
+    private static let bookTemplate: String? = Bundle.main.url(forResource: "aomidori-dropzone-book", withExtension: "svg", subdirectory: "EmptyState")
         .flatMap { try? String(contentsOf: $0, encoding: .utf8) }
-    private var cache: [String: NSImage] = [:]
+    private var bookCache: [Bool: NSImage] = [:]
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -241,7 +313,7 @@ final class DropZoneView: NSView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
-    override var intrinsicContentSize: NSSize { Self.size }
+    override var intrinsicContentSize: NSSize { Self.minimumSize }
 
     private var isDark: Bool { effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua }
 
@@ -250,36 +322,75 @@ final class DropZoneView: NSView {
         needsDisplay = true
     }
 
-    override func draw(_ dirtyRect: NSRect) {
-        let image = art(dark: isDark, highlighted: isHighlighted)
-        image?.draw(in: bounds)
-        // The PNG fallback has no highlighted variant: the frame is stroked over it.
-        if isHighlighted, !rendersSVG {
-            let frame = NSRect(x: 28, y: 16, width: 184, height: 128)
-            let path = NSBezierPath(roundedRect: frame, xRadius: 20, yRadius: 20)
-            path.lineWidth = 2.25
-            NSColor(hex: isDark ? EmptyStateArt.darkTint : EmptyStateArt.lightTint).setStroke()
-            path.stroke()
-        }
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        needsDisplay = true
     }
 
-    private func art(dark: Bool, highlighted: Bool) -> NSImage? {
-        let key = "\(dark) \(highlighted)"
-        if let image = cache[key] { return image }
-        var image: NSImage?
-        if let template = Self.template {
-            let svg = EmptyStateArt.svg(template, color: dark ? EmptyStateArt.darkTint : EmptyStateArt.lightTint, highlighted: highlighted)
-            image = NSImage(data: Data(svg.utf8))
-            rendersSVG = image != nil
+    override func draw(_ dirtyRect: NSRect) {
+        let colour = NSColor(hex: isDark ? EmptyStateArt.darkTint : EmptyStateArt.lightTint)
+        let scale = bounds.width / Self.minimumSize.width
+        guard let book = book(dark: isDark) else {
+            // No SVG: Graphe's static art, frame included.
+            Self.png(dark: isDark)?.draw(in: bounds.insetBy(dx: -28 * scale, dy: -16 * scale))
+            return
         }
-        if image == nil { image = Self.png(dark: dark) }
-        image?.size = Self.size
-        cache[key] = image
+
+        let lineWidth = isHighlighted ? Self.highlightedLineWidth : Self.lineWidth
+        let radius = Self.minimumRadius * scale
+        let path = Self.framePath(in: bounds, lineWidth: lineWidth, radius: radius)
+        colour.withAlphaComponent(isHighlighted ? 0.12 : 0.024).setFill()
+        path.fill()
+        path.lineWidth = lineWidth
+        if isHighlighted {
+            colour.setStroke()
+        } else {
+            let frame = DashedFrame(boundsWidth: Double(bounds.width), boundsHeight: Double(bounds.height),
+                                    radius: Double(radius), lineWidth: Double(lineWidth))
+            let pattern: [CGFloat] = [CGFloat(frame.dash), CGFloat(frame.gap)]
+            path.setLineDash(pattern, count: pattern.count, phase: CGFloat(frame.phase))
+            path.lineCapStyle = .round
+            colour.withAlphaComponent(0.6).setStroke()
+        }
+        path.stroke()
+
+        let size = NSSize(width: Self.bookSize.width * scale, height: Self.bookSize.height * scale)
+        // Graphe's offset is measured downwards (SVG); AppKit's y goes up.
+        let centre = NSPoint(x: bounds.midX + Self.bookCentreOffset.x * scale, y: bounds.midY - Self.bookCentreOffset.y * scale)
+        book.draw(in: NSRect(x: centre.x - size.width / 2, y: centre.y - size.height / 2, width: size.width, height: size.height))
+    }
+
+    /// The rounded rectangle, `lineWidth / 2` inside the bounds, starting at the top middle and
+    /// going clockwise, so the dash pattern starts there (`DashedFrame.phase`).
+    static func framePath(in bounds: NSRect, lineWidth: CGFloat, radius: CGFloat) -> NSBezierPath {
+        let rect = bounds.insetBy(dx: lineWidth / 2, dy: lineWidth / 2)
+        let r = min(radius, rect.width / 2, rect.height / 2)
+        let path = NSBezierPath()
+        path.move(to: NSPoint(x: rect.midX, y: rect.maxY))
+        path.line(to: NSPoint(x: rect.maxX - r, y: rect.maxY))
+        path.appendArc(withCenter: NSPoint(x: rect.maxX - r, y: rect.maxY - r), radius: r, startAngle: 90, endAngle: 0, clockwise: true)
+        path.line(to: NSPoint(x: rect.maxX, y: rect.minY + r))
+        path.appendArc(withCenter: NSPoint(x: rect.maxX - r, y: rect.minY + r), radius: r, startAngle: 0, endAngle: -90, clockwise: true)
+        path.line(to: NSPoint(x: rect.minX + r, y: rect.minY))
+        path.appendArc(withCenter: NSPoint(x: rect.minX + r, y: rect.minY + r), radius: r, startAngle: -90, endAngle: -180, clockwise: true)
+        path.line(to: NSPoint(x: rect.minX, y: rect.maxY - r))
+        path.appendArc(withCenter: NSPoint(x: rect.minX + r, y: rect.maxY - r), radius: r, startAngle: 180, endAngle: 90, clockwise: true)
+        path.close()
+        return path
+    }
+
+    private func book(dark: Bool) -> NSImage? {
+        if let image = bookCache[dark] { return image }
+        guard let template = Self.bookTemplate,
+              let image = NSImage(data: Data(EmptyStateArt.svg(template, color: dark ? EmptyStateArt.darkTint : EmptyStateArt.lightTint).utf8))
+        else { return nil }
+        bookCache[dark] = image
         return image
     }
 
-    /// The PNGs at 1×, 2× and 3× in one image.
+    /// The 0.5x art (240 × 160, frame included) at 1×, 2× and 3× in one image.
     private static func png(dark: Bool) -> NSImage? {
+        let size = NSSize(width: 240, height: 160)
         let base = dark ? "aomidori-empty-dark" : "aomidori-empty"
         let image = NSImage(size: size)
         for suffix in ["", "@2x", "@3x"] {

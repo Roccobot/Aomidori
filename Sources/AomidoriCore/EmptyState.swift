@@ -30,23 +30,15 @@ public enum RecentBooks {
     }
 }
 
-/// Graphe's empty-state art (`aomidori-empty.svg`, drawn in `currentColor`), recoloured for the
-/// window's appearance and emphasised while a book is dragged over it.
+/// Graphe's drop-zone book (`aomidori-dropzone-book.svg`, drawn in `currentColor`), recoloured
+/// for the window's appearance. The frame round it is drawn in code (`DashedFrame`).
 public enum EmptyStateArt {
     public static let lightTint = "#43B59E"
     public static let darkTint = "#5FD4BC"
 
-    /// The SVG with its colour set (`#RRGGBB`) and, when `highlighted`, a solid, thicker frame
-    /// over a stronger wash.
-    public static func svg(_ template: String, color: String, highlighted: Bool) -> String {
-        var svg = template.replacingOccurrences(of: ##"color="#[0-9A-Fa-f]{6}""##, with: "color=\"\(color)\"",
-                                                options: .regularExpression)
-        if highlighted {
-            svg = svg
-                .replacingOccurrences(of: #"fill-opacity="0.04""#, with: #"fill-opacity="0.12""#)
-                .replacingOccurrences(of: #"stroke-width="1.5" stroke-dasharray="5 6""#, with: #"stroke-width="2.25""#)
-                .replacingOccurrences(of: #"stroke-linecap="round" opacity="0.6""#, with: #"stroke-linecap="round" opacity="1""#)
-        }
-        return svg
+    /// The SVG with its colour set (`#RRGGBB`).
+    public static func svg(_ template: String, color: String) -> String {
+        template.replacingOccurrences(of: ##"color="#[0-9A-Fa-f]{6}""##, with: "color=\"\(color)\"",
+                                      options: .regularExpression)
     }
 }

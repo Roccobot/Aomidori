@@ -49,6 +49,9 @@ final class LaunchSmokeTest {
         report["dropZoneFromSVG"] = content.smokeRendersSVG
         report["recentsAtLaunch"] = content.recents.count
         report["recentsLimit"] = NSDocumentController.shared.maximumRecentDocumentCount
+        report["emptyLayout"] = content.smokeLayout
+        checkEmptyLayout(content.smokeLayout, name: "launch size")
+        checkAppearance()
         snapshot(emptyWindow, name: "empty.png")
         content.smokeHighlight(true)
         content.display()
@@ -58,6 +61,8 @@ final class LaunchSmokeTest {
         emptyWindow.setFrame(NSRect(origin: emptyWindow.frame.origin, size: emptyWindow.minSize), display: true)
         emptyWindow.layoutIfNeeded()
         snapshot(emptyWindow, name: "empty-minimum.png")
+        report["emptyLayoutMinimum"] = content.smokeLayout
+        checkEmptyLayout(content.smokeLayout, name: "minimum size")
         let emptyFrame = emptyWindow.frame
 
         // 2. The drop target takes EPUB files only.
@@ -95,6 +100,11 @@ final class LaunchSmokeTest {
             report["firstRecentIsTheBook"] = firstRecent == book.standardizedFileURL
             if firstRecent != book.standardizedFileURL { failures.append("recent books") }
             if let tabWindow = tab?.window { snapshot(tabWindow, name: "empty-tab.png") }
+            if let layout = tab?.smokeContent.smokeLayout {
+                report["emptyTabLayout"] = layout
+                checkEmptyLayout(layout, name: "tab")
+                if layout["headerTextX"] == nil { failures.append("empty tab: no recent files heading measured") }
+            }
             tab?.close()
             try? await Task.sleep(for: .milliseconds(400))
         }
@@ -132,6 +142,34 @@ final class LaunchSmokeTest {
         if !framework.hasPrefix(embedded + "/") { failures.append("Sparkle not loaded from Contents/Frameworks") }
         if menuItem == nil { failures.append("no Check for Updates menu item") }
         if Updater.shared.reasonNotStarted != "smoke test" { failures.append("updater must stay off in smoke sessions") }
+    }
+
+    /// The drop zone within half the width and 30% of the height (or at its minimum, Graphe's
+    /// 184 × 128), in its proportions; the heading's text exactly over the file names'.
+    private func checkEmptyLayout(_ layout: [String: Double], name: String) {
+        guard let width = layout["dropZoneWidth"], let height = layout["dropZoneHeight"],
+              let contentWidth = layout["contentWidth"], let contentHeight = layout["contentHeight"] else { return }
+        let minimum = DropZoneView.minimumSize
+        let atMinimum = width <= Double(minimum.width) + 0.5
+        if !atMinimum, width > contentWidth * 0.5 + 1 || height > contentHeight * 0.3 + 1 { failures.append("drop zone too large (\(name))") }
+        if abs(width / height - Double(minimum.width / minimum.height)) > 0.02 { failures.append("drop zone proportions (\(name))") }
+        if let header = layout["headerTextX"], let title = layout["firstTitleTextX"], abs(header - title) > 0.5 {
+            failures.append("recent files heading not aligned (\(name)): \(header) vs \(title)")
+        }
+    }
+
+    /// 0.53 follows macOS: the 0.5x Night/Day key is gone, and with no override set in this
+    /// session the reading appearance is the system's.
+    private func checkAppearance() {
+        let system = NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+        let legacy = UserDefaults.standard.object(forKey: "AomidoriNight")
+        let override = UserDefaults.standard.object(forKey: "AomidoriAppearanceOverride")
+        report["appearance"] = [
+            "systemIsDark": system, "isNight": ReaderEnvironment.shared.isNight,
+            "legacyNightKey": legacy.map { "\($0)" } ?? "removed", "override": override.map { "\($0)" } ?? "none",
+        ] as [String: Any]
+        if legacy != nil { failures.append("0.5x Night key not removed") }
+        if override == nil, ReaderEnvironment.shared.isNight != system { failures.append("appearance does not follow macOS") }
     }
 
     /// The `rapp` Apple event the Dock sends when its icon is clicked, sent to this process.

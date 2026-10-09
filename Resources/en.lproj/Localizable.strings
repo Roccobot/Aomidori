@@ -177,4 +177,4 @@
 "empty.message" = "Open an EPUB or drag it here";
 "empty.open" = "Open…";
 "empty.open.help" = "Choose an EPUB book to read (⌘O)";
-"empty.recents" = "Recent Books";
+"empty.recents" = "Recent Files";

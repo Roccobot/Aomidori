@@ -31,22 +31,19 @@ struct EmptyStateTests {
         #expect(RecentBooks.title(of: URL(fileURLWithPath: "/x/.epub")) == ".epub")
     }
 
-    @Test func artIsRecolouredAndHighlighted() {
-        let template = ##"<svg color="#43B59E"><rect fill-opacity="0.04" stroke="currentColor" stroke-width="1.5" stroke-dasharray="5 6" stroke-linecap="round" opacity="0.6"/></svg>"##
-        let dark = EmptyStateArt.svg(template, color: EmptyStateArt.darkTint, highlighted: false)
+    @Test func artIsRecoloured() {
+        let template = ##"<svg color="#43B59E"><path stroke="currentColor"/></svg>"##
+        let dark = EmptyStateArt.svg(template, color: EmptyStateArt.darkTint)
         #expect(dark.contains(##"color="#5FD4BC""##) && !dark.contains("#43B59E"))
-        #expect(dark.contains(#"stroke-dasharray="5 6""#))
-        let lit = EmptyStateArt.svg(template, color: EmptyStateArt.lightTint, highlighted: true)
-        #expect(lit.contains(#"fill-opacity="0.12""#) && lit.contains(#"stroke-width="2.25""#) && lit.contains(#"opacity="1""#))
-        #expect(!lit.contains("stroke-dasharray"))
     }
 
-    @Test func graphesArtMatchesTheHighlightPatterns() throws {
+    @Test func graphesBookIsTheBookAloneInItsBox() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("Resources/EmptyState/aomidori-empty.svg")
+            .appendingPathComponent("Resources/EmptyState/aomidori-dropzone-book.svg")
         let template = try String(contentsOf: url, encoding: .utf8)
-        let lit = EmptyStateArt.svg(template, color: "#000000", highlighted: true)
-        #expect(lit.contains(##"color="#000000""##))
-        #expect(lit.contains(#"stroke-width="2.25""#) && lit.contains(#"fill-opacity="0.12""#) && !lit.contains("stroke-dasharray"))
+        // The app places the book by this box (`DropZoneView.bookSize`) and draws the frame itself.
+        #expect(template.contains(#"viewBox="80 42 80 72""#))
+        #expect(!template.contains("<rect") && !template.contains("stroke-dasharray"))
+        #expect(EmptyStateArt.svg(template, color: "#000000").contains(##"color="#000000""##))
     }
 }
