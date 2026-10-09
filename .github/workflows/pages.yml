@@ -1,0 +1,51 @@
+name: Pages
+
+# The download page of Aomidori, served at roccobot.github.io/Aomidori/ by THIS repository
+# (a project site: same pattern as Roccobot/AIV, pages.yml). Author: Rocco Casadei, a.k.a. Roccobot
+#
+# ⚠️ THE APP IS NOT PART OF THE SITE: the download button points at the ZIP of the latest
+# release, and the page asks the GitHub API for its name and size while it loads. So a release
+# needs no deploy (releases are built and published from the owner's Mac, not here), and the
+# site changes only when `publish/` does.
+#
+# ⚠️ On `main` and never on a tag or a release event: the `github-pages` environment lets only
+# the default branch deploy. Watching `publish/` alone keeps a code push from redeploying an
+# unchanged page.
+on:
+  push:
+    branches: [main]
+    paths: ['publish/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Two deploys never race: the second one waits, and the site ends up as the latest `publish/`.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Check out the sources
+        uses: actions/checkout@v5
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload the page
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: publish
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
