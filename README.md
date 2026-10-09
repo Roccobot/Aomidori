@@ -4,7 +4,7 @@ A minimal, fast EPUB reader for macOS (Apple Silicon, macOS 27 Golden Gate and l
 in the spirit of Murasaki: each chapter is one web page that scrolls vertically, `←`/`→`
 move between chapters, and the reader's own CSS can replace the book's at any moment.
 
-## Features (v0.2.1)
+## Features (v0.3.0)
 
 - One window per book (`NSDocument`); macOS window tabs work out of the box.
 - Web-style reading: a chapter scrolls vertically as a single entity. No pages, no
@@ -32,6 +32,8 @@ move between chapters, and the reader's own CSS can replace the book's at any mo
   without them, Night applies only the colors of the default style's dark rules.
 - Minimal mode: no toolbar, title or window buttons, only text.
 - Book info window (`⌘I`): metadata and cover image.
+- **CSS Playground** (`⇧⌘P`): edit a style with a live preview on a sample chapter or a real
+  book, then save it to the styles folder and try it in the reader at once (see below).
 - English and Italian interface, following the system language.
 - Liquid Glass app icon by Graphe, with light, dark, tinted and clear appearances.
 
@@ -150,7 +152,8 @@ scripts/test.sh               # unit tests (Swift Testing; `swift test` plus the
                               # Command Line Tools need to find the Testing framework)
 scripts/bundle.sh             # build/Aomidori.app, ad-hoc signed, arm64 only
 scripts/smoke.sh book.epub    # open a book and save a snapshot of the page to build/smoke.png
-ditto -c -k --keepParent build/Aomidori.app Aomidori-0.2.1.zip   # release archive
+scripts/smoke-playground.sh build/pg [book.epub]   # scripted Playground session: snapshots, report.json
+ditto -c -k --keepParent build/Aomidori.app Aomidori-0.3.0.zip   # release archive
 ```
 
 `EPUBKit` and `AomidoriCore` also build and test on Linux (the app target is macOS-only);
@@ -197,11 +200,58 @@ Menu names are given in English; in Italian they are Archivio, Vista, Vai, Stile
 | Load font file | (menu) | Style |
 | Book info (metadata, cover) | `⌘I` (and toolbar) | File |
 | Open, close | `⌘O`, `⌘W` | File |
+| CSS Playground | `⇧⌘P` | Style |
+| Playground: open a CSS file | `⇧⌘O` (and the Open button) | File |
+| Playground: preview an EPUB / the sample text | `⌥⌘O` / `⇧⌘E` (and toolbar) | File |
+| Playground: save to Styles / save CSS as | `⌘S` / `⇧⌘S` (and toolbar) | File |
+| Playground: Day ↔ Night of the preview | `⇧⌘N` (and toolbar) | View |
+| Playground: previous / next chapter of the book | `←` / `→` (outside the editor), toolbar | Go |
+| Playground editor: undo / redo | `⌘Z` / `⇧⌘Z` | Edit |
+| Playground editor: find, next, previous, use selection | `⌘F`, `⌘G`, `⇧⌘G`, `⌘E` | Edit |
 
 Style list: a quick press opens a list that closes when you pick a style (click, or `↑` `↓`
 and `↩`; `esc` cancels). Holding `⌘` and pressing `1` again moves to the next style with a
 live preview (`⇧` goes back); releasing `⌘` keeps it, like `⌘⇥`.
 Choosing a style turns the override on.
+
+## CSS Playground
+
+`⇧⌘P` (*Style → CSS Playground*) opens a window with the preview on the left (half the width,
+full height) and the CSS on the right; below the editor, the styles folder's files.
+
+- It starts with the default style (`ReadingRoccobot.css`). Double-click another style to load
+  it; *Open…* (`⇧⌘O`) loads a `.css` from anywhere. The list always marks the style the editor
+  holds; an outside file is named under the Open button.
+- **Files are never modified by editing**: the editor works on a copy kept in memory, which the
+  preview reads as if it were a file in the styles folder, so relative URLs (`../Fonts/…`,
+  `@import`) resolve exactly as they will once saved. Every edit reaches the preview after a
+  100 ms pause in typing, keeping the visible line in place.
+- The preview is the reader itself (renderer, scheme handler, page script) with the override
+  on: the book's CSS is removed and the edited CSS applied, with the reader's text size and Night
+  palette, so what you see is what you get. The custom font is left out, so `font-family`
+  edits show. Its own Day/Night (`⇧⌘N` while the Playground is in front, or the toolbar)
+  previews `prefers-color-scheme` without changing the reader.
+- The preview text is a bundled sample chapter (`Resources/Playground/sample.xhtml`, original
+  Italian prose) with everything a book usually has: title page, epigraph, parts and chapters
+  (`h1.up`, `h1.no`), `h2`/`h3`, `.titoletto`, centred, right-aligned and justified text, a
+  blockquote, a poem in `.vv` lines, `.neg` and `.side` paragraphs, small caps, italics, bold,
+  note references and a notes section, a picture (`img.partit`) with caption, a table, lists,
+  a rule, a link and code, with the class names of `ReadingRoccobot.css`. *Load EPUB*
+  (`⌥⌘O`) previews a real book instead, chapter by chapter with `←`/`→`; *Sample Text*
+  (`⇧⌘E`) goes back.
+- *Save to Styles* (`⌘S`) asks for a name and warns before replacing a file; the style appears
+  at once in the reader's list (and reader windows using it reload it). *Save CSS As…* (`⇧⌘S`)
+  writes anywhere. Either way the file is UTF-8 without BOM, with LF line endings and a final
+  newline; non-ASCII characters stay UTF-8 and no `@charset` is added. After saving, the file
+  is the selected style and the editor is no longer marked as edited.
+- Closing the window, quitting, or loading another style with unsaved changes asks whether to
+  save them to Styles, discard them or cancel.
+- The editor: native text view, monospaced system font, line numbers, undo, find bar, two-space
+  Tab (`⇧⇥` removes it), Return keeps the indentation (one level more after `{`). Syntax
+  colouring for CSS (selectors, properties, values, numbers and units, colours, strings,
+  comments, at-rules, `!important`) and basic HTML and JavaScript (chosen by file extension, or
+  by content when pasted). After each edit the text is tokenized again (about 2 ms for 4,000
+  lines) and only the span whose tokens changed is re-coloured.
 
 ## Known limits
 
@@ -222,22 +272,18 @@ Choosing a style turns the override on.
 - A user style naming an installed font that the web view cannot see by name falls back; the
   `Fonts` folder next to `Styles` (with `@font-face`) or the custom font are the reliable ways.
 - Font collections (`.ttc`) are offered to the page by name only.
+- Playground: an outside CSS file's relative URLs resolve in the styles folder (where it
+  would be saved), not next to the original file. HTML and JavaScript are only coloured: the
+  preview applies the editor's text as CSS. Colours are not shown as swatches.
 
 ## Next phases
 
-1. **CSS Playground**: a window with a live preview (sample text or a real EPUB, left) and a
-   minimal HTML/CSS editor with syntax highlighting (right), plus a style selector. Ready in
-   the code: the preview is a `PageRenderer` driven by `ReaderConfiguration` with a different
-   `PageResourceProvider`; *Save to Styles* uses `StyleLibrary.save(css:named:)` (UTF-8 without
-   BOM, LF), so the style appears at once in the reader's style list through the folder watcher
-   and can be tried live in any reader window; *Save As…* writes a `.css` anywhere with the same
-   normalisation.
-2. **Windows vs tabs**: test both and pick one.
-3. **More sidebar panes**, slots and shortcuts already reserved: Thumbnails (`⌥⌘3`, the
+1. **Windows vs tabs**: test both and pick one.
+2. **More sidebar panes**, slots and shortcuts already reserved: Thumbnails (`⌥⌘3`, the
    book's pages in miniature), Images (`⌥⌘4`, every picture in the book), Notes (`⌥⌘6`,
    footnotes and endnotes from `epub:type` / `role` markup). Bookmark renaming and notes.
-4. Per-book style memory, precise positions (element anchors), landing at the end of the
-   previous chapter, trackpad swipe between chapters, find next/previous (`⌘G`).
+3. Per-book style memory, precise positions (element anchors), landing at the end of the
+   previous chapter, trackpad swipe between chapters, find next/previous in books (`⌘G`).
 
 Murasaki (closed source) is a reference for the toolbar, sidebar panes and Inspector; no assets
 or code are taken from it.

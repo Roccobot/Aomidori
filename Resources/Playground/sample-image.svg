@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+  <title>Colline verdi lungo un fiume, con un sole basso e una piccola barca</title>
+  <!-- Drawn for Aomidori's CSS Playground sample; free to use. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#DDF3EC"/>
+      <stop offset="1" stop-color="#F7EBD8"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5FB8A6"/>
+      <stop offset="1" stop-color="#2F7F70"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="540" fill="url(#sky)"/>
+  <circle cx="700" cy="170" r="62" fill="#F2B66D"/>
+  <path d="M0 330 C160 250 300 260 430 310 C560 360 700 250 960 290 L960 540 L0 540 Z" fill="#8FCFB8"/>
+  <path d="M0 380 C200 320 360 350 520 370 C680 390 800 330 960 350 L960 540 L0 540 Z" fill="#43B59E"/>
+  <path d="M0 430 C240 410 420 445 600 430 C760 418 860 425 960 420 L960 540 L0 540 Z" fill="url(#water)"/>
+  <g fill="none" stroke="#DDF3EC" stroke-width="4" stroke-linecap="round" opacity="0.7">
+    <path d="M120 470 H220"/><path d="M380 490 H520"/><path d="M700 465 H790"/><path d="M260 515 H330"/>
+  </g>
+  <path d="M560 452 L660 452 L640 472 L580 472 Z" fill="#1F3A34"/>
+  <path d="M608 452 L608 392 L640 446 Z" fill="#FCFAF6"/>
+  <path d="M606 452 V388" stroke="#1F3A34" stroke-width="4"/>
+</svg>

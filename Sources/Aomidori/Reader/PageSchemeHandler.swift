@@ -14,6 +14,8 @@ extension EPUBPublication: PageResourceProvider {}
 /// - `/<path>`: a resource of the open book, read lazily from the archive off the main thread.
 /// - `/.aomidori/Styles/<file>` and `/.aomidori/Fonts/<file>`: the user's styles and fonts folders,
 ///   so a user style's relative URLs (`../Fonts/MiSans-Regular.otf`) resolve next to it.
+/// - `/.aomidori/Styles/.playground-<id>.css`: the CSS Playground's unsaved buffer, from memory
+///   (see `PlaygroundStyleStore`).
 /// - `/.aomidori/SystemFonts/<token>`: the files of the installed family chosen as custom font
 ///   (see `SystemFontFiles`); nothing else on disk is reachable.
 @MainActor
@@ -67,6 +69,10 @@ final class PageSchemeHandler: NSObject, WKURLSchemeHandler {
         if components.count == 2, components[0] == "SystemFonts" {
             guard let url = SystemFontFiles.shared.url(forToken: components[1]) else { throw EPUBError.missingResource(path: path) }
             return EPUBResource(data: try Data(contentsOf: url), mediaType: MediaType.forPath(url.path))
+        }
+        if components.count == 2, components[0] == "Styles", components[1].hasPrefix(PlaygroundStyleStore.filePrefix) {
+            guard let resource = PlaygroundStyleStore.shared.resource(for: components[1]) else { throw EPUBError.missingResource(path: path) }
+            return resource
         }
         guard components.count >= 2, userFolders.contains(components[0]),
               !components.contains(where: { $0 == ".." || $0 == "." }) else {

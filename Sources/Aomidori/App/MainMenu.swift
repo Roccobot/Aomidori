@@ -47,16 +47,39 @@ enum MainMenu {
         menu.addItem(.separator())
         menu.addItem(item(L10n.string("menu.file.inspector"), #selector(ReaderWindowController.showInspector(_:)), "i"))
         menu.addItem(.separator())
+        // CSS Playground commands: enabled while the Playground window is in front.
+        menu.addItem(item(L10n.string("menu.playground.openCSS"), #selector(PlaygroundWindowController.openCSSFile(_:)), "o", [.command, .shift]))
+        menu.addItem(item(L10n.string("menu.playground.loadEPUB"), #selector(PlaygroundWindowController.loadPlaygroundEPUB(_:)), "o", [.command, .option]))
+        menu.addItem(item(L10n.string("menu.playground.sample"), #selector(PlaygroundWindowController.showSampleText(_:)), "e", [.command, .shift]))
+        menu.addItem(.separator())
         menu.addItem(item(L10n.string("menu.file.close"), #selector(NSWindow.performClose(_:)), "w"))
+        menu.addItem(item(L10n.string("menu.playground.saveToStyles"), #selector(PlaygroundWindowController.saveToStyles(_:)), "s"))
+        menu.addItem(item(L10n.string("menu.playground.saveAs"), #selector(PlaygroundWindowController.saveCSSAs(_:)), "s", [.command, .shift]))
         return menu
     }
 
     private static func editMenu() -> NSMenu {
         let menu = NSMenu(title: L10n.string("menu.edit"))
+        menu.addItem(item(L10n.string("menu.edit.undo"), Selector(("undo:")), "z"))
+        menu.addItem(item(L10n.string("menu.edit.redo"), Selector(("redo:")), "z", [.command, .shift]))
+        menu.addItem(.separator())
+        menu.addItem(item(L10n.string("menu.edit.cut"), #selector(NSText.cut(_:)), "x"))
         menu.addItem(item(L10n.string("menu.edit.copy"), #selector(NSText.copy(_:)), "c"))
+        menu.addItem(item(L10n.string("menu.edit.paste"), #selector(NSText.paste(_:)), "v"))
         menu.addItem(item(L10n.string("menu.edit.selectAll"), #selector(NSText.selectAll(_:)), "a"))
         menu.addItem(.separator())
+        // The reader's search pane, or the Playground editor's find bar.
         menu.addItem(item(L10n.string("menu.edit.find"), #selector(ReaderWindowController.showSearch(_:)), "f"))
+        let finder: [(String, NSTextFinder.Action, String, NSEvent.ModifierFlags)] = [
+            ("menu.edit.findNext", .nextMatch, "g", .command),
+            ("menu.edit.findPrevious", .previousMatch, "g", [.command, .shift]),
+            ("menu.edit.useSelectionForFind", .setSearchString, "e", .command),
+        ]
+        for (key, action, keyEquivalent, modifiers) in finder {
+            let finderItem = item(L10n.string(key), #selector(NSTextView.performTextFinderAction(_:)), keyEquivalent, modifiers)
+            finderItem.tag = action.rawValue
+            menu.addItem(finderItem)
+        }
         return menu
     }
 
@@ -111,6 +134,7 @@ enum MainMenu {
         menu.addItem(.separator())
         menu.addItem(item(L10n.string("menu.style.reload"), #selector(AppDelegate.reloadStyle(_:)), "r"))
         menu.addItem(item(L10n.string("menu.style.showFolder"), #selector(AppDelegate.showStylesFolder(_:))))
+        menu.addItem(item(L10n.string("menu.style.playground"), #selector(AppDelegate.showPlayground(_:)), "p", [.command, .shift]))
         menu.addItem(.separator())
         for fontItem in fontItems() { menu.addItem(fontItem) }
         return menu

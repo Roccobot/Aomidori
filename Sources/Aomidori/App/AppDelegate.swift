@@ -13,6 +13,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         installKeyMonitor()
     }
 
+    /// Unsaved Playground changes are reviewed before quitting.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard let playground, playground.isDirty else { return .terminateNow }
+        playground.reviewUnsavedChanges { proceed in
+            NSApp.reply(toApplicationShouldTerminate: proceed)
+        }
+        return .terminateLater
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         environment.saveStateNow()
     }
@@ -26,7 +35,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     func applicationShouldOpenUntitledFile(_ sender: NSApplication) -> Bool { true }
 
     func applicationOpenUntitledFile(_ sender: NSApplication) -> Bool {
-        NSDocumentController.shared.openDocument(nil)
+        // `-AomidoriPlayground YES` (or a Playground smoke test) starts with the Playground.
+        let defaults = UserDefaults.standard
+        if defaults.bool(forKey: "AomidoriPlayground") || defaults.string(forKey: PlaygroundSmokeTest.defaultsKey) != nil {
+            showPlayground(nil)
+        } else {
+            NSDocumentController.shared.openDocument(nil)
+        }
         return true
     }
 
@@ -64,6 +79,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     /// `⌘R`: reads the active style (and the fonts folder) from disk again.
     @objc func reloadStyle(_ sender: Any?) { environment.reloadStyle() }
+
+    // MARK: CSS Playground
+
+    private var playground: PlaygroundWindowController?
+
+    /// `⇧⌘P`: one Playground window, kept (with its buffer) when closed.
+    @objc func showPlayground(_ sender: Any?) {
+        let controller = playground ?? PlaygroundWindowController()
+        playground = controller
+        controller.showWindow(sender)
+    }
 
     // MARK: Custom font
 

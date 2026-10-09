@@ -46,36 +46,52 @@ public struct StyleLibrary: Sendable {
             .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 
+    /// Where saving under `name` would write, and whether a file is already there (the
+    /// Playground asks before replacing it).
+    public func savePlan(forName name: String) -> StyleSavePlan {
+        let fileName = Self.fileName(for: name)
+        let url = directory.appendingPathComponent(fileName)
+        // The folder may be on a case-insensitive volume: "a.css" replaces "A.css".
+        let existing = styles().first { $0.name.compare(fileName, options: .caseInsensitive) == .orderedSame }
+        return StyleSavePlan(fileName: existing?.name ?? fileName, url: existing?.url ?? url, replacesExisting: existing != nil)
+    }
+
+    /// A file name for `base` that no style has yet: `base.css`, then `base 2.css`, `base 3.css`…
+    public func availableName(for base: String) -> String {
+        let stem = (Self.fileName(for: base) as NSString).deletingPathExtension
+        var candidate = stem + ".css"
+        var number = 2
+        while savePlan(forName: candidate).replacesExisting {
+            candidate = "\(stem) \(number).css"
+            number += 1
+        }
+        return candidate
+    }
+
     /// Saves CSS into the folder (used by the CSS Playground), so it appears in the reader's style
-    /// list at once through the folder watcher. Written as UTF-8 without BOM, with LF line endings.
-    /// Returns the saved file.
+    /// list at once through the folder watcher. Written as `CSSFile.data(for:)` describes.
+    /// An existing file is replaced only with `overwrite`. Returns the saved file.
     @discardableResult
     public func save(css: String, named name: String, overwrite: Bool = false) throws -> StyleFile {
-        let fileName = Self.fileName(for: name)
+        let plan = savePlan(forName: name)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let url = directory.appendingPathComponent(fileName)
-        if !overwrite, FileManager.default.fileExists(atPath: url.path) {
-            throw CocoaError(.fileWriteFileExists, userInfo: [NSFilePathErrorKey: url.path])
+        if plan.replacesExisting, !overwrite {
+            throw CocoaError(.fileWriteFileExists, userInfo: [NSFilePathErrorKey: plan.url.path])
         }
-        try Data(Self.normalizedCSS(css).utf8).write(to: url, options: .atomic)
-        let date = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
-        return StyleFile(name: fileName, url: url, modificationDate: date)
+        try CSSFile.data(for: css).write(to: plan.url, options: .atomic)
+        let date = (try? plan.url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+        return StyleFile(name: plan.fileName, url: plan.url, modificationDate: date)
     }
 
-    /// CSS text as it is written to disk: no BOM, LF line endings, one final newline.
-    public static func normalizedCSS(_ css: String) -> String {
-        var text = css.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
-        if text.hasPrefix("\u{FEFF}") { text.removeFirst() }
-        if !text.hasSuffix("\n") { text.append("\n") }
-        return text
-    }
-
-    /// A safe file name: path separators removed, `.css` appended if missing.
-    static func fileName(for name: String) -> String {
-        let cleaned = name.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
+    /// A safe file name: path separators and leading dots (hidden files) removed, `.css`
+    /// appended if missing.
+    public static func fileName(for name: String) -> String {
+        var stem = name.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        let base = cleaned.isEmpty ? "Style" : cleaned
-        return base.lowercased().hasSuffix(".css") ? base : base + ".css"
+        if stem.lowercased().hasSuffix(".css") { stem.removeLast(4) }
+        while stem.hasPrefix(".") { stem.removeFirst() }
+        stem = stem.trimmingCharacters(in: .whitespaces)
+        return (stem.isEmpty ? "Style" : stem) + ".css"
     }
 
     /// The text of a style file, decoded as UTF-8 (with BOM), falling back to Latin-1.
@@ -103,7 +119,59 @@ public struct StyleLibrary: Sendable {
 
     static func readText(at url: URL) -> String? {
         guard let data = try? Data(contentsOf: url) else { return nil }
-        return String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1)
+        return CSSFile.text(from: data)
+    }
+
+    /// Whether CSS text (not yet saved, as in the Playground) or a local sheet it `@import`s
+    /// has `prefers-color-scheme` rules. Relative imports resolve in this folder.
+    public func handlesColorScheme(css: String) -> Bool {
+        if CSSScanner.mentionsColorScheme(css) { return true }
+        var visited: Set<URL> = []
+        for reference in CSSScanner.importedURLs(css) {
+            guard !reference.contains(":"),
+                  let imported = URL(string: reference, relativeTo: directory.appendingPathComponent("_")) else { continue }
+            if handlesColorScheme(at: imported, visited: &visited) { return true }
+        }
+        return false
+    }
+}
+
+/// Where saving a style would write.
+public struct StyleSavePlan: Equatable, Sendable {
+    /// The file name, as it is (or will be) on disk.
+    public let fileName: String
+    public let url: URL
+    /// A style with that name (compared without case) already exists.
+    public let replacesExisting: Bool
+}
+
+/// How style sheets are read and written.
+///
+/// Written for the widest compatibility (EPUB readers, editors, other platforms): UTF-8 without
+/// BOM, LF line endings, exactly the text with one final newline. Non-ASCII characters stay
+/// UTF-8. No `@charset` rule is added: CSS without one, and without BOM, is read as UTF-8 by
+/// browsers when the document or the server says nothing else, and an `@charset` that is not
+/// the very first bytes is ignored anyway.
+public enum CSSFile {
+    public static func data(for css: String) -> Data {
+        Data(normalized(css).utf8)
+    }
+
+    /// CSS text as it is written to disk: no BOM, LF line endings, one final newline (an empty
+    /// text stays empty).
+    public static func normalized(_ css: String) -> String {
+        var text = css.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
+        while text.hasPrefix("\u{FEFF}") { text.removeFirst() }
+        if !text.isEmpty, !text.hasSuffix("\n") { text.append("\n") }
+        return text
+    }
+
+    /// The text of a style sheet file: UTF-8 (a BOM is dropped), else Latin-1, which can decode
+    /// any bytes.
+    public static func text(from data: Data) -> String? {
+        var bytes = data
+        if bytes.starts(with: [0xEF, 0xBB, 0xBF]) { bytes = bytes.dropFirst(3) }
+        return String(data: bytes, encoding: .utf8) ?? String(data: bytes, encoding: .isoLatin1)
     }
 }
 
