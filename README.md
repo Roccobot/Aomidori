@@ -189,6 +189,7 @@ scripts/smoke.sh book.epub    # open a book and save a snapshot of the page to b
 scripts/smoke-playground.sh build/pg [book.epub]   # scripted Playground session: snapshots, report.json
 scripts/smoke-reader.sh build/rd book.epub         # cover at 3 window sizes, chapter memory, edge toast
 scripts/smoke-launch.sh build/ln book.epub         # launch with no book: empty window, open, new tab, Dock reopen
+scripts/check-icon.sh build/icon                   # icon in its six appearances (ictool), Assets.car contents
 ditto -c -k --keepParent build/Aomidori.app Aomidori-0.4.1.zip   # release archive
 ```
 
