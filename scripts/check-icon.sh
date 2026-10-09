@@ -12,13 +12,13 @@ OUT="$1"
 APP="${2:-build/Aomidori.app}"
 mkdir -p "$OUT"
 
-ICTOOL="$(xcrun --find ictool 2>/dev/null || true)"
-if [[ -z "$ICTOOL" ]]; then
-  for candidate in "/Applications/Icon Composer.app/Contents/Executables/ictool" \
-                   "$(xcode-select -p)/../Applications/Icon Composer.app/Contents/Executables/ictool"; do
-    [[ -x "$candidate" ]] && ICTOOL="$candidate" && break
-  done
-fi
+# Icon Composer's own ictool: `xcrun --find ictool` names a different tool in Xcode's usr/bin
+# (an actool front end that does not know --export-image).
+ICTOOL=""
+for candidate in "$(xcode-select -p)/../Applications/Icon Composer.app/Contents/Executables/ictool" \
+                 "/Applications/Icon Composer.app/Contents/Executables/ictool"; do
+  [[ -x "$candidate" ]] && ICTOOL="$candidate" && break
+done
 if [[ -z "$ICTOOL" ]]; then
   echo "ictool not found (Icon Composer)." >&2
   exit 1
