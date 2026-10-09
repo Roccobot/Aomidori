@@ -6,10 +6,11 @@ import AomidoriCore
 /// so book scripts (disabled anyway) can never see or alter it.
 ///
 /// Layers, in cascade order:
-/// 1. `base`: no horizontal scrolling, media never wider than the window, single-picture pages
-///    (covers) fit the window. Inserted first, so any book or user rule wins over it. It also
-///    declares the `aomidori` cascade layer first, which makes the `!important` rules placed in
-///    it beat every other author rule, whatever its specificity or position (CSS Cascade 5).
+/// 1. `base`: no horizontal scrolling, media never wider than the window. Inserted first, so any
+///    book or user rule wins over these. It also declares the `aomidori` cascade layer first,
+///    which makes the `!important` rules placed in it beat every other author rule, whatever its
+///    specificity or position (CSS Cascade 5); the image-page layout (covers whole and centred in
+///    the window, in every mode) lives there.
 /// 2. the book's own `<link>`/`<style>` sheets and inline styles, disabled when overriding;
 /// 3. `user`: the selected user style (`<link>`, so its relative URLs resolve in the styles folder);
 /// 4. `palette`: Night colors, only when the active CSS has no `prefers-color-scheme` rules;
@@ -47,19 +48,44 @@ enum ReaderScript {
       // Inline styles on these elements usually carry intrinsic sizing: kept when overriding.
       const KEEP_INLINE = new Set(['img', 'svg', 'image', 'video', 'audio', 'canvas', 'picture', 'object', 'embed', 'iframe', 'math']);
       const IMAGE_PAGE = 'aomidori-image-page';
+      // On an image page: the picture itself, and the elements around it (laid out as `contents`).
+      const COVER = 'data-aomidori-cover';
+      const COVER_WRAP = 'data-aomidori-cover-wrap';
+      const OPS = 'http://www.idpf.org/2007/ops';
       // Text that keeps its own family under the custom font: code and formulas.
       const FONT_EXEMPT = 'code, pre, kbd, samp, tt, var, math, math *';
       // Replaced content that keeps its size when the text is scaled.
       const MEDIA = ':is(img, svg, video, canvas, iframe, object, embed):not(svg *)';
+      // A page that is just one picture (a cover, a plate) is centred in the window, whole,
+      // whatever the book or user CSS and the text size say: the body becomes a viewport-sized
+      // flex box, the wrappers around the picture drop their boxes, anything else is hidden,
+      // and nothing scrolls. In the `aomidori` layer, so no author rule can undo it.
+      const PAGE = `html.${IMAGE_PAGE}`;
+      const IMAGE_PAGE_CSS = [
+        `${PAGE}, ${PAGE} body { overflow: hidden !important; }`,
+        `${PAGE} body { display: flex !important; flex-direction: column !important; align-items: center !important;`,
+        '  justify-content: center !important; box-sizing: border-box !important; width: auto !important;',
+        '  max-width: none !important; min-width: 0 !important; height: 100vh !important; min-height: 0 !important;',
+        '  max-height: none !important; margin: 0 !important; padding: 0 !important; border: 0 !important;',
+        '  zoom: 1 !important; columns: auto !important; }',
+        `${PAGE} body *:not([${COVER_WRAP}], [${COVER}], [${COVER}] *) { display: none !important; }`,
+        `${PAGE} [${COVER_WRAP}] { display: contents !important; }`,
+        `${PAGE} [${COVER}] { display: block !important; flex: none !important; box-sizing: border-box !important;`,
+        '  margin: 0 !important; padding: 0 !important; border: 0 !important; float: none !important;',
+        '  position: static !important; transform: none !important; zoom: 1 !important;',
+        '  width: auto !important; height: auto !important; min-width: 0 !important; min-height: 0 !important;',
+        '  max-width: 100vw !important; max-height: 100vh !important; object-fit: contain !important; }',
+        // An SVG with a viewBox scales to the window and letterboxes itself (preserveAspectRatio).
+        `${PAGE} svg[${COVER}="fit"] { width: 100vw !important; height: 100vh !important; }`,
+      ];
       const BASE_CSS = [
         '@layer aomidori;',
         'html { overflow-x: hidden !important; }',
         'img, video, svg { max-width: 100% !important; }',
         'img, video { object-fit: contain; }',
-        // A page that is just one picture (a cover, a plate) fits the window, whole.
-        `html.${IMAGE_PAGE} img, html.${IMAGE_PAGE} svg { max-height: 100vh !important; object-fit: contain; }`,
-        // Centred on its own, since an override style may drop the book's centring rules.
-        `html.${IMAGE_PAGE} img, html.${IMAGE_PAGE} svg { display: block; margin-inline: auto; }`,
+        '@layer aomidori {',
+        ...IMAGE_PAGE_CSS,
+        '}',
       ].join('\n');
 
       const doc = document;
@@ -295,11 +321,47 @@ enum ReaderScript {
         if (font.textContent !== css) font.textContent = css;
       }
 
-      function markImagePage() {
+      // MARK: Image pages
+
+      const hasCoverMarker = (el) => !!el && (
+        /(^|\s)cover(\s|$)/.test(el.getAttributeNS(OPS, 'type') || el.getAttribute('epub:type') || '') ||
+        /(^|\s)cover(-page|-image)?(\s|$)/i.test(el.getAttribute('class') || ''));
+
+      // Text outside SVG pictures (an SVG cover may carry its title as SVG text).
+      function visibleText(node) {
+        let text = '';
+        const walker = doc.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
+          acceptNode: (n) => n.parentElement && n.parentElement.closest('svg, script, style, title')
+            ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
+        });
+        while (walker.nextNode()) text += walker.currentNode.nodeValue;
+        return text.trim();
+      }
+
+      // A spine item that shows a single picture: no text besides it, or an explicit cover
+      // marker (`epub:type="cover"` on the page or a section, `html.cover-page`).
+      function findImagePagePicture() {
         const body = doc.body;
-        const imageOnly = !!body && (body.textContent || '').trim() === '' &&
-          body.querySelectorAll('img, svg').length === 1;
-        root.classList.toggle(IMAGE_PAGE, imageOnly);
+        if (!body) return null;
+        const pictures = [...body.querySelectorAll('img, svg')].filter((el) => !el.parentElement.closest('svg'));
+        if (pictures.length !== 1) return null;
+        const picture = pictures[0];
+        if (visibleText(body) === '') return picture;
+        for (let el = picture; el; el = el.parentElement) if (hasCoverMarker(el)) return picture;
+        return null;
+      }
+
+      function markImagePage() {
+        for (const el of doc.querySelectorAll(`[${COVER}], [${COVER_WRAP}]`)) {
+          el.removeAttribute(COVER);
+          el.removeAttribute(COVER_WRAP);
+        }
+        const picture = findImagePagePicture();
+        root.classList.toggle(IMAGE_PAGE, !!picture);
+        if (!picture) return;
+        const fits = picture.localName === 'svg' && picture.hasAttribute('viewBox');
+        picture.setAttribute(COVER, fits ? 'fit' : 'intrinsic');
+        for (let el = picture.parentElement; el && el !== doc.body; el = el.parentElement) el.setAttribute(COVER_WRAP, '');
       }
 
       // MARK: Position

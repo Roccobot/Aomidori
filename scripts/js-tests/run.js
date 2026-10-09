@@ -121,5 +121,56 @@ const assert = (cond, msg) => { console.log((cond ? 'PASS ' : 'FAIL ') + msg); i
   assert(after.color === 'rgb(9, 8, 7)', 'reloaded style applied');
   assert(after.links === 1, 'one user link after the swap');
   assert(Math.abs(after.top - before) < 10, 'reading line kept across reload');
+
+  // 5. Image pages (covers): centred in the viewport, whole, not scrollable, in every mode.
+  userCSS = 'body { max-width: 34em; margin: 0 auto; padding: 0 1.2em; } img { width: 50%; margin-top: 4em; } p { margin: 2em 0; }';
+  const coverPages = ['cover-img.html', 'cover-svg.html', 'cover-marked.html', 'cover-small.html'];
+  const modes = [
+    { overrideEnabled: false, scale: 1, night: false },
+    { overrideEnabled: true, scale: 1.6, night: false, styleHref: '/.aomidori/Styles/u.css?v=3' },
+    { overrideEnabled: true, scale: 0.8, night: true, nightPaletteCSS: 'html, body { background: #222 !important; }', styleHref: '/.aomidori/Styles/u.css?v=3' },
+  ];
+  for (const [width, height] of [[480, 900], [1400, 600], [900, 700]]) {
+    const p = await browser.newPage({ viewport: { width, height } });
+    await p.route('http://book/**', route => {
+      const url = new URL(route.request().url());
+      if (url.pathname.startsWith('/.aomidori/Styles/')) return route.fulfill({ body: userCSS, contentType: 'text/css' });
+      const f = fixture(decodeURIComponent(url.pathname.slice(1)));
+      if (!fs.existsSync(f)) return route.fulfill({ status: 404, body: '' });
+      route.fulfill({ body: fs.readFileSync(f), contentType: f.endsWith('.jpg') ? 'image/jpeg' : f.endsWith('.css') ? 'text/css' : 'application/xhtml+xml' });
+    });
+    p.on('pageerror', e => console.log('pageerror:', e.message));
+    await p.addInitScript(script + `\nAomidori.apply(${JSON.stringify(base)});`);
+    for (const name of coverPages) {
+      await p.goto('http://book/' + name);
+      await p.waitForLoadState('load');
+      for (const mode of modes) {
+        await p.evaluate(c => Aomidori.apply(c), mode);
+        await p.waitForTimeout(150);
+        const r = await p.evaluate(() => {
+          const el = document.querySelector('[data-aomidori-cover]');
+          if (!el) return null;
+          // An SVG letterboxes its picture: measure the picture inside it.
+          const target = el.localName === 'svg' ? el.querySelector('image') : el;
+          const b = target.getBoundingClientRect();
+          scrollBy(0, 400);
+          return { marked: document.documentElement.classList.contains('aomidori-image-page'), left: b.left, right: innerWidth - b.right,
+            top: b.top, bottom: innerHeight - b.bottom, w: b.width, h: b.height, scrollY, iw: innerWidth, ih: innerHeight };
+        });
+        const tag = `${name} ${width}x${height} override=${mode.overrideEnabled} scale=${mode.scale} night=${mode.night}`;
+        if (!r) { assert(false, `${tag}: image page detected`); continue; }
+        const centred = Math.abs(r.left - r.right) < 1.5 && Math.abs(r.top - r.bottom) < 1.5;
+        const inside = r.left >= -0.5 && r.top >= -0.5 && r.right >= -0.5 && r.bottom >= -0.5;
+        const fills = name === 'cover-small.html' || Math.min(r.left, r.right) < 1 || Math.min(r.top, r.bottom) < 1;
+        assert(r.marked && centred && inside && fills && r.scrollY === 0,
+          `${tag}: centred (${r.left.toFixed(1)}|${r.right.toFixed(1)} ${r.top.toFixed(1)}|${r.bottom.toFixed(1)} ${r.w.toFixed(0)}x${r.h.toFixed(0)}), whole, fits, no scroll (${r.scrollY})`);
+      }
+    }
+    if (process.env.SHOT && width === 480) await p.screenshot({ path: process.env.SHOT.replace('.png', '-cover.png') });
+    await p.goto('http://book/not-cover.html');
+    await p.waitForLoadState('load');
+    assert(!(await p.evaluate(() => document.documentElement.classList.contains('aomidori-image-page'))), `${width}x${height}: a page with text and a figure is not an image page`);
+    await p.close();
+  }
   await browser.close();
 })();
