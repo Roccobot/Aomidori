@@ -4,6 +4,8 @@ A minimal, fast EPUB reader for macOS (Apple Silicon, macOS 27 Golden Gate and l
 in the spirit of Murasaki: each chapter is one web page that scrolls vertically, `←`/`→`
 move between chapters, and the reader's own CSS can replace the book's at any moment.
 
+Download: <https://roccobot.github.io/Aomidori/> (the latest release, from `publish/`).
+
 ## Features (v0.51)
 
 - One window per book (`NSDocument`), as native tabs: books open as tabs of the front reader
@@ -374,4 +376,5 @@ to bottom.
 
 ## Licenses
 
-See [THIRD_PARTY.md](THIRD_PARTY.md) (foliate-js font de-obfuscation, ZIPFoundation).
+Aomidori has no license yet: all rights reserved. Third-party code keeps its own licenses; see
+[THIRD_PARTY.md](THIRD_PARTY.md) (foliate-js font de-obfuscation, ZIPFoundation).
