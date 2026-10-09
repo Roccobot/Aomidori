@@ -135,6 +135,9 @@ final class ReaderSmokeTest {
         }
         reader.smokeConfigure(nil)
         report["fontRendered"] = rendered
+
+        // 6. Book information: the book's title, and both tabs laid out from the top.
+        await checkInspector()
         finish(window: window, originalFrame: originalFrame)
     }
 
@@ -291,6 +294,52 @@ final class ReaderSmokeTest {
             try? await Task.sleep(for: .milliseconds(100))
         }
         try? await Task.sleep(for: .milliseconds(200))
+    }
+
+    private func checkInspector() async {
+        guard let windowController, let reader else { return }
+        windowController.showInspector(nil)
+        try? await Task.sleep(for: .milliseconds(600))
+        guard let info = windowController.smokeInspectorWindow, let content = info.contentView,
+              let tabs = info.contentViewController as? NSTabViewController else {
+            failures.append("inspector opens")
+            return
+        }
+        let expected = L10n.format("inspector.title",
+                                   BookTitle.display(title: reader.book.title, fileURL: (windowController.document as? NSDocument)?.fileURL) ?? "")
+        report["inspectorTitle"] = info.title
+        if info.title != expected { failures.append("inspector title") }
+        content.layoutSubtreeIfNeeded()
+        // Distance from the top of the window's content to the top of the metadata grid: the
+        // tabs and a margin, not half the window.
+        if let grid = Self.firstSubview(of: NSGridView.self, in: content) {
+            let frame = grid.convert(grid.bounds, to: content)
+            let gap = content.isFlipped ? frame.minY : content.bounds.maxY - frame.maxY
+            report["inspectorGridTop"] = gap
+            if gap > 110 { failures.append("inspector metadata from the top") }
+        } else {
+            failures.append("inspector metadata grid")
+        }
+        snapshotFrame(of: info, name: "inspector-metadata.png")
+        tabs.selectedTabViewItemIndex = 1
+        try? await Task.sleep(for: .milliseconds(300))
+        content.layoutSubtreeIfNeeded()
+        snapshotFrame(of: info, name: "inspector-cover.png")
+        info.close()
+    }
+
+    private static func firstSubview<T: NSView>(of type: T.Type, in view: NSView) -> T? {
+        for subview in view.subviews {
+            if let match = subview as? T ?? firstSubview(of: type, in: subview) { return match }
+        }
+        return nil
+    }
+
+    private func snapshotFrame(of window: NSWindow, name: String) {
+        guard let frameView = window.contentView?.superview,
+              let rep = frameView.bitmapImageRepForCachingDisplay(in: frameView.bounds) else { return }
+        frameView.cacheDisplay(in: frameView.bounds, to: rep)
+        write(rep.cgImage, name: name)
     }
 
     private func snapshot(_ name: String) async {
