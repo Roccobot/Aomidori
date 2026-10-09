@@ -15,8 +15,19 @@ move between chapters, and the reader's own CSS can replace the book's at any mo
   Delete removes it) and **Search** (`⌘F`; case-, accent- and quote-insensitive, every
   occurrence with its context; picking one selects it in the page). The last pane is
   remembered per book.
-- Reading position remembered per book (`Positions.json`); bookmarks and the last sidebar pane
-  in `Books.json`, both in `~/Library/Application Support/Aomidori/`.
+- Reading position remembered per book, and per chapter: `←` / `→`, the table of contents and
+  links without a fragment land where each chapter was left (scroll fraction plus an element
+  anchor, so text size and style changes do not move it). Kept in `Positions.json`; bookmarks
+  and the last sidebar pane in `Books.json`, both in `~/Library/Application Support/Aomidori/`.
+- Chapter edges: at the end of a chapter (or on a page that does not scroll, like the cover),
+  Space, `↓`, Page Down or scrolling down shows a small toast, *Go to next chapter* (or *End of
+  book*). Clicking it opens the next chapter at the top (or, at the end, the book's contents
+  page, else its start); with the pointer on the toast, the same key or scroll again does too.
+  At the top, Shift-Space, `↑`, Page Up or scrolling up offers *Go to previous chapter*, which
+  lands where that chapter was left. On a trackpad only a deliberate push past the edge counts
+  (momentum never does); the toast goes away after 3 s or when scrolling back.
+- Covers and other single-picture pages are whole and centred in the window, whatever the
+  window size, style, override, text size or Night.
 - Text size with `+` `-` `0` (or `⌘+` `⌘-` `⌘0`) that always wins over the CSS (px sizes,
   `min()`/`clamp()` caps, `!important`); pictures keep their size; pinch never scales the page.
 - User styles: every `.css` in `~/Library/Application Support/Aomidori/Styles/`, edited live
@@ -153,6 +164,7 @@ scripts/test.sh               # unit tests (Swift Testing; `swift test` plus the
 scripts/bundle.sh             # build/Aomidori.app, ad-hoc signed, arm64 only
 scripts/smoke.sh book.epub    # open a book and save a snapshot of the page to build/smoke.png
 scripts/smoke-playground.sh build/pg [book.epub]   # scripted Playground session: snapshots, report.json
+scripts/smoke-reader.sh build/rd book.epub         # cover at 3 window sizes, chapter memory, edge toast
 ditto -c -k --keepParent build/Aomidori.app Aomidori-0.3.0.zip   # release archive
 ```
 
@@ -160,7 +172,8 @@ ditto -c -k --keepParent build/Aomidori.app Aomidori-0.3.0.zip   # release archi
 IDPF font de-obfuscation needs CryptoKit and its test is skipped there.
 
 The page-side script has its own WebKit tests (text size against px and `min()`/`clamp()` caps,
-override and custom font against book fonts, live style reload keeping the position):
+override and custom font against book fonts, live style reload keeping the position, saved
+positions, scroll edges, covers centred at three viewport sizes in every mode):
 
 ```sh
 cd scripts/js-tests && npm install && npx playwright-core install webkit && node run.js
@@ -180,7 +193,9 @@ Menu names are given in English; in Italian they are Archivio, Vista, Vai, Stile
 
 | Action | Shortcut | Menu |
 | --- | --- | --- |
-| Previous / next chapter | `←` / `→` | Go |
+| Previous / next chapter (where it was left) | `←` / `→` | Go |
+| At a chapter's end / start: offer the next / previous chapter | `Space`, `↓`, `PgDn` / `⇧Space`, `↑`, `PgUp`, or scroll | (toast) |
+| Go there | click the toast, or the same key or scroll with the pointer on it | (toast) |
 | Back / forward (history of jumps) | `⌘[` / `⌘]` | Go |
 | Larger / smaller text | `+` / `-`, `⌘+` / `⌘-` | View |
 | Text at 100% of the style | `0`, `⌘0` | View |
@@ -255,10 +270,13 @@ full height) and the CSS on the right; below the editor, the styles folder's fil
 
 ## Known limits
 
-- `←` always lands at the top of the previous chapter.
-- The position is a scroll fraction of the chapter; after the chapter's layout changes a lot
-  (another style, another width) it is approximate. Style and size changes keep the visible
-  line in place.
+- A saved position is found again by its element (paragraph); inside a very long paragraph
+  the offset is proportional, so after a large layout change it is close, not exact. If the
+  book changes, the scroll fraction is used.
+- Single-picture pages are recognised by their markup (one picture and no other text, or an
+  `epub:type="cover"` / `cover-page` marker); the manifest's cover properties are not consulted.
+- The contents page for *End of book* is the EPUB 3 navigation document if it is in the reading
+  order, else a spine item named `toc`, `contents`, `indice` or `sommario`.
 - The text size zooms margins and fixed widths together with the text (the measure in em is
   kept); pictures do not grow.
 - With the override off, the book's CSS is used as is: a book without margins touches the
@@ -282,8 +300,7 @@ full height) and the CSS on the right; below the editor, the styles folder's fil
 2. **More sidebar panes**, slots and shortcuts already reserved: Thumbnails (`⌥⌘3`, the
    book's pages in miniature), Images (`⌥⌘4`, every picture in the book), Notes (`⌥⌘6`,
    footnotes and endnotes from `epub:type` / `role` markup). Bookmark renaming and notes.
-3. Per-book style memory, precise positions (element anchors), landing at the end of the
-   previous chapter, trackpad swipe between chapters, find next/previous in books (`⌘G`).
+3. Per-book style memory, trackpad swipe between chapters, find next/previous in books (`⌘G`).
 
 Murasaki (closed source) is a reference for the toolbar, sidebar panes and Inspector; no assets
 or code are taken from it.
