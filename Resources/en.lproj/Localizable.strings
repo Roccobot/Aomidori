@@ -1,6 +1,7 @@
 /* Aomidori UI strings (English, development language). Keep keys in sync with the other language. */
 
 "menu.app.about" = "About Aomidori";
+"menu.app.checkForUpdates" = "Check for Updates…";
 "menu.app.services" = "Services";
 "menu.app.hide" = "Hide Aomidori";
 "menu.app.hideOthers" = "Hide Others";

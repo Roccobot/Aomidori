@@ -1,12 +1,15 @@
 import AppKit
 import Carbon
+import Sparkle
 
 /// A scripted session for `scripts/smoke-launch.sh`, enabled by the launch argument
 /// `-AomidoriLaunchSmoke <folder>` (with `-AomidoriLaunchSmokeBook <epub>`). The app is
 /// launched with no book: it checks that the empty window is shown (drop zone, recent books,
 /// minimum size), that the drop target accepts only EPUB files, that a book opened from it
 /// takes its place (frame included), that `⌘T` adds an empty tab listing that book first, and
-/// that the Dock's reopen event brings the empty window back once the book is closed. Reading state
+/// that the Dock's reopen event brings the empty window back once the book is closed. It also
+/// checks that Sparkle is loaded from the app's own Frameworks folder and that the app menu has
+/// "Check for Updates…" (the updater itself stays off in smoke sessions). Reading state
 /// is kept in the folder (see `AppPaths`) and window frames are not remembered meanwhile.
 @MainActor
 final class LaunchSmokeTest {
@@ -29,6 +32,8 @@ final class LaunchSmokeTest {
 
     private func run() async {
         try? await Task.sleep(for: .milliseconds(1500))
+
+        checkUpdater()
 
         // 1. Launch with no book: the empty window, and nothing else.
         report["atLaunch"] = windows()
@@ -108,6 +113,25 @@ final class LaunchSmokeTest {
         report["afterReopen"] = windows()
         if EmptyReaderWindowController.all.first?.window?.isVisible != true { failures.append("empty window on reopen") }
         finish()
+    }
+
+    /// Sparkle comes from Contents/Frameworks (the rpath works, the embedded copy is the one
+    /// in use), the menu item exists, and the updater stayed off because of the smoke session.
+    private func checkUpdater() {
+        let framework = Bundle(for: SPUUpdater.self).bundleURL.resolvingSymlinksInPath().path
+        let embedded = Bundle.main.privateFrameworksURL?.resolvingSymlinksInPath().path ?? "?"
+        let menuItem = NSApp.mainMenu?.items.first?.submenu?.items
+            .first { $0.action == #selector(AppDelegate.checkForUpdates(_:)) }
+        report["updater"] = [
+            "framework": framework,
+            "sparkleVersion": Bundle(for: SPUUpdater.self).object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?",
+            "menuItem": menuItem?.title ?? "",
+            "feedURL": Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") as? String ?? "",
+            "notStarted": Updater.shared.reasonNotStarted ?? "",
+        ]
+        if !framework.hasPrefix(embedded + "/") { failures.append("Sparkle not loaded from Contents/Frameworks") }
+        if menuItem == nil { failures.append("no Check for Updates menu item") }
+        if Updater.shared.reasonNotStarted != "smoke test" { failures.append("updater must stay off in smoke sessions") }
     }
 
     /// The `rapp` Apple event the Dock sends when its icon is clicked, sent to this process.

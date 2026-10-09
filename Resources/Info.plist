@@ -66,5 +66,11 @@
 	<string>NSApplication</string>
 	<key>NSSupportsAutomaticTermination</key>
 	<false/>
+	<key>SUFeedURL</key>
+	<string>https://roccobot.github.io/Aomidori/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>REPLACE_WITH_GENERATE_KEYS_OUTPUT</string>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
 </dict>
 </plist>

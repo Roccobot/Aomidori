@@ -25,6 +25,8 @@ enum MainMenu {
     private static func appMenu() -> NSMenu {
         let menu = NSMenu(title: "Aomidori")
         menu.addItem(item(L10n.string("menu.app.about"), #selector(NSApplication.orderFrontStandardAboutPanel(_:))))
+        // Sparkle's usual place, with no shortcut, as in other Mac apps.
+        menu.addItem(item(L10n.string("menu.app.checkForUpdates"), #selector(AppDelegate.checkForUpdates(_:))))
         menu.addItem(.separator())
         let services = NSMenu(title: L10n.string("menu.app.services"))
         NSApp.servicesMenu = services

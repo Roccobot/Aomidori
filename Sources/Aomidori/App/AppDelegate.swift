@@ -55,6 +55,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        Updater.shared.start()
         if LaunchSmokeTest.isActive { launchSmokeTest = LaunchSmokeTest() }
         // AppKit does not always ask for the untitled file (a background launch, `open -g`, got
         // no window): once launching is over, the empty window is shown if nothing opened. A book
@@ -95,6 +96,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private static var isPlaygroundInFront: Bool {
         NSApp.keyWindow?.windowController is PlaygroundWindowController
     }
+
+    // MARK: Updates
+
+    @objc func checkForUpdates(_ sender: Any?) { Updater.shared.checkForUpdates(sender) }
 
     // MARK: Global reading actions
 
@@ -184,6 +189,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         switch menuItem.action {
+        case #selector(checkForUpdates(_:)):
+            return Updater.shared.canCheckForUpdates
         case #selector(toggleNight(_:)):
             menuItem.state = environment.isNight ? .on : .off
         case #selector(toggleStyleOverride(_:)):
