@@ -8,6 +8,8 @@ Download: <https://roccobot.github.io/Aomidori/> (the latest release, from `publ
 
 ## Features (v0.51)
 
+- Automatic updates with Sparkle 2 (from 0.52): *Check for Updates…* in the app menu, and a
+  daily check once allowed (Sparkle asks on the second launch). See [Updates](#updates).
 - One window per book (`NSDocument`), as native tabs: books open as tabs of the front reader
   window (tabbing mode *preferred*), and `⌘T` (or the tab bar's `+`) adds an empty tab.
 - The empty reader window, shown at launch with no book, when the Dock icon is clicked with no
@@ -197,7 +199,8 @@ scripts/smoke-playground.sh build/pg [book.epub]   # scripted Playground session
 scripts/smoke-reader.sh build/rd book.epub         # cover at 3 window sizes, chapter memory, edge toast
 scripts/smoke-launch.sh build/ln book.epub         # launch with no book: empty window, open, new tab, Dock reopen
 scripts/check-icon.sh build/icon                   # icon in its six appearances (ictool), Assets.car contents
-ditto -c -k --keepParent build/Aomidori.app Aomidori-0.51.zip   # release archive
+scripts/release.sh                                 # release ZIP, EdDSA-signed, added to publish/appcast.xml
+python3 scripts/test_appcast.py                    # tests of the appcast helper (any OS)
 ```
 
 Rules checks: in every clone, run `git config core.hooksPath .githooks` once. The two hooks hand
@@ -221,6 +224,38 @@ The app is ad-hoc signed, not notarized: on another Mac, the first launch needs 
 **Continuous integration (not set up yet).** A GitHub Actions workflow on a `macos` runner
 could run `swift test` and `scripts/bundle.sh` on each push and attach the zip to tagged
 releases, once hosted runners offer macOS 27 and Swift 6.4.
+
+## Updates
+
+Aomidori updates itself with [Sparkle 2](https://sparkle-project.org), the official binary
+package fetched by SwiftPM (macOS only; Linux builds of the libraries do not see it).
+
+- `scripts/bundle.sh` embeds `Sparkle.framework` (thinned to arm64) in `Contents/Frameworks`,
+  where the executable's `@executable_path/../Frameworks` rpath points, and signs the nested
+  code ad hoc from the inside out (the two XPC services, `Autoupdate`, `Updater.app`, the
+  framework, the app), without `--deep`; `codesign --verify --deep --strict` checks the result.
+- `Updater` (in the app target) starts `SPUStandardUpdaterController` when launching is over.
+  `UpdatePolicy` (AomidoriCore, tested) keeps it off in scripted smoke sessions and when
+  Info.plist has no HTTPS `SUFeedURL` or no valid `SUPublicEDKey`.
+- Sparkle's standard behaviour is kept: on the second launch it asks whether to check
+  automatically, then checks daily (`SUScheduledCheckInterval` 86400; `SUEnableAutomaticChecks`
+  is left out on purpose so that the question is asked).
+- The appcast is `publish/appcast.xml`, served by GitHub Pages at
+  <https://roccobot.github.io/Aomidori/appcast.xml>. Each item points at the ZIP of a GitHub
+  release and links its release page for the notes.
+- Every ZIP is signed with an EdDSA key (`sign_update`). The app is ad-hoc signed, so this
+  signature is what Sparkle relies on: an update is installed only if it verifies against the
+  installed copy's `SUPublicEDKey` and the new bundle's own signature is valid. The private key
+  lives in the maintainer's Keychain and is never committed.
+- Sparkle's installer clears the quarantine attribute of the new bundle, so an update does not
+  bring the Gatekeeper prompt back. Only the first install of an ad-hoc signed build needs
+  right-click › Open.
+- 0.52 is the first version with Sparkle: it has to be installed by hand once, and updates
+  itself from then on.
+
+A release: `scripts/bundle.sh` and the smoke tests, then `scripts/release.sh` (ZIP, signature,
+appcast item), then `gh release create vX.XX` with the ZIP, and only then the commit and push of
+`publish/appcast.xml`, so the ZIP exists before installed copies see the item.
 
 ## Keyboard shortcuts
 
@@ -381,4 +416,4 @@ to bottom.
 ## Licenses
 
 Aomidori has no license yet: all rights reserved. Third-party code keeps its own licenses; see
-[THIRD_PARTY.md](THIRD_PARTY.md) (foliate-js font de-obfuscation, ZIPFoundation).
+[THIRD_PARTY.md](THIRD_PARTY.md) (foliate-js font de-obfuscation, ZIPFoundation, Sparkle).

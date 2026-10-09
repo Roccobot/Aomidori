@@ -162,13 +162,62 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
   e la supera anche nel confronto numerico. `CFBundleShortVersionString` in
   `Resources/Info.plist` è la fonte unica; `CFBundleVersion` è il numero di build e sale di uno a
   ogni versione pubblicata. Il commit di versione è l'**ultimo** prima del rilascio.
-- **Il file**: `Aomidori-x.xx.zip`, fatto con `ditto -c -k --keepParent` dalla build provata, mai
-  da una build rifatta dopo la prova.
-- **La release**: `gh release create vx.xx` con lo ZIP e le note in inglese. La release si
-  verifica col suo tag e lo ZIP allegato; il sito la trova da sé (§ '🌐 Il sito').
+- **Il file**: `Aomidori-x.xx.zip`, fatto da `scripts/release.sh` (`ditto -c -k --keepParent`)
+  dalla build provata, mai da una build rifatta dopo la prova, e firmato per Sparkle nello stesso
+  giro (§ '🔄 Aggiornamenti automatici').
+- **La release**: `gh release create vx.xx` con lo ZIP e le note in inglese, **prima** di
+  pubblicare l'appcast. La release si verifica col suo tag e lo ZIP allegato; il sito la trova da
+  sé (§ '🌐 Il sito').
 - **L'app è firmata ad hoc**, non con Developer ID: alla prima apertura macOS la blocca, e si apre
   col clic destro e Apri (o da Impostazioni di Sistema, Privacy e sicurezza). Chi scrive note o
-  pagine per altri lo dice.
+  pagine per altri lo dice. Gli aggiornamenti installati da Sparkle non chiedono di nuovo.
+
+## 🔄 Aggiornamenti automatici
+
+- **Sparkle 2**, voluto da Rocco dalla `0.52` (9 ottobre 2026), dal pacchetto binario ufficiale
+  via SwiftPM, solo su macOS. `scripts/bundle.sh` mette `Sparkle.framework` (ridotto ad arm64) in
+  `Contents/Frameworks`, dove punta l'rpath `@executable_path/../Frameworks` di `Package.swift`, e
+  firma ad hoc dall'interno verso l'esterno: `Downloader.xpc` (con i suoi entitlement),
+  `Installer.xpc`, `Autoupdate`, `Updater.app`, il framework, l'app. Mai `--deep` per firmare;
+  `codesign --verify --deep --strict` solo per verificare.
+- **Comportamento di Sparkle, non nostro**: al secondo avvio Sparkle chiede una volta se cercare
+  da solo gli aggiornamenti, poi controlla una volta al giorno (`SUScheduledCheckInterval`).
+  `SUEnableAutomaticChecks` resta assente apposta, perché metterlo salterebbe la domanda. La voce
+  *Controlla aggiornamenti...* sta nel menu dell'app, senza scorciatoia, come nelle altre app Mac.
+- **L'appcast** è `publish/appcast.xml`, servito su <https://roccobot.github.io/Aomidori/appcast.xml>
+  (`SUFeedURL`, e `UpdatePolicy.feedURL` che una prova confronta). Ogni voce punta allo ZIP della
+  release su GitHub e alla pagina della release per le note.
+- **Nelle prove l'updater è spento** (`UpdatePolicy`): le sessioni scriptate sul Mac di Rocco non
+  devono parlare col feed né scrivere le impostazioni di Sparkle nelle sue preferenze. Resta spento
+  anche senza una chiave pubblica valida.
+- ⚠️⚠️ **La chiave privata EdDSA** firma ogni ZIP, e con un'app firmata ad hoc è l'**unica** prova
+  che un aggiornamento viene da Rocco: Sparkle accetta l'aggiornamento se la firma EdDSA torna con
+  `SUPublicEDKey` della copia installata e se la firma ad hoc del nuovo bundle è valida. La chiave
+  vive nel Portachiavi del Mac di Rocco (`generate_keys --account aomidori`) e in una copia di
+  riserva (`generate_keys -x`) che custodisce lui. Non entra mai nel repo né in chat, e non resta
+  in un file del box: se ci passa per arrivare a Rocco, si cancella appena lui l'ha. Persa la
+  chiave, nessuna copia installata accetta più aggiornamenti: si rimette a mano una versione con
+  una chiave nuova.
+- **Quarantena e Gatekeeper**: l'installatore di Sparkle toglie la quarantena dal bundle nuovo
+  prima di sostituire il vecchio, quindi un aggiornamento non riapre l'avviso di Gatekeeper.
+  Lo si è letto nel sorgente di Sparkle (`SUPlainInstaller`); su macOS 27 lo conferma il primo
+  aggiornamento vero.
+- **La `0.52` si installa a mano una volta**: le versioni precedenti non hanno Sparkle. Gli
+  aggiornamenti funzionano dalla `0.52` in poi, e le note della `0.52` lo dicono.
+- **I passi del rilascio**: i primi due sul Mac, gli altri dal box, dove ci sono `gh` e il clone
+  con la storia (lo ZIP e `publish/appcast.xml` tornano dal Mac nella stessa sessione):
+  1. `scripts/bundle.sh`, poi le prove (§ '🧰 Build e prove').
+  2. `scripts/release.sh`: verifica le firme, fa lo ZIP, lo firma con `sign_update` (dal
+     Portachiavi, account `aomidori`, o da `ED_KEY_FILE`) e aggiunge la voce a
+     `publish/appcast.xml` con `scripts/appcast.py`: `sparkle:version` (`CFBundleVersion`),
+     `shortVersionString`, `length`, `edSignature` e `minimumSystemVersion` `27.0`. Rifiuta una
+     chiave che non è quella di `SUPublicEDKey` e una build già presente nell'appcast.
+  3. `gh release create vx.xx` con lo ZIP: prima la release, così lo ZIP esiste già quando le copie
+     installate vedono la voce.
+  4. Commit di `publish/appcast.xml` (`chore(appcast): ...`) e push su `main`: GitHub Pages lo
+     pubblica, e da lì Sparkle lo trova.
+- La prima volta `sign_update` può far chiedere a macOS il permesso di usare la chiave del
+  Portachiavi: è una finestra per Rocco, che risponde *Consenti sempre*.
 
 ## 🗣️ Commit e note di rilascio in inglese: deroga dichiarata
 

@@ -260,9 +260,13 @@ Un file più specifico vince **dove parla**, e il suo silenzio non è una deroga
   e prove').
 - **Hook e controlli**: `git config core.hooksPath .githooks` in ogni clone; l'Action
   `rules-check` rifà i controlli a ogni push (`Rules.md` § '🧰 Build e prove').
-- **Il rilascio**: lo ZIP della build provata, `Aomidori-x.xx.zip`, fatto con
-  `ditto -c -k --keepParent` nella stessa sessione, e `gh release create vx.xx` con quel file; il
+- **Il rilascio**: lo ZIP della build provata, `Aomidori-x.xx.zip`, fatto e firmato da
+  `scripts/release.sh` nella stessa sessione, e `gh release create vx.xx` con quel file; il
   commit di versione è l'ultimo (`Rules.md` § '🚀 Che cosa produce un rilascio').
+- **Aggiornamenti con Sparkle 2** dalla `0.52`: appcast in `publish/appcast.xml`, ZIP firmato
+  EdDSA da `scripts/release.sh`, release su GitHub prima del push dell'appcast. ⚠️⚠️ La chiave
+  privata sta solo nel Portachiavi di Rocco e nella sua copia di riserva: mai nel repo né in
+  chat, e mai lasciata sul box (`Rules.md` § '🔄 Aggiornamenti automatici').
 - **Versione**: SlimVer `x.xx` come ovunque, senza eccezioni: prima dell'1.00 la numerazione
   riparte da `0.51`, che segue la `0.5.0`. `CFBundleShortVersionString` in `Resources/Info.plist`
   è la fonte unica, e `CFBundleVersion` sale di uno a ogni versione pubblicata (`Rules.md`
