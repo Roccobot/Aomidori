@@ -108,6 +108,16 @@ public struct CustomFontChoice: Codable, Equatable, Sendable {
         return CustomFontChoice(family: legacyFamily)
     }
 
+    /// Variation values read from an AppKit font (the Font panel's, a face picked in the
+    /// chooser), minus the axes that follow the text size: an optical size (`opsz`) recorded
+    /// at the panel's point size would freeze it, while the page sets it from the rendered size
+    /// by itself (`font-optical-sizing: auto`).
+    public static func panelVariations(_ values: [String: Double]) -> [String: Double] {
+        values.filter { !sizeDrivenAxes.contains($0.key) }
+    }
+
+    public static let sizeDrivenAxes: Set<String> = ["opsz"]
+
     public func record() -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
@@ -164,6 +174,22 @@ public enum CustomFontCSS {
     /// Maps a Core Text width trait (-1...1) to a CSS `font-stretch` percentage.
     public static func stretch(fromWidthTrait trait: Double) -> Double {
         (interpolate(trait, in: widthTable) * 10).rounded() / 10
+    }
+
+    /// The CSS width of a named instance whose font has a width axis off the CSS percent scale
+    /// (older Apple fonts such as Skia: `wdth` 0.62–1.3, 1 being normal). Core Text's width
+    /// trait is unreliable for those (Skia's Extended reads as narrow as Condensed). A ratio
+    /// scale (within 0.25–4) is read as a fraction of normal width, between 50% and 200%;
+    /// anything else as normal width.
+    public static func stretch(fromWidthAxisValue value: Double, range: ClosedRange<Double>) -> Double {
+        guard value.isFinite, range.lowerBound >= 0.25, range.upperBound <= 4 else { return 100 }
+        return (min(max(value * 100, 50), 200) * 10).rounded() / 10
+    }
+
+    /// Whether a width axis range is on the percent scale that `font-stretch` drives. Not only
+    /// 50–200%: the system font's axis runs 30–150.
+    public static func isCSSWidthAxis(_ range: ClosedRange<Double>) -> Bool {
+        range.lowerBound >= 10 && range.upperBound <= 1000
     }
 
     private static func interpolate(_ value: Double, in table: [(trait: Double, css: Double)]) -> Double {

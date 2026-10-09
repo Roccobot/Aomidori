@@ -19,7 +19,8 @@ enum FontChoiceConversion {
     }
 
     /// The choice an AppKit font stands for: its family and face, the face's weight, width and
-    /// style, its variation values, and the Typography features set on its descriptor.
+    /// style, its variation values (not the optical size, which follows the text size), and
+    /// the Typography features set on its descriptor.
     /// `unknownFeatures` lists features with no OpenType equivalent, which are left out.
     static func choice(from font: NSFont) -> (choice: CustomFontChoice, unknownFeatures: [String]) {
         let descriptor = font.fontDescriptor as CTFontDescriptor
@@ -40,7 +41,8 @@ enum FontChoiceConversion {
         }
         let (features, unknown) = features(of: font)
         let choice = CustomFontChoice(family: font.familyName ?? font.fontName, faceName: font.fontName, weight: weight,
-                                      italic: style.italic, stretch: stretch, variations: variations, features: features)
+                                      italic: style.italic, stretch: stretch,
+                                      variations: CustomFontChoice.panelVariations(variations), features: features)
         return (choice, unknown)
     }
 

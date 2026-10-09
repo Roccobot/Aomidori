@@ -203,7 +203,7 @@ final class CustomFonts {
             let name = axis[kCTFontVariationAxisNameKey] as? String ?? tag
             switch tag {
             case "wght" where minimum < 1 || maximum > 1000 || maximum <= 10: return nil
-            case "wdth" where minimum < 10 || maximum > 1000: return nil
+            case "wdth" where !CustomFontCSS.isCSSWidthAxis(minimum...maximum): return nil
             default: return VariationAxis(tag: tag, name: name, range: minimum...maximum, defaultValue: defaultValue)
             }
         }
@@ -223,7 +223,11 @@ final class CustomFonts {
         var style = FaceStyle(weight: CustomFontCSS.exactWeight(fromTrait: weight),
                               italic: symbolic & CTFontSymbolicTraits.traitItalic.rawValue != 0,
                               stretch: CustomFontCSS.stretch(fromWidthTrait: width))
-        for axis in variationAxes(of: CTFontCreateWithFontDescriptor(descriptor, 12, nil)) {
+        let font = CTFontCreateWithFontDescriptor(descriptor, 12, nil)
+        if let width = rawWidthAxis(of: font) {
+            style.stretch = CustomFontCSS.stretch(fromWidthAxisValue: width.value, range: width.range)
+        }
+        for axis in variationAxes(of: font) {
             switch axis.tag {
             case "wght": style.weightRange = axis.range
             case "wdth": style.stretchRange = axis.range
@@ -231,6 +235,19 @@ final class CustomFonts {
             }
         }
         return style
+    }
+
+    /// The value and range of a width axis that is not on the CSS scale, if the font has one.
+    private static func rawWidthAxis(of font: CTFont) -> (value: Double, range: ClosedRange<Double>)? {
+        let axes = CTFontCopyVariationAxes(font) as? [[CFString: Any]] ?? []
+        guard let identifier = FontChoiceConversion.identifier("wdth"),
+              let axis = axes.first(where: { ($0[kCTFontVariationAxisIdentifierKey] as? NSNumber)?.uint32Value == identifier }),
+              let minimum = (axis[kCTFontVariationAxisMinimumValueKey] as? NSNumber)?.doubleValue,
+              let maximum = (axis[kCTFontVariationAxisMaximumValueKey] as? NSNumber)?.doubleValue, minimum < maximum,
+              !CustomFontCSS.isCSSWidthAxis(minimum...maximum) else { return nil }
+        let values = CTFontCopyVariation(font) as? [NSNumber: NSNumber] ?? [:]
+        let defaultValue = (axis[kCTFontVariationAxisDefaultValueKey] as? NSNumber)?.doubleValue ?? 1
+        return (values[NSNumber(value: identifier)]?.doubleValue ?? defaultValue, minimum...maximum)
     }
 
     private static func pathComponent(_ name: String) -> String {

@@ -190,14 +190,24 @@ final class ReaderSmokeTest {
             "\(face.postScriptName ?? "-") \(face.url ?? "-") w=\(face.weightRange.map { "\($0)" } ?? "\(face.weight)")"
                 + " s=\(face.stretchRange.map { "\($0)" } ?? "\(face.stretch)") i=\(face.italic)"
         }
+        let skia = Dictionary(ReaderEnvironment.shared.fonts.faces(forFamily: "Skia").compactMap { face in
+            face.postScriptName.map { ($0, face.stretch) }
+        }, uniquingKeysWith: { first, _ in first })
+        if let extended = skia["Skia-Regular_Extended"], let condensed = skia["Skia-Regular_Condensed"],
+           !(extended > 100 && condensed < 100) {
+            failures.append("Skia widths")
+        }
         result["SkiaAxes"] = CustomFonts.variationAxes(ofFace: "Skia-Regular").map { "\($0.tag) \($0.name) \($0.range) \($0.defaultValue)" }
         // The system font has CSS-scale axes: a weight between named instances survives the round trip.
         let system = NSFont.systemFont(ofSize: 16)
         result["systemAxes"] = CustomFonts.variationAxes(of: system as CTFont).map { "\($0.tag) \($0.range) \($0.defaultValue)" }
         var roundTrip = FontChoiceConversion.choice(from: system).choice
         roundTrip.weight = 550
-        result["systemRoundTrip"] = FontChoiceConversion.font(for: roundTrip, size: 16)
-            .map { describe(FontChoiceConversion.choice(from: $0).choice) } ?? "nil"
+        let back = FontChoiceConversion.font(for: roundTrip, size: 16).map { FontChoiceConversion.choice(from: $0).choice }
+        result["systemRoundTrip"] = back.map(describe) ?? "nil"
+        if back?.variations["opsz"] != nil || back.map({ abs(($0.weight ?? 0) - 550) > 1 }) ?? true {
+            failures.append("system font round trip")
+        }
         return result
     }
 

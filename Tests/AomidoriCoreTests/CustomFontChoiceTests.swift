@@ -67,6 +67,26 @@ struct CustomFontChoiceTests {
         #expect(CustomFontCSS.stretch(fromWidthTrait: -1) == 50)
     }
 
+    @Test func widthAxesOffTheCSSScaleAreReadAsRatios() {
+        // Skia: wdth 0.62–1.3, 1 = normal.
+        #expect(CustomFontCSS.stretch(fromWidthAxisValue: 1.3, range: 0.62...1.3) == 130)
+        #expect(CustomFontCSS.stretch(fromWidthAxisValue: 0.62, range: 0.62...1.3) == 62)
+        #expect(CustomFontCSS.stretch(fromWidthAxisValue: 1, range: 0.62...1.3) == 100)
+        #expect(CustomFontCSS.stretch(fromWidthAxisValue: 0.3, range: 0.25...4) == 50, "clamped to 50%")
+        #expect(CustomFontCSS.stretch(fromWidthAxisValue: .nan, range: 0.62...1.3) == 100)
+        #expect(CustomFontCSS.stretch(fromWidthAxisValue: 5, range: 0...10) == 100, "unknown scale: normal width")
+        #expect(CustomFontCSS.isCSSWidthAxis(62.5...100))
+        #expect(CustomFontCSS.isCSSWidthAxis(30...150), "the system font's width axis")
+        #expect(!CustomFontCSS.isCSSWidthAxis(0.62...1.3))
+    }
+
+    @Test func opticalSizeFromAnAppKitFontIsDropped() {
+        let values = CustomFontChoice.panelVariations(["opsz": 17, "GRAD": 500, "wght": 550])
+        #expect(values == ["GRAD": 500, "wght": 550])
+        let choice = CustomFontChoice(family: "SF", variations: CustomFontChoice.panelVariations(["opsz": 17, "GRAD": 500]))
+        #expect(choice.variationSettingsCSS == #""GRAD" 500"#)
+    }
+
     @Test func typographySelectorsMapToOpenTypeTags() {
         #expect(OpenTypeFeatures.tag(type: 37, selector: 1)! == ("smcp", 1))
         #expect(OpenTypeFeatures.tag(type: 1, selector: 3)! == ("liga", 0))
