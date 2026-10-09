@@ -69,7 +69,7 @@
 	<key>SUFeedURL</key>
 	<string>https://roccobot.github.io/Aomidori/appcast.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>REPLACE_WITH_GENERATE_KEYS_OUTPUT</string>
+	<string>yZEMa1wCFCWonQAxPiq27fdeobtmtTE6Hry6rYO8bqs=</string>
 	<key>SUScheduledCheckInterval</key>
 	<integer>86400</integer>
 </dict>
