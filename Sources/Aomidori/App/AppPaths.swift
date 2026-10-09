@@ -13,9 +13,13 @@ enum AppPaths {
     /// Font files that user styles can reference as `url("../Fonts/<file>")`.
     static let fonts = support.appendingPathComponent("Fonts", isDirectory: true)
     /// Last reading position of every book.
-    static let positions = support.appendingPathComponent("Positions.json")
+    static let positions = stateFolder.appendingPathComponent("Positions.json")
     /// Bookmarks and other per-book state.
-    static let books = support.appendingPathComponent("Books.json")
+    static let books = stateFolder.appendingPathComponent("Books.json")
+    /// A scripted smoke session (`-AomidoriReaderSmoke <folder>`) keeps reading state in its own
+    /// folder, so it never moves the user's places in their books.
+    private static let stateFolder: URL = UserDefaults.standard.string(forKey: ReaderSmokeTest.defaultsKey)
+        .map { URL(fileURLWithPath: $0, isDirectory: true) } ?? support
 
     /// The style shipped inside the app bundle and installed on first launch.
     static let bundledStyleName = "ReadingRoccobot.css"

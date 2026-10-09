@@ -365,6 +365,20 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
 
     // MARK: Diagnostics
 
+    /// For `ReaderSmokeTest`: renders with a changed configuration without touching the
+    /// reader's saved settings; `nil` goes back to them.
+    func smokeConfigure(_ change: ((inout ReaderConfiguration) -> Void)?) {
+        var configuration = environment.configuration()
+        change?(&configuration)
+        renderer.update(configuration)
+    }
+
+    func smokeCurrentPosition() async -> ChapterPosition? { await renderer.currentPosition() }
+    func smokeScroll(toFraction fraction: Double) { renderer.scroll(toFraction: fraction) }
+    var smokeToast: ChapterToastView.Kind? { toast.isShown ? toast.kind : nil }
+    var smokeEdges: ScrollEdges { edges.edges }
+    func smokeClickToast() { activateToast() }
+
     /// Launch argument `-AomidoriFontProbe "Family A,Family B"` (with a snapshot path): writes
     /// `<file>.fonts.json`, telling for each family whether the web view can draw it by name
     /// (canvas text width differs from every generic fallback), and the load status of the

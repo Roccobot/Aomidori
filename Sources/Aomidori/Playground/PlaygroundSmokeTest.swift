@@ -17,6 +17,8 @@ final class PlaygroundSmokeTest {
     private weak var playground: PlaygroundWindowController?
     private var started = false
     private var report: [String: Any] = [:]
+    /// The session runs in the background (`open -g`): no App Nap meanwhile.
+    private let activity = ProcessInfo.processInfo.beginActivity(options: [.userInitiated, .latencyCritical], reason: "Playground smoke test")
 
     init(folder: URL, playground: PlaygroundWindowController) {
         self.folder = folder

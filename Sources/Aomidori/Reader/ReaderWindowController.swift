@@ -32,6 +32,7 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
     private var environmentObserver: (any NSObjectProtocol)?
     private var isMinimal = false
     private var sidebarWasCollapsed = true
+    private var smokeTest: ReaderSmokeTest?
 
     init(publication: EPUBPublication, bookKey: String) {
         reader = ReaderViewController(publication: publication, bookKey: bookKey)
@@ -66,7 +67,8 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         window.tabbingIdentifier = "AomidoriReader"
         window.delegate = self
         window.isRestorable = false
-        window.setFrameAutosaveName("AomidoriReaderWindow")
+        // A smoke session resizes the window: its frame is not remembered.
+        if !ReaderSmokeTest.isActive { window.setFrameAutosaveName("AomidoriReaderWindow") }
 
         let toolbar = NSToolbar(identifier: "AomidoriReaderToolbar")
         toolbar.delegate = self
@@ -94,6 +96,7 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         if environment.prefersMinimal { setMinimal(true) }
         reader.start()
         window.makeFirstResponder(reader.webView)
+        if ReaderSmokeTest.isActive { smokeTest = ReaderSmokeTest(windowController: self) }
     }
 
     @available(*, unavailable)
