@@ -38,7 +38,9 @@ Decisioni sue, da non ridiscutere senza che sia lui a riaprirle:
 - **Giorno e notte**: gli stili con regole `prefers-color-scheme` le seguono da sé; per un CSS che
   non le ha, la notte applica solo i colori delle regole scure dello stile di fabbrica.
 - **La finestra vuota**, dall'alto: la zona di rilascio di Graphe, l'invito ad aprire un EPUB col
-  pulsante Apri, la lista dei libri recenti (solo il nome del file, mai il percorso). Appare
+  pulsante Apri, la lista "File recenti" (solo il nome del file, mai il percorso), col titolo
+  allineato esattamente ai nomi. La zona di rilascio cresce con la finestra, al massimo metà
+  della larghezza e il 30% dell'altezza, nelle sue proporzioni. Appare
   all'avvio senza libro, dal Dock senza finestre e in una tab nuova. I libri si aprono come tab
   della finestra in primo piano.
 - **Niente impaginazione e niente modalità di vista**: non si propongono come miglioramenti di
@@ -87,9 +89,17 @@ lì. L'elenco completo è nel `README.md`: qui non si ricopia.
 - `⌘T` apre una tab nuova vuota, come in Safari e nel Finder.
 - `⇧⌘T` apre la scelta del font personalizzato; il pannello font di sistema si apre dal suo
   pulsante e dal menu Stile.
-- `⌘S` passa dal font del libro o dello stile al font personalizzato e viceversa, perché un
-  lettore non salva file. Solo nella Playground `⌘S` resta Salva, perché lì un file si scrive
-  davvero.
+- `⌘Y` passa dal font del libro o dello stile al font personalizzato e viceversa (in tutte le
+  finestre; fino alla 0.52 era `⌘S`). `⌘S` resta libero nel lettore, per la vista divisa
+  (Split) che verrà; nella Playground `⌘S` resta Salva, perché lì un file si scrive davvero.
+- `⌘←` / `⌘→` vanno indietro e avanti nella cronologia dei link seguiti (note, capitoli,
+  ancore), alla posizione esatta; `⌘[` / `⌘]` restano come alias. Spenti mentre si scrive in
+  un campo di testo o nell'editor della Playground, dove muovono il cursore. `←` / `→` da soli
+  restano i capitoli.
+- `⌘G` / `⇧⌘G`: risultato di ricerca successivo e precedente, anche in altri capitoli; senza
+  una ricerca, `⌘G` apre la ricerca.
+- Chiaro e scuro seguono l'aspetto di macOS. `⇧⌘N` e il sole nella barra passano all'altro
+  aspetto; quando la scelta coincide con quello di sistema, si torna a seguire macOS.
 - `⌘R` ricarica capitolo, immagini, font e stile, e lascia il lettore nel punto in cui era.
 
 ## 🖌️ Icona e decorazione: sono di Graphe
@@ -100,6 +110,12 @@ lì. L'elenco completo è nel `README.md`: qui non si ricopia.
   colori cambiati nei file.
 - Un ritocco al disegno si chiede a Graphe; qui si cambia solo come il disegno entra nell'app
   (`AppIcon.icon/icon.json`, i colori dell'interfaccia attorno).
+- La cornice tratteggiata della zona di rilascio si disegna nel codice, a ogni dimensione, con
+  la regola di Graphe (`DashedFrame`): perimetro reale del rettangolo arrotondato, numero di
+  trattini intero attorno a trattino 10 + spazio 12 con linea da 2 pt, trattino e spazio
+  ricalcolati perché il motivo chiuda su se stesso, un trattino centrato in alto al centro
+  (dove parte il tracciato), capi arrotondati compensati. Il libro è l'SVG di Graphe
+  (`aomidori-dropzone-book.svg`), i PNG restano come riserva.
 - **⚠️ Trappole**: in `icon.json` il primo elemento di `groups` e di `layers` è quello disegnato
   sopra; i colori dei livelli vengono da `fill-specializations` e non dagli SVG; la sfumatura
   diagonale non si può esprimere e scorre dall'alto in basso. Queste due differenze dal progetto di

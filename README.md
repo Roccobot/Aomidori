@@ -15,18 +15,21 @@ Download: <https://roccobot.github.io/Aomidori/> (the latest release, from `publ
 - The empty reader window, shown at launch with no book, when the Dock icon is clicked with no
   windows, and in a new tab, has the reader's toolbar and, from the top: Graphe's drop zone
   (drop an `.epub` on the window; it lights up), *Open an EPUB or drag it here* with an Open
-  button (`⌘O`), and the recent books (file name; full path in the tooltip). A click, or
-  `↑`/`↓` and Return, opens a recent book. The list follows the system's Recent Items count
+  button (`⌘O`), and **Recent Files** (file name; full path in the tooltip). A click, or
+  `↑`/`↓` and Return, opens a recent file. The drop zone grows with the window (up to half its
+  width and 30% of its height); its dashed frame is drawn in code, evenly at any size. The list follows the system's Recent Items count
   and leaves out files that are missing (they reappear when their volume is back). Whatever
   is opened from an empty window takes its place: same frame, same tab.
 - Web-style reading: a chapter scrolls vertically as a single entity. No pages, no
   horizontal scrolling, a single view mode.
-- Internal links between chapters, history (`⌘[` / `⌘]`).
+- Internal links between chapters. Following a link (a note, a chapter, an anchor) is
+  remembered: `⌘←` goes back to the exact place it was followed from and `⌘→` forward again
+  (`⌘[` / `⌘]` also work); one history per window, off while typing in a field.
 - One sidebar (`⌘\`, one toolbar button) with a Liquid Glass pane selector: **Chapters**
   (table of contents), **Bookmarks** (`⌘D` adds one, named after the chapter by default;
   Delete removes it) and **Search** (`⌘F`; case-, accent- and quote-insensitive, every
-  occurrence with its context; picking one selects it in the page). The last pane is
-  remembered per book.
+  occurrence with its context; picking one selects it in the page; `⌘G` / `⇧⌘G` go to the next
+  or previous one, in any chapter). The last pane is remembered per book.
 - Reading position remembered per book, and per chapter: `←` / `→`, the table of contents and
   links without a fragment land where each chapter was left (scroll fraction plus an element
   anchor, so text size and style changes do not move it). Kept in `Positions.json`; bookmarks
@@ -49,7 +52,7 @@ Download: <https://roccobot.github.io/Aomidori/> (the latest release, from `publ
   The book's CSS is used by default; *Override Book Style* (`⌘.`) replaces it with the
   selected user style, including its fonts: nothing of the book's typography survives
   (sheets, `@font-face`, inline styles, `<font face>`). The style choice is global.
-- Custom font (`⌘S` switches between the book or style font and the custom font; `⇧⌘T`
+- Custom font (`⌘Y` switches between the book or style font and the custom font; `⇧⌘T`
   defines it): any installed family, or TTF/OTF/WOFF files loaded
   into the `Fonts` folder, replaces the font of all text (book and style, override on or off;
   code and formulas excepted) without touching sizes or colors. Global and remembered.
@@ -59,8 +62,9 @@ Download: <https://roccobot.github.io/Aomidori/> (the latest release, from `publ
   Typography features (small caps, old-style figures, ligatures, stylistic sets…). With a
   chosen face, bold text is 300 heavier (at most 900: Light → Semibold, Regular → Bold), and
   an italic face makes italic text upright, as emphasis does in italic typesetting.
-- Day/Night with one click. Styles with `prefers-color-scheme` rules follow it natively; for CSS
-  without them, Night applies only the colors of the default style's dark rules.
+- Light and dark follow macOS; one click (or `⇧⌘N`) shows the other, and choosing the system's
+  own appearance follows macOS again. Styles with `prefers-color-scheme` rules follow it
+  natively; for CSS without them, Night applies only the colors of the default style's dark rules.
 - Minimal mode: no toolbar, title or window buttons, only text.
 - Book info window (`⌘I`), titled with the book's title (or the file name): metadata and cover image.
 - **CSS Playground** (`⇧⌘P`): edit a style with a live preview on a sample chapter or a real
@@ -166,7 +170,10 @@ is bold or italic is decided whenever the page or the font changes, from the cas
 opposite style. Font panel features arrive either as OpenType tags or as Apple feature
 type/selector pairs; the common pairs are translated to OpenType tags, the others are ignored.
 
-**Night.** The toolbar button sets the window appearance (`aqua`/`darkAqua`), so
+**Night.** Windows follow the system appearance unless the reader picked the other one
+(`AppearanceChoice`: the override is cleared when it equals the system's, by a swap or when
+macOS switches; the 0.5x `AomidoriNight` key is removed at launch). The override sets the
+window appearance (`aqua`/`darkAqua`), so
 `prefers-color-scheme` resolves in the page as in Safari. If the active CSS (the book's
 sheets when the override is off, including `@import`s; the user style when it is on) has no
 `prefers-color-scheme` rule, the page receives only the color declarations (`color`,
@@ -263,9 +270,9 @@ appcast item), then `gh release create vX.XX` with the ZIP, and only then the co
 
 Shortcuts are designed for the Italian keyboard layout (AppKit's automatic remapping is off).
 They are defined in one table, `Shortcuts.table` in AomidoriCore; a test fails if two commands
-share a shortcut in the same window. `⌘T` opens a new tab, as in Safari and Finder. `⌘S`
-switches the custom font in every window but the CSS Playground, where it is Save (the only
-per-window shortcut; the app routes it by the window in front).
+share a shortcut in the same window. `⌘T` opens a new tab, as in Safari and Finder. `⌘Y`
+switches the custom font (it was `⌘S` up to 0.52); `⌘S` is Save in the CSS Playground and is
+kept free in the reader for a future split view.
 Menu names are given in English; in Italian they are Archivio, Vista, Vai, Stile.
 
 | Action | Shortcut | Menu |
@@ -273,13 +280,14 @@ Menu names are given in English; in Italian they are Archivio, Vista, Vai, Stile
 | Previous / next chapter (where it was left) | `←` / `→` | Go |
 | At a chapter's end / start: offer the next / previous chapter | `Space`, `↓`, `PgDn` / `⇧Space`, `↑`, `PgUp`, or scroll | (toast) |
 | Go there | click the toast, or the same key or scroll with the pointer on it | (toast) |
-| Back / forward (history of jumps) | `⌘[` / `⌘]` | Go |
+| Back / forward (links followed, exact place) | `⌘←` / `⌘→` (also `⌘[` / `⌘]`; not while typing) | Go |
 | Larger / smaller text | `+` / `-`, `⌘+` / `⌘-` | View |
 | Text at 100% of the style | `0`, `⌘0` | View |
-| Day ↔ Night | `⇧⌘N` (and toolbar) | View |
+| Light ↔ dark (back to following macOS when it matches) | `⇧⌘N` (and toolbar) | View |
 | Sidebar on/off | `⌘\` (and toolbar) | View |
 | Sidebar: Chapters, Bookmarks, Search | `⌥⌘1`, `⌥⌘2`, `⌥⌘5` | View |
 | Find in book | `⌘F` | Edit |
+| Next / previous search result (any chapter; no search: opens it) | `⌘G` / `⇧⌘G` | Edit |
 | Add bookmark | `⌘D` | Go |
 | Minimal mode | `⌃⌘M` | View |
 | Full screen | `⌃⌘F` | View |
@@ -287,7 +295,7 @@ Menu names are given in English; in Italian they are Archivio, Vista, Vai, Stile
 | Previous / next style | `⌘'` / `⌘ì` | Style |
 | Style list | `⌘1` | Style |
 | Reload (chapter from the book, style from disk, same place) | `⌘R` | Style |
-| Book or style font ↔ custom font | `⌘S` (not in the Playground) | Style |
+| Book or style font ↔ custom font | `⌘Y` | Style |
 | Define the custom font (chooser; Font panel from its button) | `⇧⌘T` | Style |
 | Font panel (custom font) | (menu, chooser button) | Style |
 | Load font file | (menu) | Style |
@@ -382,7 +390,7 @@ full height) and the CSS on the right; below the editor, the styles folder's fil
 1. **More sidebar panes**, slots and shortcuts already reserved: Thumbnails (`⌥⌘3`, the
    book's pages in miniature), Images (`⌥⌘4`, every picture in the book), Notes (`⌥⌘6`,
    footnotes and endnotes from `epub:type` / `role` markup). Bookmark renaming and notes.
-2. Per-book style memory, trackpad swipe between chapters, find next/previous in books (`⌘G`).
+2. Per-book style memory, trackpad swipe between chapters.
 
 Murasaki (closed source) is a reference for the toolbar, sidebar panes and Inspector; no assets
 or code are taken from it.
