@@ -18,6 +18,10 @@
   ⚠️ releases/latest skips pre-releases and drafts, so a version published as a pre-release
   never reaches this page: that is the switch between a main release and a test build.
   ⚠️ Never innerHTML: every text goes in with textContent.
+  The screenshot on the right (below, on narrow screens) is one file per language and theme:
+  assets/screenshot-it-light.png, screenshot-it-dark.png, screenshot-en-light.png and
+  screenshot-en-dark.png (about 1600 px wide). Until a file exists its slot stays hidden and the
+  page keeps one column: adding the four files is the whole change.
   ⚠️ The icon is Graphe's artwork, copied unaltered from Resources/Icon/ (aomidori-v2.svg and
   aomidori-v2-dark.svg): the page picks one per theme, it never redraws it.
   TODO before publishing: Open Graph image (anteprima.jpg, 1200x630) and og:image tags, as on AIV.
@@ -89,12 +93,17 @@
   :focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 
   .foglio{max-width:960px; width:100%; margin:0 auto; padding:24px 24px 0}
+  /* With a screenshot (see .schermata), the page widens and the top becomes two columns. */
+  .con-schermata .foglio, .con-schermata footer{max-width:1180px}
+  .testa{display:grid; grid-template-columns:minmax(0,1fr); gap:40px}
   .alto{display:grid; grid-template-columns:auto 1fr; gap:20px 24px; align-items:center}
-  /* The artwork is a 1024 canvas with an 824 tile and its shadow: at 108 px the tile is about
-     87 px, the size of AIV's 88 px icon. */
-  .icona{display:block; width:108px; height:108px}
+  /* The artwork is a 1024 canvas with an 824 tile (100 px of margin and shadow on each side):
+     at 108 px the tile is about 87 px, the size of AIV's 88 px icon. The negative margin puts
+     the tile's left edge, not the canvas's, on the left edge of the text below. */
+  .icona{display:block; --icona:108px; width:var(--icona); height:var(--icona); margin-left:calc(var(--icona) * -100 / 1024)}
   h1{font-size:40px; line-height:1.1; letter-spacing:-0.02em; font-weight:600; margin:0}
   .sottotitolo{font-size:18px; color:var(--text-muted); margin:6px 0 0}
+  .sottotitolo .sorgente{font-size:15px; white-space:nowrap}
   .parole{display:flex; flex-direction:column; gap:20px; max-width:38rem; grid-column:1 / -1}
   .claim{font-size:18px; line-height:1.55; color:var(--text-muted); margin:0}
   .blocco-scarica{display:flex; flex-direction:column; gap:10px; align-items:flex-start}
@@ -107,7 +116,17 @@
   .scarica:hover{text-decoration:none; filter:brightness(1.06)}
   .tecnica{font-size:13px; color:var(--text-muted); font-variant-numeric:tabular-nums}
   .tecnica .minuta{opacity:0.72}
-  .installa{font-size:13px; line-height:1.6; color:var(--text-muted); opacity:0.7; max-width:52ch; margin:4px 0 0}
+  .installa{font-size:12px; line-height:1.5; color:var(--text-muted); opacity:0.7; max-width:52ch; margin:0}
+
+  /* The screenshot slot: hidden until its picture has loaded, so a missing file never shows
+     as a broken image. Expected files, one per language and theme (see the script):
+     assets/screenshot-it-light.png, -it-dark, -en-light, -en-dark; about 1600 px wide. */
+  .schermata{margin:0; align-self:center}
+  .schermata[hidden]{display:none}
+  .schermata img{display:block; width:100%; height:auto}
+  @media (min-width:1000px){
+    .con-schermata .testa{grid-template-columns:minmax(0,38rem) minmax(0,1fr); gap:56px; align-items:center}
+  }
 
   .fatti{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px 40px; padding:56px 0 0; max-width:840px}
   .fatto{
@@ -140,11 +159,12 @@
   .lingua:hover,.tema:hover{color:var(--text-body)}
 
   @media (max-width:880px){
-    .icona{width:88px; height:88px}
+    .icona{--icona:88px}
     h1{font-size:30px}
     .scarica{font-size:18px; padding:16px 30px; border-radius:14px; align-self:center}
     .blocco-scarica{align-items:stretch}
     .tecnica{text-align:center; line-height:1.8}
+    .installa{text-align:center; align-self:center}
     .tecnica .sep{display:none}
     .tecnica .pezzo{display:block}
     .fatti{grid-template-columns:1fr; padding-top:40px}
@@ -154,6 +174,7 @@
 <body>
 
 <main class="foglio">
+  <div class="testa">
   <div class="alto">
     <!-- One <picture>, so the browser downloads one icon; applicaTema() rewrites the media of
          the dark <source> when the visitor picks a theme, as AIV does with its screenshot. -->
@@ -163,7 +184,7 @@
     </picture>
     <div>
       <h1>Aomidori</h1>
-      <p class="sottotitolo" id="sottotitolo"></p>
+      <p class="sottotitolo"><span id="sottotitolo"></span> <span class="sorgente"><span aria-hidden="true">&middot;</span> <a id="sorgente" href="https://github.com/Roccobot/Aomidori" target="_blank" rel="noopener noreferrer"></a></span></p>
     </div>
     <div class="parole">
       <p class="claim" id="claim"></p>
@@ -179,6 +200,8 @@
         <p class="installa" id="installa"></p>
       </div>
     </div>
+  </div>
+  <figure class="schermata" id="schermata" hidden><img id="schermata-img" alt=""></figure>
   </div>
 
   <div class="fatti">
@@ -247,14 +270,15 @@
       scarica: 'Scarica Aomidori',
       sistema: 'macOS 27 o successivo, Apple Silicon',
       sorgente: 'codice sorgente',
-      installa: 'L\'app non arriva dall\'App Store e non è autenticata da Apple, quindi la prima volta macOS può bloccarla: estrai lo ZIP, sposta Aomidori in Applicazioni e aprila; se macOS la blocca, vai in Impostazioni di Sistema, Privacy e sicurezza, e scegli Apri comunque. In alternativa, nel Terminale: xattr -dr com.apple.quarantine /Applications/Aomidori.app',
+      installa: 'Alla prima apertura, se macOS la blocca: Impostazioni di Sistema \u203A Privacy e sicurezza \u203A Apri comunque.',
+      schermata: 'Aomidori con un libro aperto',
       fatti: [
         ['Un capitolo, una pagina', 'Ogni capitolo scorre in verticale come una pagina web, e le frecce cambiano capitolo. Niente impaginazione, niente modalità.'],
         ['Il tuo CSS comanda', 'Gli stili si ricaricano appena li salvi, e con un tasto scavalcano tutta la tipografia del libro.'],
         ['Il testo cresce davvero', 'Più e meno vincono su qualunque limite del CSS; le immagini restano come sono.'],
         ['Il tuo font, fino in fondo', 'Qualunque famiglia installata o un file TTF, OTF e WOFF, con peso, stile, assi variabili e opzioni tipografiche.'],
         ['Playground CSS', 'Scrivi uno stile con l\'anteprima dal vivo, e provalo subito nel lettore.'],
-        ['Nativo e leggero', 'Swift e AppKit per Apple Silicon, Liquid Glass, schede native, giorno e notte.']
+        ['Nativo e leggero', 'Swift e AppKit per Apple Silicon, Liquid Glass, schede native, temi chiaro e scuro.']
       ],
       altra: 'English', titoloAltra: 'Read this page in English',
       temi: { light: 'Tema chiaro', dark: 'Tema scuro' },
@@ -266,15 +290,16 @@
       claim: 'A light, snappy EPUB reader that works like a web page: each chapter scrolls vertically, the arrow keys change chapter, and your CSS always has the last word.',
       scarica: 'Download Aomidori',
       sistema: 'macOS 27 or later, Apple Silicon',
-      sorgente: 'source',
-      installa: 'The app does not come from the App Store and is not notarized by Apple, so macOS may block it the first time: unzip it, move Aomidori to Applications and open it; if macOS blocks it, go to System Settings, Privacy & Security, and choose Open Anyway. Or, in Terminal: xattr -dr com.apple.quarantine /Applications/Aomidori.app',
+      sorgente: 'source code',
+      installa: 'First launch: if macOS blocks it, System Settings \u203A Privacy & Security \u203A Open Anyway.',
+      schermata: 'Aomidori with a book open',
       fatti: [
         ['One chapter, one page', 'Each chapter scrolls vertically like a web page, and the arrow keys change chapter. No pagination, no modes.'],
         ['Your CSS rules', 'Styles reload as soon as you save them, and one key lets them override the book\'s whole typography.'],
         ['Text that really grows', 'Plus and minus win over any CSS limit; pictures stay as they are.'],
         ['Your font, all the way', 'Any installed family or a TTF, OTF or WOFF file, with weight, style, variable axes and typographic features.'],
         ['CSS Playground', 'Write a style with a live preview, and try it in the reader at once.'],
-        ['Native and light', 'Swift and AppKit for Apple Silicon, Liquid Glass, native tabs, day and night.']
+        ['Native and light', 'Swift and AppKit for Apple Silicon, Liquid Glass, native tabs, light and dark themes.']
       ],
       altra: 'Italiano', titoloAltra: 'Leggi questa pagina in italiano',
       temi: { light: 'Light theme', dark: 'Dark theme' },
@@ -317,7 +342,9 @@
 
     el('sottotitolo').textContent = T.sottotitolo;
     el('claim').textContent = T.claim;
+    el('sorgente').textContent = T.sorgente;
     el('installa').textContent = T.installa;
+    mostraSchermata(T);
 
     var tasto = el('scarica');
     el('scarica-testo').textContent = T.scarica + (rel ? ' ' + rel.tag : '');
@@ -327,12 +354,9 @@
 
     var tecnica = el('tecnica');
     svuota(tecnica);
-    var sorgente = document.createElement('a');
-    sorgente.href = 'https://github.com/' + REPO;
-    sorgente.textContent = T.sorgente;
     var righe = [];
-    if (asset) righe.push([asset.name + ' \u00B7 ' + peso(asset.size, T.loc), '']);
-    righe.push([T.sistema, ' minuta'], [sorgente, '']);
+    if (asset) righe.push([peso(asset.size, T.loc), '']);
+    righe.push([T.sistema, ' minuta']);
     for (var r = 0; r < righe.length; r++) {
       if (r) {
         var sep = document.createElement('span');
@@ -342,7 +366,7 @@
       }
       var pz = document.createElement('span');
       pz.className = 'pezzo' + righe[r][1];
-      if (typeof righe[r][0] === 'string') pz.textContent = righe[r][0]; else pz.appendChild(righe[r][0]);
+      pz.textContent = righe[r][0];
       tecnica.appendChild(pz);
     }
 
@@ -361,6 +385,28 @@
     var tastoTema = el('tema');
     tastoTema.textContent = T.temi[altro];
     tastoTema.title = T.titoliTema[altro];
+  }
+
+  // The screenshot for the language and theme in force: assets/screenshot-<it|en>-<light|dark>.png.
+  // The slot stays hidden until the file has loaded, and a file that failed is not asked again.
+  var schermataMancante = {};
+  function mostraSchermata(T) {
+    var figura = el('schermata');
+    var img = el('schermata-img');
+    var src = 'assets/screenshot-' + stato.lingua + '-' + temaInVigore() + '.png';
+    img.alt = T.schermata;
+    if (schermataMancante[src]) { nascondiSchermata(); return; }
+    if (img.getAttribute('src') === src) return;
+    img.onload = function () {
+      figura.hidden = false;
+      document.body.classList.add('con-schermata');
+    };
+    img.onerror = function () { schermataMancante[src] = true; nascondiSchermata(); };
+    img.setAttribute('src', src);
+  }
+  function nascondiSchermata() {
+    el('schermata').hidden = true;
+    document.body.classList.remove('con-schermata');
   }
 
   // One call: the latest main release (pre-releases and drafts excluded) and its ZIP.

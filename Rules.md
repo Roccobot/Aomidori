@@ -249,6 +249,10 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
 - **Un rilascio non chiede deploy**: la pagina chiede a `releases/latest` dell'API di GitHub il
   nome e la dimensione dello ZIP mentre si carica. Per questo una versione si pubblica come
   release normale, mai come pre-release o bozza, che `releases/latest` salta.
+- **Le schermate** della pagina sono quattro file in `publish/assets/`, una per lingua e tema:
+  `screenshot-it-light.png`, `screenshot-it-dark.png`, `screenshot-en-light.png`,
+  `screenshot-en-dark.png` (larghe circa 1600 px). Finché un file manca il suo posto resta nascosto
+  e la pagina ha una colonna sola; aggiungerli basta, senza toccare il codice.
 - Nella pagina valgono le regole universali del web: mai `innerHTML`, testi con `textContent`.
 
 ## 🌿 Branch e tag
