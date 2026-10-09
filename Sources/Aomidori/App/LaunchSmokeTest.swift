@@ -3,9 +3,10 @@ import Carbon
 
 /// A scripted session for `scripts/smoke-launch.sh`, enabled by the launch argument
 /// `-AomidoriLaunchSmoke <folder>` (with `-AomidoriLaunchSmokeBook <epub>`). The app is
-/// launched with no book: it checks that the empty window is shown, that a book opened from it
-/// takes its place (frame included), that the drop target accepts only EPUB files, and that
-/// the Dock's reopen event brings the empty window back once the book is closed. Reading state
+/// launched with no book: it checks that the empty window is shown (drop zone, recent books,
+/// minimum size), that the drop target accepts only EPUB files, that a book opened from it
+/// takes its place (frame included), that `⌘T` adds an empty tab listing that book first, and
+/// that the Dock's reopen event brings the empty window back once the book is closed. Reading state
 /// is kept in the folder (see `AppPaths`) and window frames are not remembered meanwhile.
 @MainActor
 final class LaunchSmokeTest {
@@ -32,13 +33,25 @@ final class LaunchSmokeTest {
         // 1. Launch with no book: the empty window, and nothing else.
         report["atLaunch"] = windows()
         report["activeAtLaunch"] = NSApp.isActive
-        guard let empty = EmptyReaderWindowController.current, let emptyWindow = empty.window, emptyWindow.isVisible else {
+        guard let empty = EmptyReaderWindowController.all.first, let emptyWindow = empty.window, emptyWindow.isVisible else {
             failures.append("no empty window at launch")
             return finish()
         }
-        report["placeholder"] = empty.smokePlaceholderText
+        let content = empty.smokeContent
+        report["placeholder"] = content.message
         report["emptyToolbar"] = emptyWindow.toolbar?.items.map(\.itemIdentifier.rawValue) ?? []
+        report["minimumSize"] = NSStringFromSize(emptyWindow.minSize)
+        report["dropZoneFromSVG"] = content.smokeRendersSVG
+        report["recentsAtLaunch"] = content.recents.count
+        report["recentsLimit"] = NSDocumentController.shared.maximumRecentDocumentCount
         snapshot(emptyWindow, name: "empty.png")
+        content.smokeHighlight(true)
+        content.display()
+        snapshot(emptyWindow, name: "empty-highlighted.png")
+        content.smokeHighlight(false)
+        emptyWindow.setContentSize(EmptyReaderWindowController.minimumSize)
+        content.layoutSubtreeIfNeeded()
+        snapshot(emptyWindow, name: "empty-minimum.png")
         let emptyFrame = emptyWindow.frame
 
         // 2. The drop target takes EPUB files only.
@@ -60,13 +73,27 @@ final class LaunchSmokeTest {
         report["afterOpen"] = windows()
         let readers = readerWindows()
         if readers.count != 1 { failures.append("one reader window after opening") }
-        if EmptyReaderWindowController.current != nil || emptyWindow.isVisible { failures.append("empty window replaced") }
+        if EmptyReaderWindowController.all.contains(where: { $0 === empty }) || emptyWindow.isVisible { failures.append("empty window replaced") }
         if let reader = readers.first {
             report["frames"] = ["empty": NSStringFromRect(emptyFrame), "reader": NSStringFromRect(reader.frame)]
             if reader.frame != emptyFrame { failures.append("reader takes the empty window's frame") }
+
+            // 4. ⌘T in the reader window: an empty tab beside it, listing the book first.
+            reader.windowController?.newWindowForTab(nil)
+            try? await Task.sleep(for: .milliseconds(600))
+            let tab = EmptyReaderWindowController.all.last
+            report["afterNewTab"] = windows()
+            report["tabsAfterNewTab"] = reader.tabbedWindows?.count ?? 1
+            if reader.tabbedWindows?.count != 2 || tab?.window?.tabGroup !== reader.tabGroup { failures.append("new tab") }
+            let firstRecent = tab?.smokeContent.recents.first?.url.standardizedFileURL
+            report["firstRecentIsTheBook"] = firstRecent == book.standardizedFileURL
+            if firstRecent != book.standardizedFileURL { failures.append("recent books") }
+            if let tabWindow = tab?.window { snapshot(tabWindow, name: "empty-tab.png") }
+            tab?.close()
+            try? await Task.sleep(for: .milliseconds(400))
         }
 
-        // 4. Book closed, then the Dock's reopen event: the empty window again.
+        // 5. Book closed, then the Dock's reopen event: the empty window again.
         NSDocumentController.shared.documents.forEach { $0.close() }
         try? await Task.sleep(for: .milliseconds(600))
         report["afterClose"] = windows()
@@ -75,10 +102,10 @@ final class LaunchSmokeTest {
         } catch {
             report["reopenError"] = "\(error)"
         }
-        for _ in 0..<30 where EmptyReaderWindowController.current == nil { try? await Task.sleep(for: .milliseconds(100)) }
+        for _ in 0..<30 where EmptyReaderWindowController.all.isEmpty { try? await Task.sleep(for: .milliseconds(100)) }
         try? await Task.sleep(for: .milliseconds(400))
         report["afterReopen"] = windows()
-        if EmptyReaderWindowController.current?.window?.isVisible != true { failures.append("empty window on reopen") }
+        if EmptyReaderWindowController.all.first?.window?.isVisible != true { failures.append("empty window on reopen") }
         finish()
     }
 

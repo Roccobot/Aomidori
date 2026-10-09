@@ -1,26 +1,50 @@
+import AomidoriCore
 import AppKit
 import UniformTypeIdentifiers
 
-/// The reader window with no book: shown at launch with nothing to open and when the Dock icon
-/// is clicked with no windows, instead of an Open panel. Same chrome as a reader window (the
-/// app-wide toolbar items, Night appearance, the reader's frame); in the middle, a placeholder
-/// with an Open button. A book opened from it (button, `⌘O`, or dropped on the window), or from
-/// anywhere else while it is shown, takes its place: same frame, same tab.
+/// The reader window with no book: shown at launch with nothing to open, when the Dock icon is
+/// clicked with no windows, and as a new tab (`⌘T`). Same chrome as a reader window (the
+/// app-wide toolbar items, Night appearance, the reader's frame and tabs). From the top: Graphe's
+/// drop zone, the invitation with an Open button, and the recent books. A book opened from it
+/// (drop, Open button, `⌘O`, a recent book) takes its place: same frame, same tab.
 @MainActor
 final class EmptyReaderWindowController: NSWindowController, NSWindowDelegate, NSToolbarDelegate {
-    /// The empty window, while there is one. There is never more than one.
-    private(set) static var current: EmptyReaderWindowController?
+    /// Empty windows on screen or minimised; several when opened as tabs.
+    private(set) static var all: [EmptyReaderWindowController] = []
+    /// The empty window a book is being opened from, so that this window is the one replaced.
+    private static weak var pendingTarget: EmptyReaderWindowController?
+
+    /// Big enough for the drop zone, the invitation and about five recent books.
+    static let minimumSize = NSSize(width: 440, height: 560)
 
     private let environment = ReaderEnvironment.shared
     private let globalItems = GlobalToolbarItems()
     private var environmentObserver: (any NSObjectProtocol)?
-    private let placeholder = EmptyReaderView()
+    private let content = EmptyReaderView()
+    /// Set once a book has taken this window's place; it is closing.
+    private var isHandedOver = false
 
-    /// Shows the empty window, creating it if needed.
+    // MARK: Showing
+
+    /// Shows an empty window: the existing one, or a new one.
     static func show() {
-        let controller = current ?? EmptyReaderWindowController()
-        current = controller
+        let controller = all.first { !$0.isHandedOver } ?? make()
         controller.showWindow(nil)
+    }
+
+    /// `⌘T`: a new empty window, as a tab of `window` when it is a reader or empty window.
+    static func openNewTab(besides window: NSWindow?) {
+        let controller = make()
+        if let window, let newWindow = controller.window, window.tabbingIdentifier == newWindow.tabbingIdentifier {
+            window.addTabbedWindow(newWindow, ordered: .above)
+        }
+        controller.showWindow(nil)
+    }
+
+    private static func make() -> EmptyReaderWindowController {
+        let controller = EmptyReaderWindowController()
+        all.append(controller)
+        return controller
     }
 
     private init() {
@@ -31,14 +55,15 @@ final class EmptyReaderWindowController: NSWindowController, NSWindowDelegate, N
         )
         super.init(window: window)
         window.title = L10n.string("empty.title")
-        window.minSize = NSSize(width: 420, height: 320)
+        window.minSize = Self.minimumSize
         window.toolbarStyle = .unified
-        window.tabbingIdentifier = "AomidoriReader"
+        window.tabbingIdentifier = ReaderWindowController.tabbingIdentifier
+        window.tabbingMode = .preferred
         window.isRestorable = false
         window.delegate = self
-        window.contentView = placeholder
-        placeholder.onOpen = { [weak self] in self?.openDocument(nil) }
-        placeholder.onDrop = { [weak self] urls in self?.open(urls) }
+        window.contentView = content
+        content.onOpen = { [weak self] in self?.openDocument(nil) }
+        content.onOpenURLs = { [weak self] urls in self?.open(urls) }
         window.center()
         if !LaunchSmokeTest.isActive { window.setFrameAutosaveName(ReaderWindowController.frameAutosaveName) }
 
@@ -52,6 +77,8 @@ final class EmptyReaderWindowController: NSWindowController, NSWindowDelegate, N
             MainActor.assumeIsolated { self?.environmentDidChange() }
         }
         environmentDidChange()
+        content.reloadRecents()
+        window.initialFirstResponder = content.initialFirstResponder
     }
 
     @available(*, unavailable)
@@ -78,13 +105,20 @@ final class EmptyReaderWindowController: NSWindowController, NSWindowDelegate, N
         panel.beginSheetModal(for: window, completionHandler: handler)
     }
 
+    /// `⌘T` in an empty window: another empty tab.
+    override func newWindowForTab(_ sender: Any?) {
+        Self.openNewTab(besides: window)
+    }
+
     /// Opens books through the document controller. The first one replaces this window (see
     /// `handOver(to:)`); a book that is already open is brought to the front instead.
     func open(_ urls: [URL]) {
-        for url in urls {
+        for (index, url) in urls.enumerated() {
+            if index == 0 { Self.pendingTarget = self }
             NSDocumentController.shared.openDocument(withContentsOf: url, display: true) { [weak self] _, _, error in
-                guard let error else { return }
                 MainActor.assumeIsolated {
+                    if index == 0, let self, Self.pendingTarget === self { Self.pendingTarget = nil }
+                    guard let error else { return }
                     let nsError = error as NSError
                     guard !(nsError.domain == NSCocoaErrorDomain && nsError.code == NSUserCancelledError) else { return }
                     if let window = self?.window, window.isVisible {
@@ -99,20 +133,30 @@ final class EmptyReaderWindowController: NSWindowController, NSWindowDelegate, N
 
     // MARK: Handing over to a book
 
+    /// The empty window a book being opened should replace: the one it was opened from; else
+    /// the main window if it is empty; else the only empty window. Nil when there is none.
+    static func target() -> EmptyReaderWindowController? {
+        if let pending = pendingTarget, !pending.isHandedOver {
+            pendingTarget = nil
+            return pending
+        }
+        if let main = NSApp.mainWindow?.windowController as? EmptyReaderWindowController, !main.isHandedOver { return main }
+        let candidates = all.filter { !$0.isHandedOver }
+        return candidates.count == 1 ? candidates[0] : nil
+    }
+
     /// Called before a reader window is created: the frame name goes free for it.
     func releaseFrameName() {
         window?.setFrameAutosaveName("")
     }
 
-    /// The new reader window takes this window's frame and tab, then this window closes,
-    /// once the reader window is on screen.
+    /// The new reader window takes this window's frame and place among the tabs, then this
+    /// window closes, once the reader window is on screen.
     func handOver(to controller: NSWindowController) {
-        guard let window, let readerWindow = controller.window else { return }
-        Self.current = nil
+        guard let window, let readerWindow = controller.window, !isHandedOver else { return }
+        isHandedOver = true
         readerWindow.setFrame(window.frame, display: false)
-        if window.tabbedWindows.map({ $0.count > 1 }) ?? false {
-            window.addTabbedWindow(readerWindow, ordered: .above)
-        }
+        if window.isVisible { window.addTabbedWindow(readerWindow, ordered: .above) }
         Task { @MainActor in window.close() }
     }
 
@@ -133,98 +177,18 @@ final class EmptyReaderWindowController: NSWindowController, NSWindowDelegate, N
 
     // MARK: Window delegate
 
+    /// The recent books may have changed while another window was in front.
+    func windowDidBecomeKey(_ notification: Notification) {
+        content.reloadRecents()
+    }
+
     func windowWillClose(_ notification: Notification) {
-        if Self.current === self { Self.current = nil }
+        Self.all.removeAll { $0 === self }
         if let environmentObserver { NotificationCenter.default.removeObserver(environmentObserver) }
         environmentObserver = nil
     }
 
     // MARK: Smoke test
 
-    var smokePlaceholderText: String { placeholder.message }
-}
-
-/// The empty window's content: a centred message and Open button, and a drop target for EPUB
-/// files, outlined while a book is dragged over it.
-@MainActor
-final class EmptyReaderView: NSView {
-    var onOpen: (() -> Void)?
-    var onDrop: (([URL]) -> Void)?
-    let message = L10n.string("empty.message")
-    private var isDropTarget = false { didSet { needsDisplay = true } }
-
-    override init(frame: NSRect) {
-        super.init(frame: frame)
-        registerForDraggedTypes([.fileURL])
-
-        let icon = NSImageView(image: NSImage(systemSymbolName: "book", accessibilityDescription: nil) ?? NSImage())
-        icon.symbolConfiguration = .init(pointSize: 56, weight: .light)
-        icon.contentTintColor = .tertiaryLabelColor
-        let label = NSTextField(labelWithString: message)
-        label.font = .systemFont(ofSize: NSFont.systemFontSize * 1.4)
-        label.textColor = .secondaryLabelColor
-        label.alignment = .center
-        let button = NSButton(title: L10n.string("empty.open"), target: self, action: #selector(openClicked(_:)))
-        button.bezelStyle = .push
-        button.controlSize = .large
-        button.keyEquivalent = "o"
-        button.keyEquivalentModifierMask = .command
-        button.toolTip = L10n.string("empty.open.help")
-
-        let stack = NSStackView(views: [icon, label, button])
-        stack.orientation = .vertical
-        stack.spacing = 16
-        stack.setCustomSpacing(24, after: label)
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(stack)
-        NSLayoutConstraint.activate([
-            stack.centerXAnchor.constraint(equalTo: centerXAnchor),
-            stack.centerYAnchor.constraint(equalTo: safeAreaLayoutGuide.centerYAnchor),
-            stack.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 24),
-        ])
-        setAccessibilityLabel(message)
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
-
-    @objc private func openClicked(_ sender: Any?) { onOpen?() }
-
-    /// The EPUB files on a pasteboard: by type, or by extension when the type is unknown.
-    static func epubURLs(on pasteboard: NSPasteboard) -> [URL] {
-        let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
-        let epub = UTType("org.idpf.epub-container")
-        return urls.filter { url in
-            if url.pathExtension.lowercased() == "epub" { return true }
-            guard let epub, let type = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType else { return false }
-            return type.conforms(to: epub)
-        }
-    }
-
-    override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
-        isDropTarget = !Self.epubURLs(on: sender.draggingPasteboard).isEmpty
-        return isDropTarget ? .copy : []
-    }
-
-    override func draggingExited(_ sender: (any NSDraggingInfo)?) {
-        isDropTarget = false
-    }
-
-    override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
-        isDropTarget = false
-        let urls = Self.epubURLs(on: sender.draggingPasteboard)
-        guard !urls.isEmpty else { return false }
-        onDrop?(urls)
-        return true
-    }
-
-    override func draw(_ dirtyRect: NSRect) {
-        guard isDropTarget else { return }
-        let rect = safeAreaRect.insetBy(dx: 16, dy: 16)
-        let path = NSBezierPath(roundedRect: rect, xRadius: 18, yRadius: 18)
-        path.lineWidth = 3
-        path.setLineDash([10, 6], count: 2, phase: 0)
-        NSColor.controlAccentColor.setStroke()
-        path.stroke()
-    }
+    var smokeContent: EmptyReaderView { content }
 }

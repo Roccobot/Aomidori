@@ -59,7 +59,8 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         window.setContentSize(NSSize(width: 860, height: 980))
         window.minSize = NSSize(width: 420, height: 320)
         window.toolbarStyle = .unified
-        window.tabbingIdentifier = "AomidoriReader"
+        window.tabbingIdentifier = Self.tabbingIdentifier
+        window.tabbingMode = .preferred
         window.delegate = self
         window.isRestorable = false
         // A smoke session resizes the window: its frame is not remembered.
@@ -99,6 +100,8 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
 
     /// Shared with the empty window, which stands where the next book will open.
     static let frameAutosaveName = "AomidoriReaderWindow"
+    /// Reader and empty windows are tabs of each other; books open as tabs.
+    static let tabbingIdentifier = "AomidoriReader"
 
     override func windowTitle(forDocumentDisplayName displayName: String) -> String {
         reader.book.title ?? displayName
@@ -123,6 +126,11 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
     }
 
     // MARK: Actions (window-specific; global ones live in AppDelegate)
+
+    /// `⌘T` and the tab bar's + button: an empty tab.
+    override func newWindowForTab(_ sender: Any?) {
+        EmptyReaderWindowController.openNewTab(besides: window)
+    }
 
     @objc func goToPreviousChapter(_ sender: Any?) { reader.goToPreviousChapter() }
     @objc func goToNextChapter(_ sender: Any?) { reader.goToNextChapter() }

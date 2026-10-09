@@ -20,10 +20,11 @@ final class BookDocument: NSDocument {
         MainActor.assumeIsolated { self.publication = publication }
     }
 
-    /// The book's reader window. If the empty window is shown, the book takes its place.
+    /// The book's reader window. If it was opened from an empty window (or one is in front),
+    /// the book takes its place.
     override func makeWindowControllers() {
         guard let publication else { return }
-        let empty = EmptyReaderWindowController.current
+        let empty = EmptyReaderWindowController.target()
         empty?.releaseFrameName()
         let controller = ReaderWindowController(publication: publication, bookKey: bookKey(for: publication.book))
         addWindowController(controller)

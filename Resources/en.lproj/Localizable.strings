@@ -7,6 +7,7 @@
 "menu.app.showAll" = "Show All";
 "menu.app.quit" = "Quit Aomidori";
 "menu.file" = "File";
+"menu.file.newTab" = "New Tab";
 "menu.file.open" = "Open…";
 "menu.file.openRecent" = "Open Recent";
 "menu.file.clearRecent" = "Clear Menu";
@@ -121,7 +122,7 @@
 "font.face" = "Face";
 "font.face.automatic" = "Automatic";
 "font.panel" = "Font Panel…";
-"font.panel.help" = "Opens the system Font panel: faces, variable axes and Typography features (⌘T)";
+"font.panel.help" = "Opens the system Font panel: faces, variable axes and Typography features (%@)";
 
 /* CSS Playground */
 "menu.edit.undo" = "Undo";
@@ -175,3 +176,4 @@
 "empty.message" = "Open an EPUB or drag it here";
 "empty.open" = "Open…";
 "empty.open.help" = "Choose an EPUB book to read (⌘O)";
+"empty.recents" = "Recent Books";

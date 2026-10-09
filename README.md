@@ -6,11 +6,15 @@ move between chapters, and the reader's own CSS can replace the book's at any mo
 
 ## Features (v0.4.1)
 
-- One window per book (`NSDocument`); macOS window tabs work out of the box.
-- With no book open (at launch, or clicking the Dock icon with no windows) an empty reader
-  window, with the same toolbar, says *Open an EPUB or drag it here*: its Open button (`⌘O`)
-  or an `.epub` dropped on it opens the book in its place (same frame, same tab). Opening a
-  book any other way while it is shown replaces it too.
+- One window per book (`NSDocument`), as native tabs: books open as tabs of the front reader
+  window (tabbing mode *preferred*), and `⌘T` (or the tab bar's `+`) adds an empty tab.
+- The empty reader window, shown at launch with no book, when the Dock icon is clicked with no
+  windows, and in a new tab, has the reader's toolbar and, from the top: Graphe's drop zone
+  (drop an `.epub` on the window; it lights up), *Open an EPUB or drag it here* with an Open
+  button (`⌘O`), and the recent books (file name; full path in the tooltip). A click, or
+  `↑`/`↓` and Return, opens a recent book. The list follows the system's Recent Items count
+  and leaves out files that are missing (they reappear when their volume is back). Whatever
+  is opened from an empty window takes its place: same frame, same tab.
 - Web-style reading: a chapter scrolls vertically as a single entity. No pages, no
   horizontal scrolling, a single view mode.
 - Internal links between chapters, history (`⌘[` / `⌘]`).
@@ -44,7 +48,7 @@ move between chapters, and the reader's own CSS can replace the book's at any mo
   into the `Fonts` folder, replaces the font of all text (book and style, override on or off;
   code and formulas excepted) without touching sizes or colors. Global and remembered.
   The chooser also picks the face (*Automatic* keeps the book's and the style's weights) and
-  sets each axis of a variable face; the system **Font panel** (`⌘T`) works too, with its
+  sets each axis of a variable face; the system **Font panel** (`⌥⌘T`) works too, with its
   Typography features (small caps, old-style figures, ligatures, stylistic sets…). With a
   chosen face, bold text is 300 heavier (at most 900: Light → Semibold, Regular → Bold), and
   an italic face makes italic text upright, as emphasis does in italic typesetting.
@@ -184,7 +188,7 @@ scripts/bundle.sh             # build/Aomidori.app, ad-hoc signed, arm64 only
 scripts/smoke.sh book.epub    # open a book and save a snapshot of the page to build/smoke.png
 scripts/smoke-playground.sh build/pg [book.epub]   # scripted Playground session: snapshots, report.json
 scripts/smoke-reader.sh build/rd book.epub         # cover at 3 window sizes, chapter memory, edge toast
-scripts/smoke-launch.sh build/ln book.epub         # launch with no book: empty window, open, Dock reopen
+scripts/smoke-launch.sh build/ln book.epub         # launch with no book: empty window, open, new tab, Dock reopen
 ditto -c -k --keepParent build/Aomidori.app Aomidori-0.4.1.zip   # release archive
 ```
 
@@ -209,6 +213,9 @@ releases, once hosted runners offer macOS 27 and Swift 6.4.
 ## Keyboard shortcuts
 
 Shortcuts are designed for the Italian keyboard layout (AppKit's automatic remapping is off).
+They are defined in one table, `Shortcuts.table` in AomidoriCore; a test fails if two commands
+share a shortcut. `⌘T` opens a new tab, as in Safari and Finder, so the Font panel is on `⌥⌘T`
+(Aomidori has no Show Toolbar command, which other apps put there).
 Menu names are given in English; in Italian they are Archivio, Vista, Vai, Stile.
 
 | Action | Shortcut | Menu |
@@ -232,9 +239,10 @@ Menu names are given in English; in Italian they are Archivio, Vista, Vai, Stile
 | Reload style from disk | `⌘R` | Style |
 | Custom font on/off | `⇧⌘F` | Style |
 | Choose custom font | `⌥⌘F` | Style |
-| Font panel (custom font) | `⌘T` | Style |
+| Font panel (custom font) | `⌥⌘T` | Style |
 | Load font file | (menu) | Style |
 | Book info (metadata, cover) | `⌘I` (and toolbar) | File |
+| New tab (empty window) | `⌘T` | File |
 | Open, close | `⌘O`, `⌘W` | File |
 | CSS Playground | `⇧⌘P` | Style |
 | Playground: open a CSS file | `⇧⌘O` (and the Open button) | File |
@@ -321,11 +329,10 @@ full height) and the CSS on the right; below the editor, the styles folder's fil
 
 ## Next phases
 
-1. **Windows vs tabs**: test both and pick one.
-2. **More sidebar panes**, slots and shortcuts already reserved: Thumbnails (`⌥⌘3`, the
+1. **More sidebar panes**, slots and shortcuts already reserved: Thumbnails (`⌥⌘3`, the
    book's pages in miniature), Images (`⌥⌘4`, every picture in the book), Notes (`⌥⌘6`,
    footnotes and endnotes from `epub:type` / `role` markup). Bookmark renaming and notes.
-3. Per-book style memory, trackpad swipe between chapters, find next/previous in books (`⌘G`).
+2. Per-book style memory, trackpad swipe between chapters, find next/previous in books (`⌘G`).
 
 Murasaki (closed source) is a reference for the toolbar, sidebar panes and Inspector; no assets
 or code are taken from it.

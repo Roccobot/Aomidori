@@ -47,6 +47,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         return true
     }
 
+    /// `⌘T` with no reader or empty window in front (none open, or the Playground): an empty
+    /// window, as a tab of the main reader window if there is one.
+    @objc func newWindowForTab(_ sender: Any?) {
+        let main = NSApp.mainWindow.flatMap { $0.tabbingIdentifier == ReaderWindowController.tabbingIdentifier ? $0 : nil }
+        EmptyReaderWindowController.openNewTab(besides: main)
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         if LaunchSmokeTest.isActive { launchSmokeTest = LaunchSmokeTest() }
         // AppKit does not always ask for the untitled file (a background launch, `open -g`, got

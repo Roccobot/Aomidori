@@ -24,6 +24,8 @@ cp Resources/ReadingRoccobot.css "$APP/Contents/Resources/ReadingRoccobot.css"
 cp THIRD_PARTY.md "$APP/Contents/Resources/THIRD_PARTY.md"
 # CSS Playground sample text and its picture.
 cp -R Resources/Playground "$APP/Contents/Resources/Playground"
+# The empty window's drop zone art by Graphe (SVG, PNG fallbacks).
+cp -R Resources/EmptyState "$APP/Contents/Resources/EmptyState"
 # App icon by Graphe. The flat AppIcon.icns (CFBundleIconFile) is always shipped as the fallback;
 # the layered Liquid Glass AppIcon.icon is compiled into Assets.car (CFBundleIconName) by Xcode's
 # actool, which the Command Line Tools lack. actool also emits an .icns of its own: it is
