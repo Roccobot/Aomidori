@@ -44,11 +44,13 @@ move between chapters, and the reader's own CSS can replace the book's at any mo
   The book's CSS is used by default; *Override Book Style* (`⌘.`) replaces it with the
   selected user style, including its fonts: nothing of the book's typography survives
   (sheets, `@font-face`, inline styles, `<font face>`). The style choice is global.
-- Custom font (`⇧⌘F`, chosen with `⌥⌘F`): any installed family, or TTF/OTF/WOFF files loaded
+- Custom font (`⌘S` switches between the book or style font and the custom font; `⇧⌘T`
+  defines it): any installed family, or TTF/OTF/WOFF files loaded
   into the `Fonts` folder, replaces the font of all text (book and style, override on or off;
   code and formulas excepted) without touching sizes or colors. Global and remembered.
   The chooser also picks the face (*Automatic* keeps the book's and the style's weights) and
-  sets each axis of a variable face; the system **Font panel** (`⌥⌘T`) works too, with its
+  sets each axis of a variable face; the system **Font panel** (the chooser's *Font Panel…* button, or Style › Font Panel…)
+  works too, with its
   Typography features (small caps, old-style figures, ligatures, stylistic sets…). With a
   chosen face, bold text is 300 heavier (at most 900: Light → Semibold, Regular → Bold), and
   an italic face makes italic text upright, as emphasis does in italic typesetting.
@@ -215,8 +217,9 @@ releases, once hosted runners offer macOS 27 and Swift 6.4.
 
 Shortcuts are designed for the Italian keyboard layout (AppKit's automatic remapping is off).
 They are defined in one table, `Shortcuts.table` in AomidoriCore; a test fails if two commands
-share a shortcut. `⌘T` opens a new tab, as in Safari and Finder, so the Font panel is on `⌥⌘T`
-(Aomidori has no Show Toolbar command, which other apps put there).
+share a shortcut in the same window. `⌘T` opens a new tab, as in Safari and Finder. `⌘S`
+switches the custom font in every window but the CSS Playground, where it is Save (the only
+per-window shortcut; the app routes it by the window in front).
 Menu names are given in English; in Italian they are Archivio, Vista, Vai, Stile.
 
 | Action | Shortcut | Menu |
@@ -238,9 +241,9 @@ Menu names are given in English; in Italian they are Archivio, Vista, Vai, Stile
 | Previous / next style | `⌘'` / `⌘ì` | Style |
 | Style list | `⌘1` | Style |
 | Reload style from disk | `⌘R` | Style |
-| Custom font on/off | `⇧⌘F` | Style |
-| Choose custom font | `⌥⌘F` | Style |
-| Font panel (custom font) | `⌥⌘T` | Style |
+| Book or style font ↔ custom font | `⌘S` (not in the Playground) | Style |
+| Define the custom font (chooser; Font panel from its button) | `⇧⌘T` | Style |
+| Font panel (custom font) | (menu, chooser button) | Style |
 | Load font file | (menu) | Style |
 | Book info (metadata, cover) | `⌘I` (and toolbar) | File |
 | New tab (empty window) | `⌘T` | File |

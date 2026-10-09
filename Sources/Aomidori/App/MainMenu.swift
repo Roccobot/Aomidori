@@ -144,8 +144,8 @@ enum MainMenu {
     static func fontItems() -> [NSMenuItem] {
         [
             item(L10n.string("menu.style.customFont"), #selector(AppDelegate.toggleCustomFont(_:)), .customFont),
-            item(L10n.string("menu.style.chooseFont"), #selector(AppDelegate.showFontPicker(_:)), .chooseFont),
-            item(L10n.string("menu.style.fontPanel"), #selector(AppDelegate.showFontPanel(_:)), .fontPanel),
+            item(L10n.string("menu.style.chooseFont"), #selector(AppDelegate.showFontPicker(_:)), .defineFont),
+            item(L10n.string("menu.style.fontPanel"), #selector(AppDelegate.showFontPanel(_:))),
             item(L10n.string("menu.style.loadFont"), #selector(AppDelegate.loadFontFile(_:))),
         ]
     }
@@ -183,5 +183,17 @@ enum MainMenu {
         let item = NSMenuItem(title: menu.title, action: nil, keyEquivalent: "")
         item.submenu = menu
         return item
+    }
+}
+
+extension KeyShortcut.Modifiers {
+    /// The shortcut modifiers held in an event's flags.
+    init(_ flags: NSEvent.ModifierFlags) {
+        let flags = flags.intersection(.deviceIndependentFlagsMask)
+        self = []
+        if flags.contains(.command) { insert(.command) }
+        if flags.contains(.shift) { insert(.shift) }
+        if flags.contains(.option) { insert(.option) }
+        if flags.contains(.control) { insert(.control) }
     }
 }

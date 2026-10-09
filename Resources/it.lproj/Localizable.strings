@@ -106,13 +106,13 @@
 "menu.style.reload" = "Ricarica stile";
 "menu.style.customFont" = "Font personalizzato";
 "menu.style.customFont.named" = "Font personalizzato: %@";
-"menu.style.chooseFont" = "Scegli font…";
+"menu.style.chooseFont" = "Definisci font…";
 "menu.style.fontPanel" = "Pannello Font…";
 "menu.style.loadFont" = "Carica font…";
 "font.title" = "Font personalizzato";
 "font.search" = "Cerca font";
 "font.enabled" = "Usa font personalizzato";
-"font.enabled.help" = "Sostituisce il font di tutto il testo, del libro e dello stile (⇧⌘F)";
+"font.enabled.help" = "Sostituisce il font di tutto il testo, del libro e dello stile (%@)";
 "font.load" = "Carica font…";
 "font.loadedFamily" = "%@ (caricato)";
 "font.load.title" = "Carica file di font";
@@ -122,7 +122,7 @@
 "font.face" = "Stile";
 "font.face.automatic" = "Automatico";
 "font.panel" = "Pannello Font…";
-"font.panel.help" = "Apre il pannello Font di sistema: stili, assi variabili e funzioni tipografiche (%@)";
+"font.panel.help" = "Apre il pannello Font di sistema: stili, assi variabili e funzioni tipografiche";
 
 /* CSS Playground */
 "menu.edit.undo" = "Annulla";

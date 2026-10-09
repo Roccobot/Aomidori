@@ -23,7 +23,7 @@ public struct KeyShortcut: Hashable, Sendable, CustomStringConvertible {
     public static let leftArrow = String(UnicodeScalar(0xF702)!)
     public static let rightArrow = String(UnicodeScalar(0xF703)!)
 
-    /// "⌥⌘T", for messages and tests.
+    /// "⇧⌘T", for messages and tests.
     public var description: String {
         let symbols: [(Modifiers, String)] = [(.control, "⌃"), (.option, "⌥"), (.shift, "⇧"), (.command, "⌘")]
         let keyName = switch key {
@@ -51,7 +51,7 @@ public enum ShortcutCommand: String, CaseIterable, Sendable {
     case previousChapter, nextChapter, back, forward, addBookmark
     // Style
     case override, previousStyle, nextStyle, styleList, reloadStyle, playground
-    case customFont, chooseFont, fontPanel
+    case customFont, defineFont
     // Window
     case minimize
 }
@@ -105,12 +105,38 @@ public enum Shortcuts {
         .styleList: KeyShortcut("1"),
         .reloadStyle: KeyShortcut("r"),
         .playground: KeyShortcut("p", [.command, .shift]),
-        .customFont: KeyShortcut("f", [.command, .shift]),
-        .chooseFont: KeyShortcut("f", [.command, .option]),
-        .fontPanel: KeyShortcut("t", [.command, .option]),
+        // Book or style font ↔ custom font. ⌘S is Save in the Playground window (see `scope`).
+        .customFont: KeyShortcut("s"),
+        // The custom font chooser, with a button for the system Font panel.
+        .defineFont: KeyShortcut("t", [.command, .shift]),
 
         .minimize: KeyShortcut("m"),
     ]
+
+    /// The windows a command's shortcut acts in. Two commands may share a shortcut only if
+    /// their scopes do not overlap: the key then means one thing per window.
+    public enum Scope: Sendable {
+        case everywhere
+        /// The CSS Playground window.
+        case playground
+        /// Any window but the Playground (reader windows, the empty window, panels).
+        case outsidePlayground
+
+        func overlaps(_ other: Scope) -> Bool {
+            switch (self, other) {
+            case (.playground, .outsidePlayground), (.outsidePlayground, .playground): false
+            default: true
+            }
+        }
+    }
+
+    public static func scope(_ command: ShortcutCommand) -> Scope {
+        switch command {
+        case .playgroundOpenCSS, .playgroundLoadEPUB, .playgroundSample, .playgroundSave, .playgroundSaveAs: .playground
+        case .customFont: .outsidePlayground
+        default: .everywhere
+        }
+    }
 
     /// The shortcut of a command.
     public static func shortcut(_ command: ShortcutCommand) -> KeyShortcut {
@@ -122,15 +148,24 @@ public enum Shortcuts {
         KeyShortcut("\(digit)", [.command, .option])
     }
 
-    /// Every shortcut in the menus, the sidebar panes' included, with what it does; a
-    /// shortcut listed twice is a conflict.
-    public static var all: [(name: String, shortcut: KeyShortcut)] {
-        ShortcutCommand.allCases.map { ($0.rawValue, shortcut($0)) }
-            + SidebarPane.allCases.map { ("sidebar.\($0)", sidebarPane($0.shortcutDigit)) }
+    /// Every shortcut in the menus, the sidebar panes' included, with what it does and where.
+    public static var all: [(name: String, shortcut: KeyShortcut, scope: Scope)] {
+        ShortcutCommand.allCases.map { ($0.rawValue, shortcut($0), scope($0)) }
+            + SidebarPane.allCases.map { ("sidebar.\($0)", sidebarPane($0.shortcutDigit), .everywhere) }
     }
 
-    /// Shortcuts used by more than one command.
+    /// Shortcuts used by more than one command in the same window.
     public static var conflicts: [KeyShortcut: [String]] {
-        Dictionary(grouping: all, by: \.shortcut).mapValues { $0.map(\.name) }.filter { $0.value.count > 1 }
+        Dictionary(grouping: all, by: \.shortcut).compactMapValues { uses in
+            let clashing = uses.enumerated().filter { index, use in
+                uses.enumerated().contains { other, otherUse in other != index && use.scope.overlaps(otherUse.scope) }
+            }
+            return clashing.isEmpty ? nil : clashing.map(\.element.name)
+        }
+    }
+
+    /// Whether a key press (its characters without modifiers, and its modifiers) is the shortcut.
+    public static func matches(_ shortcut: KeyShortcut, characters: String, modifiers: KeyShortcut.Modifiers) -> Bool {
+        characters.lowercased() == shortcut.key.lowercased() && modifiers == shortcut.modifiers
     }
 }
