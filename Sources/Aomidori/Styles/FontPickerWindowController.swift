@@ -1,8 +1,12 @@
 import AppKit
+import AomidoriCore
 import UniformTypeIdentifiers
 
-/// The custom font panel: every family, each shown in its own face, with a filter; picking one
-/// turns the custom font on at once. *Load Font…* adds TTF/OTF files to the fonts folder.
+/// The custom font chooser: every family, each shown in its own face, with a filter; picking one
+/// turns the custom font on at once. Below the list, the face (*Automatic* keeps the weights of
+/// the book and the style) and a slider for each axis of a variable face. *Font Panel…* opens
+/// the system Font panel for features and finer choices; *Load Font…* adds font files to the
+/// fonts folder.
 @MainActor
 final class FontPickerWindowController: NSWindowController, NSTableViewDataSource, NSTableViewDelegate, NSSearchFieldDelegate {
     private let environment = ReaderEnvironment.shared
@@ -14,6 +18,13 @@ final class FontPickerWindowController: NSWindowController, NSTableViewDataSourc
     private var loaded: Set<String> = []
     private var observer: (any NSObjectProtocol)?
     private var isUpdatingSelection = false
+    private let facePopUp = NSPopUpButton()
+    private let axesStack = NSStackView()
+    /// The faces listed in the popup, after its *Automatic* item, and the family they belong to.
+    private var faceMembers: [CustomFonts.Member] = []
+    private var faceFamily: String?
+    /// The face and axis values the sliders show, so they are rebuilt only when these change.
+    private var shownAxes: (face: String?, axes: [CustomFonts.VariationAxis])?
 
     init() {
         let panel = NSPanel(
@@ -24,7 +35,7 @@ final class FontPickerWindowController: NSWindowController, NSTableViewDataSourc
         panel.title = L10n.string("font.title")
         panel.isFloatingPanel = true
         panel.hidesOnDeactivate = true
-        panel.minSize = NSSize(width: 260, height: 300)
+        panel.minSize = NSSize(width: 280, height: 360)
         panel.setFrameAutosaveName("AomidoriFontPicker")
         super.init(window: panel)
         buildContent(in: panel)
@@ -64,10 +75,23 @@ final class FontPickerWindowController: NSWindowController, NSTableViewDataSourc
         enabledCheckbox.action = #selector(enabledChanged(_:))
         enabledCheckbox.toolTip = L10n.string("font.enabled.help")
         let loadButton = NSButton(title: L10n.string("font.load"), target: nil, action: #selector(AppDelegate.loadFontFile(_:)))
-        let footer = NSStackView(views: [enabledCheckbox, NSView(), loadButton])
-        footer.orientation = .horizontal
+        let panelButton = NSButton(title: L10n.string("font.panel"), target: nil, action: #selector(AppDelegate.showFontPanel(_:)))
+        panelButton.toolTip = L10n.string("font.panel.help")
+        let buttons = NSStackView(views: [panelButton, NSView(), loadButton])
+        buttons.orientation = .horizontal
 
-        let stack = NSStackView(views: [searchField, scrollView, footer])
+        facePopUp.target = self
+        facePopUp.action = #selector(faceChanged(_:))
+        facePopUp.setAccessibilityLabel(L10n.string("font.face"))
+        let faceLabel = NSTextField(labelWithString: L10n.string("font.face"))
+        let faceRow = NSStackView(views: [faceLabel, facePopUp])
+        faceRow.orientation = .horizontal
+        facePopUp.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        axesStack.orientation = .vertical
+        axesStack.alignment = .leading
+        axesStack.spacing = 6
+
+        let stack = NSStackView(views: [searchField, scrollView, faceRow, axesStack, enabledCheckbox, buttons])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 10
@@ -82,7 +106,9 @@ final class FontPickerWindowController: NSWindowController, NSTableViewDataSourc
             stack.bottomAnchor.constraint(equalTo: content.bottomAnchor),
             searchField.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -24),
             scrollView.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -24),
-            footer.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -24),
+            faceRow.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -24),
+            axesStack.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -24),
+            buttons.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -24),
         ])
         panel.contentView = content
     }
@@ -105,6 +131,7 @@ final class FontPickerWindowController: NSWindowController, NSTableViewDataSourc
     private func syncWithEnvironment() {
         enabledCheckbox.state = environment.customFontEnabled ? .on : .off
         enabledCheckbox.isEnabled = environment.customFontFamily != nil
+        syncFace()
         guard let family = environment.customFontFamily, let row = families.firstIndex(of: family) else {
             tableView.deselectAll(nil)
             return
@@ -114,6 +141,112 @@ final class FontPickerWindowController: NSWindowController, NSTableViewDataSourc
         tableView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
         tableView.scrollRowToVisible(row)
         isUpdatingSelection = false
+    }
+
+    // MARK: Face and axes
+
+    private func syncFace() {
+        let choice = environment.customFontChoice
+        if faceFamily != choice?.family {
+            faceFamily = choice?.family
+            faceMembers = choice.map { environment.fonts.faceMembers(ofFamily: $0.family) } ?? []
+            facePopUp.removeAllItems()
+            facePopUp.addItem(withTitle: L10n.string("font.face.automatic"))
+            facePopUp.menu?.addItem(.separator())
+            for member in faceMembers {
+                facePopUp.addItem(withTitle: member.displayName)
+                let item = facePopUp.lastItem
+                item?.representedObject = member.postScriptName
+                item?.toolTip = member.postScriptName
+                if let font = NSFont(name: member.postScriptName, size: NSFont.systemFontSize) {
+                    item?.attributedTitle = NSAttributedString(string: member.displayName, attributes: [.font: font])
+                }
+            }
+        }
+        facePopUp.isEnabled = choice != nil
+        if let face = choice?.faceName, let index = facePopUp.itemArray.firstIndex(where: { $0.representedObject as? String == face }) {
+            facePopUp.selectItem(at: index)
+        } else if let face = choice?.faceName {
+            // A face the family list does not show (chosen in the Font panel): listed as it is.
+            facePopUp.addItem(withTitle: choice.map(FontChoiceConversion.displayName) ?? face)
+            facePopUp.lastItem?.representedObject = face
+            facePopUp.select(facePopUp.lastItem)
+        } else {
+            facePopUp.selectItem(at: 0)
+        }
+        syncAxes(choice)
+    }
+
+    /// One slider per axis of the chosen face: weight and width drive the CSS weight and width,
+    /// the others `font-variation-settings`. Values are applied when the slider is released.
+    private func syncAxes(_ choice: CustomFontChoice?) {
+        let face = choice?.faceName
+        let axes = face.map(CustomFonts.variationAxes(ofFace:)) ?? []
+        if shownAxes?.face != face || shownAxes?.axes != axes {
+            shownAxes = (face, axes)
+            axesStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+            for (index, axis) in axes.enumerated() {
+                let label = NSTextField(labelWithString: axis.name)
+                label.toolTip = axis.tag
+                label.widthAnchor.constraint(equalToConstant: 80).isActive = true
+                label.lineBreakMode = .byTruncatingTail
+                let slider = NSSlider(value: axis.defaultValue, minValue: axis.range.lowerBound, maxValue: axis.range.upperBound,
+                                      target: self, action: #selector(axisChanged(_:)))
+                slider.isContinuous = false
+                slider.tag = index
+                slider.setAccessibilityLabel(axis.name)
+                let value = NSTextField(labelWithString: "")
+                value.font = .monospacedDigitSystemFont(ofSize: NSFont.smallSystemFontSize, weight: .regular)
+                value.alignment = .right
+                value.widthAnchor.constraint(equalToConstant: 40).isActive = true
+                let row = NSStackView(views: [label, slider, value])
+                row.orientation = .horizontal
+                axesStack.addArrangedSubview(row)
+                row.widthAnchor.constraint(equalTo: axesStack.widthAnchor).isActive = true
+            }
+        }
+        axesStack.isHidden = axes.isEmpty
+        for (axis, row) in zip(axes, axesStack.arrangedSubviews) {
+            guard let views = (row as? NSStackView)?.arrangedSubviews, let slider = views[1] as? NSSlider,
+                  let label = views[2] as? NSTextField else { continue }
+            let value = choice.flatMap { Self.value(of: axis, in: $0) } ?? axis.defaultValue
+            slider.doubleValue = value
+            label.stringValue = CustomFontCSS.number(value)
+        }
+    }
+
+    private static func value(of axis: CustomFonts.VariationAxis, in choice: CustomFontChoice) -> Double? {
+        switch axis.tag {
+        case "wght": choice.weight
+        case "wdth": choice.stretch
+        default: choice.variations[axis.tag]
+        }
+    }
+
+    @objc private func faceChanged(_ sender: NSPopUpButton) {
+        guard let family = environment.customFontFamily else { return }
+        let features = environment.customFontChoice?.features ?? [:]
+        guard let face = sender.selectedItem?.representedObject as? String,
+              let font = NSFont(name: face, size: NSFont.systemFontSize) else {
+            environment.setCustomFont(CustomFontChoice(family: family, features: features))
+            return
+        }
+        var choice = FontChoiceConversion.choice(from: font).choice
+        choice.family = family
+        choice.features = features
+        environment.setCustomFont(choice)
+    }
+
+    @objc private func axisChanged(_ sender: NSSlider) {
+        guard var choice = environment.customFontChoice, let axes = shownAxes?.axes, axes.indices.contains(sender.tag) else { return }
+        let axis = axes[sender.tag]
+        let value = sender.doubleValue.rounded()
+        switch axis.tag {
+        case "wght": choice.weight = value
+        case "wdth": choice.stretch = value == 100 ? nil : value
+        default: choice.variations[axis.tag] = value
+        }
+        environment.setCustomFont(choice)
     }
 
     /// Called after font files are loaded: lists them and selects the first new family.

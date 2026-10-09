@@ -106,6 +106,7 @@
 "menu.style.customFont" = "Font personalizzato";
 "menu.style.customFont.named" = "Font personalizzato: %@";
 "menu.style.chooseFont" = "Scegli font…";
+"menu.style.fontPanel" = "Pannello Font…";
 "menu.style.loadFont" = "Carica font…";
 "font.title" = "Font personalizzato";
 "font.search" = "Cerca font";
@@ -117,6 +118,10 @@
 "font.load.prompt" = "Carica";
 "font.load.error" = "Impossibile caricare il font.";
 "font.load.error.detail" = "Scegli file TrueType o OpenType (.ttf, .otf, .woff, .woff2).";
+"font.face" = "Stile";
+"font.face.automatic" = "Automatico";
+"font.panel" = "Pannello Font…";
+"font.panel.help" = "Apre il pannello Font di sistema: stili, assi variabili e funzioni tipografiche (⌘T)";
 
 /* CSS Playground */
 "menu.edit.undo" = "Annulla";

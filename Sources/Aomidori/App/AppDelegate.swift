@@ -96,7 +96,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     private lazy var fontPicker = FontPickerWindowController()
 
-    /// `⇧⌘F`: the custom font on or off; the first time, the font panel opens to choose one.
+    /// `⇧⌘F`: the custom font on or off; the first time, the font chooser opens to choose one.
     @objc func toggleCustomFont(_ sender: Any?) {
         if !environment.toggleCustomFont() { showFontPicker(sender) }
     }
@@ -104,6 +104,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     /// `⌥⌘F`
     @objc func showFontPicker(_ sender: Any?) {
         fontPicker.showWindow(sender)
+    }
+
+    /// `⌘T`: the system Font panel, showing the custom font. What is picked there (family,
+    /// face, the axes of a variable font, Typography features) becomes the custom font. Size
+    /// and effects are not offered: the style and the text size controls own those.
+    @objc func showFontPanel(_ sender: Any?) {
+        let manager = NSFontManager.shared
+        manager.target = self
+        manager.action = #selector(changeFont(_:))
+        let size = NSFont.systemFontSize * 1.5
+        let font = environment.customFontChoice.flatMap { FontChoiceConversion.font(for: $0, size: size) }
+            ?? NSFont.systemFont(ofSize: size)
+        manager.setSelectedFont(font, isMultiple: false)
+        manager.orderFrontFontPanel(sender)
+    }
+
+    /// Sent by the Font panel for every change made in it.
+    @objc func changeFont(_ sender: Any?) {
+        let manager = sender as? NSFontManager ?? NSFontManager.shared
+        let current = manager.selectedFont ?? NSFont.systemFont(ofSize: NSFont.systemFontSize * 1.5)
+        let font = manager.convert(current)
+        manager.setSelectedFont(font, isMultiple: false)
+        environment.setCustomFont(FontChoiceConversion.choice(from: font).choice)
+    }
+
+    @objc func validModesForFontPanel(_ fontPanel: NSFontPanel) -> NSFontPanel.ModeMask {
+        [.face, .collection]
     }
 
     @objc func loadFontFile(_ sender: Any?) {
@@ -123,8 +150,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             menuItem.state = environment.overrideEnabled ? .on : .off
         case #selector(toggleCustomFont(_:)):
             menuItem.state = environment.customFontEnabled ? .on : .off
-            menuItem.title = environment.customFontFamily.map { L10n.format("menu.style.customFont.named", $0) }
-                ?? L10n.string("menu.style.customFont")
+            menuItem.title = environment.customFontChoice.map {
+                L10n.format("menu.style.customFont.named", FontChoiceConversion.displayName(of: $0))
+            } ?? L10n.string("menu.style.customFont")
         case #selector(previousStyle(_:)), #selector(nextStyle(_:)):
             return environment.styles.count > 0
         case #selector(increaseTextSize(_:)):

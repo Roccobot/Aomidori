@@ -39,6 +39,11 @@ move between chapters, and the reader's own CSS can replace the book's at any mo
 - Custom font (`⇧⌘F`, chosen with `⌥⌘F`): any installed family, or TTF/OTF/WOFF files loaded
   into the `Fonts` folder, replaces the font of all text (book and style, override on or off;
   code and formulas excepted) without touching sizes or colors. Global and remembered.
+  The chooser also picks the face (*Automatic* keeps the book's and the style's weights) and
+  sets each axis of a variable face; the system **Font panel** (`⌘T`) works too, with its
+  Typography features (small caps, old-style figures, ligatures, stylistic sets…). With a
+  chosen face, bold text is 300 heavier (at most 900: Light → Semibold, Regular → Bold), and
+  an italic face makes italic text upright, as emphasis does in italic typesetting.
 - Day/Night with one click. Styles with `prefers-color-scheme` rules follow it natively; for CSS
   without them, Night applies only the colors of the default style's dark rules.
 - Minimal mode: no toolbar, title or window buttons, only text.
@@ -134,6 +139,16 @@ see them by name. Fonts loaded with *Load Font…* are copied to the `Fonts` fol
 from there. A book's own `@font-face` can never take the family over, because its name is
 private. Code (`code`, `pre`, `kbd`, `samp`, `tt`, `var`) and MathML keep their fonts.
 
+Each face is declared with its exact weight and width, taken from Core Text's traits (so
+Light, Book and Medium keep separate slots); a variable font is declared once per file with
+its `wght`/`wdth` ranges, so CSS weights drive its axes. The choice is stored as a record
+(family, face, weight, italic, width, other axes, features), and becomes `font-weight`,
+`font-style`, `font-stretch`, `font-variation-settings` and `font-feature-settings`. Which text
+is bold or italic is decided whenever the page or the font changes, from the cascade with only the family replaced
+(`data-aomidori-bold`, `data-aomidori-italic`), and those elements get the bold weight or the
+opposite style. Font panel features arrive either as OpenType tags or as Apple feature
+type/selector pairs; the common pairs are translated to OpenType tags, the others are ignored.
+
 **Night.** The toolbar button sets the window appearance (`aqua`/`darkAqua`), so
 `prefers-color-scheme` resolves in the page as in Safari. If the active CSS (the book's
 sheets when the override is off, including `@import`s; the user style when it is on) has no
@@ -212,6 +227,7 @@ Menu names are given in English; in Italian they are Archivio, Vista, Vai, Stile
 | Reload style from disk | `⌘R` | Style |
 | Custom font on/off | `⇧⌘F` | Style |
 | Choose custom font | `⌥⌘F` | Style |
+| Font panel (custom font) | `⌘T` | Style |
 | Load font file | (menu) | Style |
 | Book info (metadata, cover) | `⌘I` (and toolbar) | File |
 | Open, close | `⌘O`, `⌘W` | File |
@@ -289,7 +305,11 @@ full height) and the CSS on the right; below the editor, the styles folder's fil
   unpacked (folder) EPUBs, `xml-stylesheet` instructions, DRM-protected books (reported).
 - A user style naming an installed font that the web view cannot see by name falls back; the
   `Fonts` folder next to `Styles` (with `@font-face`) or the custom font are the reliable ways.
-- Font collections (`.ttc`) are offered to the page by name only.
+- Font collections (`.ttc`) are offered to the page by name only, so their variable axes and
+  exact weights depend on WebKit finding the face by name.
+- Font panel: size and effects (color, shadow, underline) are not offered, the style and the
+  text size own those. Apple features without an OpenType equivalent are ignored.
+- Letter spacing is not part of the custom font.
 - Playground: an outside CSS file's relative URLs resolve in the styles folder (where it
   would be saved), not next to the original file. HTML and JavaScript are only coloured: the
   preview applies the editor's text as CSS. Colours are not shown as swatches.

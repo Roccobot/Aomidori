@@ -145,6 +145,7 @@ enum MainMenu {
         [
             item(L10n.string("menu.style.customFont"), #selector(AppDelegate.toggleCustomFont(_:)), "f", [.command, .shift]),
             item(L10n.string("menu.style.chooseFont"), #selector(AppDelegate.showFontPicker(_:)), "f", [.command, .option]),
+            item(L10n.string("menu.style.fontPanel"), #selector(AppDelegate.showFontPanel(_:)), "t"),
             item(L10n.string("menu.style.loadFont"), #selector(AppDelegate.loadFontFile(_:))),
         ]
     }
