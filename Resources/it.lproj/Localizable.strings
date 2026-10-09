@@ -103,7 +103,7 @@
 "search.results" = "Risultati: %d";
 "search.resultsLimited" = "Primi %d risultati";
 "search.item" = "Sezione %d";
-"menu.style.reload" = "Ricarica stile";
+"menu.style.reload" = "Ricarica";
 "menu.style.customFont" = "Font personalizzato";
 "menu.style.customFont.named" = "Font personalizzato: %@";
 "menu.style.chooseFont" = "Definisci font…";

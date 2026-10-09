@@ -103,7 +103,7 @@
 "search.results" = "Results: %d";
 "search.resultsLimited" = "First %d results";
 "search.item" = "Section %d";
-"menu.style.reload" = "Reload Style";
+"menu.style.reload" = "Reload";
 "menu.style.customFont" = "Custom Font";
 "menu.style.customFont.named" = "Custom Font: %@";
 "menu.style.chooseFont" = "Define Font…";

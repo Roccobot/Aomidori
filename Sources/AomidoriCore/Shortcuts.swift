@@ -50,7 +50,7 @@ public enum ShortcutCommand: String, CaseIterable, Sendable {
     // Go
     case previousChapter, nextChapter, back, forward, addBookmark
     // Style
-    case override, previousStyle, nextStyle, styleList, reloadStyle, playground
+    case override, previousStyle, nextStyle, styleList, reload, playground
     case customFont, defineFont
     // Window
     case minimize
@@ -103,7 +103,8 @@ public enum Shortcuts {
         .previousStyle: KeyShortcut("'"),
         .nextStyle: KeyShortcut("\u{00EC}"),
         .styleList: KeyShortcut("1"),
-        .reloadStyle: KeyShortcut("r"),
+        // The chapter from the book and the style from disk, keeping the reading position.
+        .reload: KeyShortcut("r"),
         .playground: KeyShortcut("p", [.command, .shift]),
         // Book or style font ↔ custom font. ⌘S is Save in the Playground window (see `scope`).
         .customFont: KeyShortcut("s"),

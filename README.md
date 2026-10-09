@@ -40,7 +40,8 @@ move between chapters, and the reader's own CSS can replace the book's at any mo
   `min()`/`clamp()` caps, `!important`); pictures keep their size; pinch never scales the page.
 - User styles: every `.css` in `~/Library/Application Support/Aomidori/Styles/`, edited live
   with any external editor: a save (in place or atomic, as BBEdit, VS Code and TextEdit do)
-  shows up in about 0.1 s, keeping the reading position. *Reload Style* (`⌘R`) forces it.
+  shows up in about 0.1 s, keeping the reading position. *Reload* (`⌘R`) does it
+  by hand and also reloads the chapter from the book, at the same place.
   The book's CSS is used by default; *Override Book Style* (`⌘.`) replaces it with the
   selected user style, including its fonts: nothing of the book's typography survives
   (sheets, `@font-face`, inline styles, `<font face>`). The style choice is global.
@@ -121,7 +122,9 @@ read stays where it was.
 0.1 s latency: the kernel delivers each burst of changes once (a debounce with no polling and no
 open file descriptors), and atomic saves, which rename a new file over the old one, look like
 any other change. Each event bumps a revision that is part of the style's URL, so the page
-fetches the file again even when only an `@import`ed file changed. `⌘R` does the same by hand.
+fetches the file again even when only an `@import`ed file changed. `⌘R` does the same by hand, then loads
+the chapter again from the book (bypassing WebKit's caches) and restores the position read just
+before the reload.
 
 **Text size** is CSS `zoom` on `<body>`, with pictures (`img`, `svg`, `video`, `canvas`,
 `iframe`, `object`, `embed`) zoomed back by the inverse factor. The choice, because the size
@@ -240,7 +243,7 @@ Menu names are given in English; in Italian they are Archivio, Vista, Vai, Stile
 | Override book style on/off | `⌘.` (and toolbar) | Style |
 | Previous / next style | `⌘'` / `⌘ì` | Style |
 | Style list | `⌘1` | Style |
-| Reload style from disk | `⌘R` | Style |
+| Reload (chapter from the book, style from disk, same place) | `⌘R` | Style |
 | Book or style font ↔ custom font | `⌘S` (not in the Playground) | Style |
 | Define the custom font (chooser; Font panel from its button) | `⇧⌘T` | Style |
 | Font panel (custom font) | (menu, chooser button) | Style |

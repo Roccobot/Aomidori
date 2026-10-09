@@ -30,6 +30,7 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
     /// A search hit to reveal once its chapter has loaded.
     private var pendingFind: (hit: SearchHit, query: String)?
     private var findTask: Task<Void, Never>?
+    private var reloadTask: Task<Void, Never>?
     private var edges = ChapterEdgeDetector()
     private let toast = ChapterToastView()
     private var toastTimer: Task<Void, Never>?
@@ -145,6 +146,25 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
         guard book.spine.indices.contains(index) else { return }
         pendingLanding = landing
         renderer.load(path: book.spine[index].path)
+    }
+
+    /// Reloads the current document from the book and the styles and fonts from disk, then
+    /// lands where the reader was. The position is read before anything changes, so neither
+    /// the new style nor the new document can move the reading line.
+    func reload() {
+        reloadTask?.cancel()
+        reloadTask = Task { [weak self] in
+            guard let self else { return }
+            let path = currentPath
+            let position = await renderer.currentPosition()
+            guard !Task.isCancelled else { return }
+            environment.reloadStyle()
+            guard let path else { return }
+            if let position { record(position, path: path) }
+            pendingLanding = .position(position
+                ?? environment.positions.chapterPosition(forBook: bookKey, spinePath: path) ?? .top)
+            renderer.reload(path: path)
+        }
     }
 
     /// Opens a bookmark's chapter at its scroll position.

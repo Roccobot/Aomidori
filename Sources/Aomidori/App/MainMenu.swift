@@ -132,7 +132,7 @@ enum MainMenu {
         menu.addItem(.separator())
         StyleMenu.refresh(menu)
         menu.addItem(.separator())
-        menu.addItem(item(L10n.string("menu.style.reload"), #selector(AppDelegate.reloadStyle(_:)), .reloadStyle))
+        menu.addItem(item(L10n.string("menu.style.reload"), #selector(AppDelegate.reloadPage(_:)), .reload))
         menu.addItem(item(L10n.string("menu.style.showFolder"), #selector(AppDelegate.showStylesFolder(_:))))
         menu.addItem(item(L10n.string("menu.style.playground"), #selector(AppDelegate.showPlayground(_:)), .playground))
         menu.addItem(.separator())

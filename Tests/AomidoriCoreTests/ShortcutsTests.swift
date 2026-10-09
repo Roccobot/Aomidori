@@ -17,6 +17,7 @@ struct ShortcutsTests {
         #expect(Shortcuts.shortcut(.newTab).description == "⌘T")
         #expect(Shortcuts.shortcut(.defineFont).description == "⇧⌘T")
         #expect(Shortcuts.shortcut(.customFont).description == "⌘S")
+        #expect(Shortcuts.shortcut(.reload).description == "⌘R")
         #expect(!Shortcuts.all.contains { $0.shortcut == KeyShortcut("f", [.command, .shift]) }, "⇧⌘F is free")
     }
 

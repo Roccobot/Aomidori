@@ -116,8 +116,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         NSWorkspace.shared.open(AppPaths.styles)
     }
 
-    /// `⌘R`: reads the active style (and the fonts folder) from disk again.
-    @objc func reloadStyle(_ sender: Any?) { environment.reloadStyle() }
+    /// `⌘R` with no reader window in front (the empty window, the Playground): reads the
+    /// styles and fonts from disk again. A reader window also reloads its chapter; see
+    /// `ReaderWindowController.reloadPage(_:)`.
+    @objc func reloadPage(_ sender: Any?) { environment.reloadStyle() }
 
     // MARK: CSS Playground
 

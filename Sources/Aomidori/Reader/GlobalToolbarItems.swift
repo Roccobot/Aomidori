@@ -34,7 +34,7 @@ final class GlobalToolbarItems {
             let menu = NSMenu(title: L10n.string("menu.style"))
             menu.delegate = styleMenuUpdater
             menu.addItem(withTitle: L10n.string("menu.style.list"), action: #selector(ReaderWindowController.showStyleList(_:)), keyEquivalent: "")
-            menu.addItem(withTitle: L10n.string("menu.style.reload"), action: #selector(AppDelegate.reloadStyle(_:)), keyEquivalent: "")
+            menu.addItem(withTitle: L10n.string("menu.style.reload"), action: #selector(AppDelegate.reloadPage(_:)), keyEquivalent: "")
             menu.addItem(withTitle: L10n.string("menu.style.showFolder"), action: #selector(AppDelegate.showStylesFolder(_:)), keyEquivalent: "")
             menu.addItem(.separator())
             MainMenu.fontItems().forEach { $0.keyEquivalent = ""; menu.addItem($0) }

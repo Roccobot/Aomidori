@@ -132,6 +132,10 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         EmptyReaderWindowController.openNewTab(besides: window)
     }
 
+    /// `⌘R`: the chapter again from the book and the style from disk, at the same place.
+    /// (Not `reload(_:)`: the web view, first in the responder chain, would take that one.)
+    @objc func reloadPage(_ sender: Any?) { reader.reload() }
+
     @objc func goToPreviousChapter(_ sender: Any?) { reader.goToPreviousChapter() }
     @objc func goToNextChapter(_ sender: Any?) { reader.goToNextChapter() }
 

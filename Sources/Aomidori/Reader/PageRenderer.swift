@@ -70,6 +70,12 @@ final class PageRenderer: NSObject {
         webView.load(URLRequest(url: url(forPath: path, fragment: fragment)))
     }
 
+    /// Loads a document again, bypassing WebKit's caches, so the page and its own resources
+    /// (the book's CSS, pictures, fonts) are read from the book anew.
+    func reload(path: String) {
+        webView.load(URLRequest(url: url(forPath: path), cachePolicy: .reloadIgnoringLocalAndRemoteCacheData))
+    }
+
     /// Applies a new configuration to the current document without reloading it, and to every
     /// document loaded afterwards.
     func update(_ configuration: ReaderConfiguration) {
