@@ -58,7 +58,7 @@ move between chapters, and the reader's own CSS can replace the book's at any mo
 - Day/Night with one click. Styles with `prefers-color-scheme` rules follow it natively; for CSS
   without them, Night applies only the colors of the default style's dark rules.
 - Minimal mode: no toolbar, title or window buttons, only text.
-- Book info window (`⌘I`): metadata and cover image.
+- Book info window (`⌘I`), titled with the book's title (or the file name): metadata and cover image.
 - **CSS Playground** (`⇧⌘P`): edit a style with a live preview on a sample chapter or a real
   book, then save it to the styles folder and try it in the reader at once (see below).
 - English and Italian interface, following the system language.

@@ -1,12 +1,18 @@
+import AomidoriCore
 import AppKit
 import EPUBKit
 
 /// Book information: descriptive metadata and the cover image (`⌘I`).
 @MainActor
 final class InspectorWindowController: NSWindowController {
-    init(publication: EPUBPublication) {
+    /// `title` is the book's name as the reader window shows it (see `BookTitle`).
+    init(publication: EPUBPublication, title: String) {
         let tabs = NSTabViewController()
         tabs.tabStyle = .segmentedControlOnTop
+        // A window takes its content view controller's title, and a tab view controller takes
+        // its selected tab's, which is unset ("Untitled"): the window title is set here instead.
+        tabs.canPropagateSelectedChildViewControllerTitle = false
+        tabs.title = L10n.format("inspector.title", title)
         let metadata = NSTabViewItem(viewController: MetadataViewController(metadata: publication.book.metadata))
         metadata.label = L10n.string("inspector.metadata")
         let cover = NSTabViewItem(viewController: CoverViewController(image: Self.coverImage(of: publication)))
@@ -16,7 +22,7 @@ final class InspectorWindowController: NSWindowController {
 
         let window = NSWindow(contentViewController: tabs)
         window.styleMask = [.titled, .closable, .resizable, .miniaturizable]
-        window.title = L10n.format("inspector.title", publication.book.title ?? "")
+        window.title = L10n.format("inspector.title", title)
         window.setContentSize(NSSize(width: 520, height: 460))
         window.isRestorable = false
         super.init(window: window)
@@ -74,7 +80,9 @@ private final class MetadataViewController: NSViewController {
         grid.columnSpacing = 10
         grid.translatesAutoresizingMaskIntoConstraints = false
 
-        let document = NSView()
+        // Flipped, so the grid hangs from the top of the clip view (below the tabs) rather than
+        // sitting at its bottom when it is shorter than the window.
+        let document = FlippedView()
         document.translatesAutoresizingMaskIntoConstraints = false
         document.addSubview(grid)
         let scrollView = NSScrollView()
@@ -88,6 +96,8 @@ private final class MetadataViewController: NSViewController {
             grid.leadingAnchor.constraint(equalTo: document.leadingAnchor, constant: 20),
             grid.trailingAnchor.constraint(lessThanOrEqualTo: document.trailingAnchor, constant: -20),
             document.widthAnchor.constraint(equalTo: scrollView.contentView.widthAnchor),
+            document.topAnchor.constraint(equalTo: scrollView.contentView.topAnchor),
+            document.leadingAnchor.constraint(equalTo: scrollView.contentView.leadingAnchor),
         ])
         view = scrollView
     }
@@ -115,17 +125,24 @@ private final class CoverViewController: NSViewController {
             container.addSubview(label)
             NSLayoutConstraint.activate([
                 label.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-                label.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                label.topAnchor.constraint(equalTo: container.topAnchor, constant: 20),
             ])
             view = container
             return
         }
+        // Like the metadata, the cover starts right below the tabs.
         let imageView = NSImageView(image: image)
         imageView.imageScaling = .scaleProportionallyUpOrDown
+        imageView.imageAlignment = .alignTop
         imageView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         imageView.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
         view = imageView
     }
+}
+
+/// A document view laid out from the top.
+private final class FlippedView: NSView {
+    override var isFlipped: Bool { true }
 }
 
 private extension String {

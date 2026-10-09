@@ -104,7 +104,7 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
     static let tabbingIdentifier = "AomidoriReader"
 
     override func windowTitle(forDocumentDisplayName displayName: String) -> String {
-        reader.book.title ?? displayName
+        BookTitle.display(title: reader.book.title, fileURL: (document as? NSDocument)?.fileURL) ?? displayName
     }
 
     private func environmentDidChange() {
@@ -150,10 +150,16 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
             window.performClose(nil)
             return
         }
-        let inspector = inspector ?? InspectorWindowController(publication: reader.publication)
+        let inspector = inspector ?? InspectorWindowController(
+            publication: reader.publication,
+            title: BookTitle.display(title: reader.book.title, fileURL: (document as? NSDocument)?.fileURL)
+                ?? (document as? NSDocument)?.displayName ?? "")
         self.inspector = inspector
         inspector.showWindow(nil)
     }
+
+    /// For `ReaderSmokeTest`.
+    var smokeInspectorWindow: NSWindow? { inspector?.window }
 
     // MARK: Sidebar
 
