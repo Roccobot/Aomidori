@@ -73,9 +73,9 @@ final class ReaderEnvironment {
             MainActor.assumeIsolated {
                 guard let self else { return }
                 // macOS now shows what the reader had picked: follow it again from here.
-                let override = nightOverride
-                setNightOverride(AppearanceChoice.reconciled(override, systemIsDark: systemIsDark))
-                if override == nil || nightOverride == nil { notify() }
+                let override = self.nightOverride
+                self.setNightOverride(AppearanceChoice.reconciled(override, systemIsDark: self.systemIsDark))
+                if override == nil || self.nightOverride == nil { self.notify() }
             }
         }
     }
