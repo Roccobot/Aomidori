@@ -156,7 +156,7 @@ final class StylePicker: NSObject, NSTableViewDataSource, NSTableViewDelegate {
         tableView.delegate = self
         tableView.target = self
         tableView.action = #selector(rowClicked(_:))
-        tableView.setAccessibilityLabel("Stili")
+        tableView.setAccessibilityLabel(L10n.string("picker.title"))
 
         let scrollView = NSScrollView()
         scrollView.documentView = tableView
@@ -164,7 +164,7 @@ final class StylePicker: NSObject, NSTableViewDataSource, NSTableViewDelegate {
         scrollView.hasVerticalScroller = true
         scrollView.autohidesScrollers = true
 
-        let title = NSTextField(labelWithString: "Stili")
+        let title = NSTextField(labelWithString: L10n.string("picker.title"))
         title.font = .systemFont(ofSize: NSFont.smallSystemFontSize, weight: .semibold)
         title.textColor = .secondaryLabelColor
 

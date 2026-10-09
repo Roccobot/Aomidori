@@ -17,13 +17,21 @@ swift build -c release --product Aomidori
 BIN_DIR="$(swift build -c release --show-bin-path)"
 
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/it.lproj"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/Aomidori" "$APP/Contents/MacOS/Aomidori"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp Resources/ReadingRoccobot.css "$APP/Contents/Resources/ReadingRoccobot.css"
 cp THIRD_PARTY.md "$APP/Contents/Resources/THIRD_PARTY.md"
-# An Italian localization folder makes AppKit's own menu items and panels Italian.
-printf '"CFBundleDisplayName" = "Aomidori";\n' > "$APP/Contents/Resources/it.lproj/InfoPlist.strings"
+# Exactly two localizations: English (development language) and Italian, with the same keys.
+for LANG_DIR in en.lproj it.lproj; do
+  plutil -lint "Resources/$LANG_DIR/Localizable.strings" "Resources/$LANG_DIR/InfoPlist.strings" >/dev/null
+  cp -R "Resources/$LANG_DIR" "$APP/Contents/Resources/$LANG_DIR"
+done
+if ! diff <(grep -o '^"[^"]*"' Resources/en.lproj/Localizable.strings | sort) \
+          <(grep -o '^"[^"]*"' Resources/it.lproj/Localizable.strings | sort) >/dev/null; then
+  echo "en.lproj and it.lproj Localizable.strings have different keys." >&2
+  exit 1
+fi
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
 ARCHS="$(lipo -archs "$APP/Contents/MacOS/Aomidori")"

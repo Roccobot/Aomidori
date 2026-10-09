@@ -10,7 +10,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 EPUB="$1"
 OUT="$(cd "$(dirname "${2:-build/smoke.png}")" && pwd)/$(basename "${2:-build/smoke.png}")"
-APP="${APP:-build/Aomidori.app}"
+APP="$(cd "$(dirname "${APP:-build/Aomidori.app}")" && pwd)/$(basename "${APP:-build/Aomidori.app}")"
 
 pkill -x Aomidori 2>/dev/null && sleep 1 || true
 rm -f "$OUT" "${OUT%.png}.window.png"

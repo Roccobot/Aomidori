@@ -57,6 +57,10 @@ struct EPUBFixture {
             <dc:identifier id="pub-id">urn:uuid:12345678-90ab-cdef-1234-567890abcdef</dc:identifier>
             <dc:title>  Una   prova </dc:title>
             <dc:language>it</dc:language>
+            <dc:creator id="a1">Ursula K. Le Guin</dc:creator>
+            <dc:creator>Seconda Autrice</dc:creator>
+            <dc:publisher>Editore</dc:publisher>
+            <meta property="dcterms:modified">2026-09-30T13:14:58Z</meta>
           </metadata>
           <manifest>
             <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
@@ -107,11 +111,13 @@ struct EPUBFixture {
         <opf:package xmlns:opf="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="BookId">
           <opf:metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
             <dc:identifier id="BookId">book-2</dc:identifier><dc:title>Due</dc:title>
+            <opf:meta name="cover" content="img"/>
           </opf:metadata>
           <opf:manifest>
             <opf:item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
             <opf:item id="a" href="text/a.html" media-type="application/xhtml+xml"/>
             <opf:item id="b" href="text/b.html" media-type="application/xhtml+xml"/>
+            <opf:item id="img" href="images/c.png" media-type="image/png"/>
           </opf:manifest>
           <opf:spine toc="ncx"><opf:itemref idref="a"/><opf:itemref idref="b"/></opf:spine>
         </opf:package>

@@ -38,7 +38,9 @@ public enum EPUBParser {
             packagePath: packagePath,
             manifest: manifest,
             spine: spine,
-            toc: toc
+            toc: toc,
+            metadata: descriptiveMetadata(metadata, uniqueIdentifier: uniqueIdentifier),
+            coverPath: coverPath(manifest: manifest, manifestByID: manifestByID, metadata: metadata)
         )
         let obfuscated = try obfuscatedResources(
             in: container,
@@ -68,6 +70,32 @@ public enum EPUBParser {
             return element.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         }
         return identifiers.first?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    static func descriptiveMetadata(_ element: XMLElement?, uniqueIdentifier: String) -> EPUBMetadata {
+        var metadata = EPUBMetadata()
+        guard let element else { return metadata }
+        let texts = { (name: String) in element.childElements(named: name).map(\.normalizedText).filter { !$0.isEmpty } }
+        metadata.title = texts("title").first
+        metadata.creators = texts("creator")
+        metadata.contributors = texts("contributor")
+        metadata.publisher = texts("publisher").first
+        metadata.date = texts("date").first
+        metadata.language = texts("language").first
+        metadata.rights = texts("rights").first
+        metadata.subjects = texts("subject")
+        metadata.description = texts("description").first
+        metadata.identifier = uniqueIdentifier.nilIfEmpty
+        metadata.modified = element.childElements(named: "meta")
+            .first { $0.attributeValue("property") == "dcterms:modified" }?.normalizedText.nilIfEmpty
+        return metadata
+    }
+
+    static func coverPath(manifest: [ManifestItem], manifestByID: [String: ManifestItem], metadata: XMLElement?) -> String? {
+        if let item = manifest.first(where: { $0.properties.contains("cover-image") }) { return item.path }
+        let id = metadata?.childElements(named: "meta").first { $0.attributeValue("name") == "cover" }?.attributeValue("content")
+        guard let item = id.flatMap({ manifestByID[$0] }), item.mediaType.hasPrefix("image/") else { return nil }
+        return item.path
     }
 
     static func manifestItems(root: XMLElement, packagePath: String) -> [ManifestItem] {

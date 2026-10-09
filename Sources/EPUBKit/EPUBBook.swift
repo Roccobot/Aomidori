@@ -27,6 +27,24 @@ public struct TOCEntry: Equatable, Sendable {
     public let children: [TOCEntry]
 }
 
+/// Descriptive metadata from the package document, for display (Inspector).
+public struct EPUBMetadata: Equatable, Sendable {
+    public var title: String?
+    public var creators: [String] = []
+    public var contributors: [String] = []
+    public var publisher: String?
+    public var date: String?
+    /// `dcterms:modified` (EPUB 3).
+    public var modified: String?
+    public var language: String?
+    public var rights: String?
+    public var identifier: String?
+    public var subjects: [String] = []
+    public var description: String?
+
+    public init() {}
+}
+
 /// The parsed structure of an EPUB publication.
 public struct EPUBBook: Sendable {
     /// The package unique identifier (`unique-identifier`), empty if absent.
@@ -38,12 +56,16 @@ public struct EPUBBook: Sendable {
     public let manifest: [ManifestItem]
     public let spine: [SpineItem]
     public let toc: [TOCEntry]
+    public let metadata: EPUBMetadata
+    /// Path of the cover image (`properties="cover-image"`, or EPUB 2 `<meta name="cover">`).
+    public let coverPath: String?
 
     private let manifestByPath: [String: ManifestItem]
     private let spineIndexByPath: [String: Int]
 
     public init(identifier: String, title: String?, language: String?, packagePath: String,
-                manifest: [ManifestItem], spine: [SpineItem], toc: [TOCEntry]) {
+                manifest: [ManifestItem], spine: [SpineItem], toc: [TOCEntry],
+                metadata: EPUBMetadata = EPUBMetadata(), coverPath: String? = nil) {
         self.identifier = identifier
         self.title = title
         self.language = language
@@ -51,6 +73,8 @@ public struct EPUBBook: Sendable {
         self.manifest = manifest
         self.spine = spine
         self.toc = toc
+        self.metadata = metadata
+        self.coverPath = coverPath
         self.manifestByPath = Dictionary(manifest.map { ($0.path, $0) }, uniquingKeysWith: { first, _ in first })
         self.spineIndexByPath = Dictionary(spine.enumerated().map { ($1.path, $0) }, uniquingKeysWith: { first, _ in first })
     }

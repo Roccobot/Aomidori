@@ -10,7 +10,7 @@ enum StyleMenu {
         let environment = ReaderEnvironment.shared
         let active = environment.activeStyle?.name
         guard !environment.styles.isEmpty else {
-            let empty = NSMenuItem(title: "Nessuno stile nella cartella", action: nil, keyEquivalent: "")
+            let empty = NSMenuItem(title: L10n.string("menu.style.empty"), action: nil, keyEquivalent: "")
             empty.isEnabled = false
             empty.tag = itemTag
             return [empty]

@@ -42,16 +42,16 @@ extension EPUBError {
     var userFacingError: NSError {
         let reason: String
         switch self {
-        case .unreadableArchive: reason = "Il file non \u{00E8} un EPUB valido: l'archivio ZIP non si pu\u{00F2} leggere."
-        case .missingContainer: reason = "Manca META-INF/container.xml: il file non sembra un EPUB."
-        case .missingPackage(let path): reason = "Manca il documento del pacchetto '\(path)'."
-        case .malformedXML(let path): reason = "Il file '\(path)' contiene XML non valido."
-        case .missingResource(let path): reason = "Manca il file '\(path)'."
-        case .emptySpine: reason = "Il libro non contiene capitoli leggibili."
-        case .drmProtected: reason = "Il libro \u{00E8} protetto da DRM e Aomidori non pu\u{00F2} aprirlo."
+        case .unreadableArchive: reason = L10n.string("error.unreadableArchive")
+        case .missingContainer: reason = L10n.string("error.missingContainer")
+        case .missingPackage(let path): reason = L10n.format("error.missingPackage", path)
+        case .malformedXML(let path): reason = L10n.format("error.malformedXML", path)
+        case .missingResource(let path): reason = L10n.format("error.missingResource", path)
+        case .emptySpine: reason = L10n.string("error.emptySpine")
+        case .drmProtected: reason = L10n.string("error.drmProtected")
         }
         return NSError(domain: "Aomidori", code: 1, userInfo: [
-            NSLocalizedDescriptionKey: "Impossibile aprire il libro.",
+            NSLocalizedDescriptionKey: L10n.string("error.open"),
             NSLocalizedRecoverySuggestionErrorKey: reason,
         ])
     }

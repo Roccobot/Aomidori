@@ -46,6 +46,38 @@ public struct StyleLibrary: Sendable {
             .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 
+    /// Saves CSS into the folder (used by the CSS Playground), so it appears in the reader's style
+    /// list at once through the folder watcher. Written as UTF-8 without BOM, with LF line endings.
+    /// Returns the saved file.
+    @discardableResult
+    public func save(css: String, named name: String, overwrite: Bool = false) throws -> StyleFile {
+        let fileName = Self.fileName(for: name)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent(fileName)
+        if !overwrite, FileManager.default.fileExists(atPath: url.path) {
+            throw CocoaError(.fileWriteFileExists, userInfo: [NSFilePathErrorKey: url.path])
+        }
+        try Data(Self.normalizedCSS(css).utf8).write(to: url, options: .atomic)
+        let date = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+        return StyleFile(name: fileName, url: url, modificationDate: date)
+    }
+
+    /// CSS text as it is written to disk: no BOM, LF line endings, one final newline.
+    public static func normalizedCSS(_ css: String) -> String {
+        var text = css.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
+        if text.hasPrefix("\u{FEFF}") { text.removeFirst() }
+        if !text.hasSuffix("\n") { text.append("\n") }
+        return text
+    }
+
+    /// A safe file name: path separators removed, `.css` appended if missing.
+    static func fileName(for name: String) -> String {
+        let cleaned = name.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let base = cleaned.isEmpty ? "Style" : cleaned
+        return base.lowercased().hasSuffix(".css") ? base : base + ".css"
+    }
+
     /// The text of a style file, decoded as UTF-8 (with BOM), falling back to Latin-1.
     public func contents(of style: StyleFile) -> String? {
         Self.readText(at: style.url)

@@ -33,7 +33,7 @@ final class TOCViewController: NSViewController, NSOutlineViewDataSource, NSOutl
         outlineView.delegate = self
         outlineView.target = self
         outlineView.action = #selector(rowClicked(_:))
-        outlineView.setAccessibilityLabel("Indice")
+        outlineView.setAccessibilityLabel(L10n.string("toc.title"))
 
         let scrollView = NSScrollView()
         scrollView.documentView = outlineView
@@ -42,7 +42,7 @@ final class TOCViewController: NSViewController, NSOutlineViewDataSource, NSOutl
         scrollView.drawsBackground = false
 
         if roots.isEmpty {
-            let label = NSTextField(labelWithString: "Questo libro non ha un indice.")
+            let label = NSTextField(labelWithString: L10n.string("toc.empty"))
             label.textColor = .secondaryLabelColor
             label.alignment = .center
             label.translatesAutoresizingMaskIntoConstraints = false

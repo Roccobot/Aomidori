@@ -11,6 +11,7 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         static let night = NSToolbarItem.Identifier("Aomidori.night")
         static let style = NSToolbarItem.Identifier("Aomidori.style")
         static let override = NSToolbarItem.Identifier("Aomidori.override")
+        static let info = NSToolbarItem.Identifier("Aomidori.info")
     }
 
     let reader: ReaderViewController
@@ -23,6 +24,7 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
     private var chaptersItem: NSToolbarItemGroup?
     private var nightItem: NSToolbarItem?
     private var overrideItem: NSToolbarItem?
+    private var inspector: InspectorWindowController?
     private var environmentObserver: (any NSObjectProtocol)?
     private var isMinimal = false
     private var sidebarWasCollapsed = true
@@ -112,6 +114,17 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         picker.show(over: window, heldModifier: nil)
     }
 
+    /// Shows the book information window, or closes it if it is in front.
+    @objc func showInspector(_ sender: Any?) {
+        if let window = inspector?.window, window.isKeyWindow {
+            window.performClose(nil)
+            return
+        }
+        let inspector = inspector ?? InspectorWindowController(publication: reader.publication)
+        self.inspector = inspector
+        inspector.showWindow(nil)
+    }
+
     @objc func toggleMinimalMode(_ sender: Any?) {
         setMinimal(!isMinimal)
         environment.prefersMinimal = isMinimal
@@ -193,7 +206,7 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
     // MARK: Toolbar
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.toggleSidebar, .sidebarTrackingSeparator, ToolbarID.chapters, .flexibleSpace,
+        [.toggleSidebar, .sidebarTrackingSeparator, ToolbarID.chapters, ToolbarID.info, .flexibleSpace,
          ToolbarID.night, ToolbarID.style, ToolbarID.override]
     }
 
@@ -207,14 +220,15 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         case ToolbarID.chapters:
             let group = NSToolbarItemGroup(
                 itemIdentifier: identifier,
-                images: [Self.symbol("chevron.left", "Capitolo precedente"), Self.symbol("chevron.right", "Capitolo successivo")],
+                images: [Self.symbol("chevron.left", L10n.string("menu.go.previousChapter")),
+                         Self.symbol("chevron.right", L10n.string("menu.go.nextChapter"))],
                 selectionMode: .momentary,
-                labels: ["Precedente", "Successivo"],
+                labels: [L10n.string("toolbar.previous"), L10n.string("toolbar.next")],
                 target: self,
                 action: #selector(chapterGroupClicked(_:))
             )
-            group.label = "Capitoli"
-            group.toolTip = "Capitolo precedente / successivo (\u{2190} \u{2192})"
+            group.label = L10n.string("toolbar.chapters")
+            group.toolTip = L10n.string("toolbar.chapters.help")
             group.isNavigational = true
             group.autovalidates = false
             group.subitems.forEach { $0.autovalidates = false }
@@ -223,8 +237,8 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
             return group
         case ToolbarID.night:
             let item = NSToolbarItem(itemIdentifier: identifier)
-            item.label = "Giorno/Notte"
-            item.toolTip = "Giorno/Notte (\u{21E7}\u{2318}N)"
+            item.label = L10n.string("toolbar.night")
+            item.toolTip = L10n.string("toolbar.night.help")
             item.action = #selector(AppDelegate.toggleNight(_:))
             item.isBordered = true
             nightItem = item
@@ -232,21 +246,30 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
             return item
         case ToolbarID.style:
             let item = NSMenuToolbarItem(itemIdentifier: identifier)
-            item.label = "Stile"
-            item.toolTip = "Stile"
-            item.image = Self.symbol("textformat", "Stile")
-            let menu = NSMenu(title: "Stile")
+            item.label = L10n.string("menu.style")
+            item.toolTip = L10n.string("menu.style")
+            item.image = Self.symbol("textformat", L10n.string("menu.style"))
+            let menu = NSMenu(title: L10n.string("menu.style"))
             menu.delegate = styleMenuUpdater
-            menu.addItem(withTitle: "Elenco stili\u{2026}", action: #selector(showStyleList(_:)), keyEquivalent: "")
-            menu.addItem(withTitle: "Mostra cartella stili", action: #selector(AppDelegate.showStylesFolder(_:)), keyEquivalent: "")
+            menu.addItem(withTitle: L10n.string("menu.style.list"), action: #selector(showStyleList(_:)), keyEquivalent: "")
+            menu.addItem(withTitle: L10n.string("menu.style.showFolder"), action: #selector(AppDelegate.showStylesFolder(_:)), keyEquivalent: "")
             menu.addItem(.separator())
             StyleMenu.refresh(menu)
             item.menu = menu
             return item
+        case ToolbarID.info:
+            let item = NSToolbarItem(itemIdentifier: identifier)
+            item.label = L10n.string("menu.file.inspector")
+            item.toolTip = L10n.string("toolbar.info.help")
+            item.image = Self.symbol("info.circle", L10n.string("menu.file.inspector"))
+            item.action = #selector(showInspector(_:))
+            item.target = self
+            item.isBordered = true
+            return item
         case ToolbarID.override:
             let item = NSToolbarItem(itemIdentifier: identifier)
-            item.label = "Sovrascrivi stile"
-            item.toolTip = "Sovrascrivi lo stile del libro (\u{2318}.)"
+            item.label = L10n.string("toolbar.override")
+            item.toolTip = L10n.string("toolbar.override.help")
             item.action = #selector(AppDelegate.toggleStyleOverride(_:))
             item.isBordered = true
             overrideItem = item
@@ -261,10 +284,10 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         chaptersItem?.subitems.first?.isEnabled = reader.canGoToPreviousChapter
         chaptersItem?.subitems.last?.isEnabled = reader.canGoToNextChapter
         let night = environment.isNight
-        nightItem?.image = Self.symbol(night ? "moon.fill" : "sun.max", night ? "Notte" : "Giorno")
+        nightItem?.image = Self.symbol(night ? "moon.fill" : "sun.max", L10n.string(night ? "a11y.night" : "a11y.day"))
         let overriding = environment.overrideEnabled
         overrideItem?.image = Self.symbol(overriding ? "paintbrush.pointed.fill" : "paintbrush.pointed",
-                                          overriding ? "Stile sovrascritto" : "Stile del libro")
+                                          L10n.string(overriding ? "a11y.styleOverridden" : "a11y.bookStyle"))
     }
 
     private static func symbol(_ name: String, _ description: String) -> NSImage {
@@ -275,6 +298,7 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
 
     func windowWillClose(_ notification: Notification) {
         picker.dismiss()
+        inspector?.close()
         if let environmentObserver { NotificationCenter.default.removeObserver(environmentObserver) }
         environmentObserver = nil
         environment.savePositionsNow()

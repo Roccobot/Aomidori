@@ -20,6 +20,25 @@ struct EPUBParserTests {
         #expect(book.manifestItem(forPath: "OEBPS/Images/cover.jpg")?.properties == ["cover-image"])
     }
 
+    @Test func descriptiveMetadataAndCover() throws {
+        let url = try EPUBFixture.epub3().write()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let book = try EPUBPublication(contentsOf: url).book
+
+        #expect(book.metadata.title == "Una prova")
+        #expect(book.metadata.creators == ["Ursula K. Le Guin", "Seconda Autrice"])
+        #expect(book.metadata.publisher == "Editore")
+        #expect(book.metadata.modified == "2026-09-30T13:14:58Z")
+        #expect(book.metadata.identifier == "urn:uuid:12345678-90ab-cdef-1234-567890abcdef")
+        #expect(book.metadata.rights == nil)
+        #expect(book.coverPath == "OEBPS/Images/cover.jpg")
+
+        let epub2URL = try EPUBFixture.epub2().write()
+        defer { try? FileManager.default.removeItem(at: epub2URL) }
+        // EPUB 2: <meta name="cover" content="…"> names the manifest item.
+        #expect(try EPUBPublication(contentsOf: epub2URL).book.coverPath == "images/c.png")
+    }
+
     @Test func linearNavigationSkipsNonLinearItems() throws {
         let url = try EPUBFixture.epub3().write()
         defer { try? FileManager.default.removeItem(at: url) }

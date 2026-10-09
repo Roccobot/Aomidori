@@ -3,7 +3,12 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>it</string>
+	<string>en</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>it</string>
+	</array>
 	<key>CFBundleDisplayName</key>
 	<string>Aomidori</string>
 	<key>CFBundleExecutable</key>
@@ -24,7 +29,7 @@
 	<array>
 		<dict>
 			<key>CFBundleTypeName</key>
-			<string>Libro EPUB</string>
+			<string>EPUB Book</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>LSHandlerRank</key>

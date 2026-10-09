@@ -28,6 +28,18 @@ struct StyleLibraryTests {
         #expect(try String(contentsOf: installed, encoding: .utf8) == "/* mine */")
     }
 
+    @Test func savesPlaygroundCSS() throws {
+        let library = try makeLibrary()
+        defer { try? FileManager.default.removeItem(at: library.directory.deletingLastPathComponent()) }
+        let saved = try library.save(css: "\u{FEFF}p {\r\n  color: red;\r}", named: "Prova/1")
+        #expect(saved.name == "Prova-1.css")
+        #expect(try Data(contentsOf: saved.url) == Data("p {\n  color: red;\n}\n".utf8))
+        #expect(library.styles().map(\.name) == ["Prova-1.css"])
+        #expect(throws: CocoaError.self) { try library.save(css: "a {}", named: "Prova-1.css") }
+        try library.save(css: "a {}", named: "Prova-1.css", overwrite: true)
+        #expect(try String(contentsOf: saved.url, encoding: .utf8) == "a {}\n")
+    }
+
     @Test func colorSchemeThroughImports() throws {
         let library = try makeLibrary()
         defer { try? FileManager.default.removeItem(at: library.directory.deletingLastPathComponent()) }

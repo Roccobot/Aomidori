@@ -13,7 +13,7 @@ enum MainMenu {
         main.addItem(submenu(styleMenu(updater: styleMenuUpdater)))
         let window = windowMenu()
         main.addItem(submenu(window))
-        let help = NSMenu(title: "Aiuto")
+        let help = NSMenu(title: L10n.string("menu.help"))
         main.addItem(submenu(help))
         NSApp.windowsMenu = window
         NSApp.helpMenu = help
@@ -22,88 +22,90 @@ enum MainMenu {
 
     private static func appMenu() -> NSMenu {
         let menu = NSMenu(title: "Aomidori")
-        menu.addItem(item("Informazioni su Aomidori", #selector(NSApplication.orderFrontStandardAboutPanel(_:))))
+        menu.addItem(item(L10n.string("menu.app.about"), #selector(NSApplication.orderFrontStandardAboutPanel(_:))))
         menu.addItem(.separator())
-        let services = NSMenu(title: "Servizi")
+        let services = NSMenu(title: L10n.string("menu.app.services"))
         NSApp.servicesMenu = services
         menu.addItem(submenu(services))
         menu.addItem(.separator())
-        menu.addItem(item("Nascondi Aomidori", #selector(NSApplication.hide(_:)), "h"))
-        menu.addItem(item("Nascondi altre", #selector(NSApplication.hideOtherApplications(_:)), "h", [.command, .option]))
-        menu.addItem(item("Mostra tutte", #selector(NSApplication.unhideAllApplications(_:))))
+        menu.addItem(item(L10n.string("menu.app.hide"), #selector(NSApplication.hide(_:)), "h"))
+        menu.addItem(item(L10n.string("menu.app.hideOthers"), #selector(NSApplication.hideOtherApplications(_:)), "h", [.command, .option]))
+        menu.addItem(item(L10n.string("menu.app.showAll"), #selector(NSApplication.unhideAllApplications(_:))))
         menu.addItem(.separator())
-        menu.addItem(item("Esci da Aomidori", #selector(NSApplication.terminate(_:)), "q"))
+        menu.addItem(item(L10n.string("menu.app.quit"), #selector(NSApplication.terminate(_:)), "q"))
         return menu
     }
 
     private static func fileMenu() -> NSMenu {
-        let menu = NSMenu(title: "Archivio")
-        menu.addItem(item("Apri\u{2026}", #selector(NSDocumentController.openDocument(_:)), "o"))
+        let menu = NSMenu(title: L10n.string("menu.file"))
+        menu.addItem(item(L10n.string("menu.file.open"), #selector(NSDocumentController.openDocument(_:)), "o"))
         // AppKit fills the recent documents menu it finds through `clearRecentDocuments:`.
-        let recent = NSMenu(title: "Apri recenti")
-        recent.addItem(item("Cancella menu", #selector(NSDocumentController.clearRecentDocuments(_:))))
+        let recent = NSMenu(title: L10n.string("menu.file.openRecent"))
+        recent.addItem(item(L10n.string("menu.file.clearRecent"), #selector(NSDocumentController.clearRecentDocuments(_:))))
         menu.addItem(submenu(recent))
         menu.addItem(.separator())
-        menu.addItem(item("Chiudi", #selector(NSWindow.performClose(_:)), "w"))
+        menu.addItem(item(L10n.string("menu.file.inspector"), #selector(ReaderWindowController.showInspector(_:)), "i"))
+        menu.addItem(.separator())
+        menu.addItem(item(L10n.string("menu.file.close"), #selector(NSWindow.performClose(_:)), "w"))
         return menu
     }
 
     private static func editMenu() -> NSMenu {
-        let menu = NSMenu(title: "Composizione")
-        menu.addItem(item("Copia", #selector(NSText.copy(_:)), "c"))
-        menu.addItem(item("Seleziona tutto", #selector(NSText.selectAll(_:)), "a"))
+        let menu = NSMenu(title: L10n.string("menu.edit"))
+        menu.addItem(item(L10n.string("menu.edit.copy"), #selector(NSText.copy(_:)), "c"))
+        menu.addItem(item(L10n.string("menu.edit.selectAll"), #selector(NSText.selectAll(_:)), "a"))
         return menu
     }
 
     private static func viewMenu() -> NSMenu {
-        let menu = NSMenu(title: "Vista")
-        menu.addItem(item("Mostra/nascondi indice", #selector(NSSplitViewController.toggleSidebar(_:)), "s", [.command, .control]))
-        menu.addItem(item("Modalit\u{00E0} minimale", #selector(ReaderWindowController.toggleMinimalMode(_:)), "m", [.command, .control]))
+        let menu = NSMenu(title: L10n.string("menu.view"))
+        menu.addItem(item(L10n.string("menu.view.toc"), #selector(NSSplitViewController.toggleSidebar(_:)), "s", [.command, .control]))
+        menu.addItem(item(L10n.string("menu.view.minimal"), #selector(ReaderWindowController.toggleMinimalMode(_:)), "m", [.command, .control]))
         menu.addItem(.separator())
-        menu.addItem(item("Notte", #selector(AppDelegate.toggleNight(_:)), "n", [.command, .shift]))
+        menu.addItem(item(L10n.string("menu.view.night"), #selector(AppDelegate.toggleNight(_:)), "n", [.command, .shift]))
         menu.addItem(.separator())
-        menu.addItem(item("Ingrandisci testo", #selector(AppDelegate.increaseTextSize(_:)), "+"))
-        menu.addItem(item("Riduci testo", #selector(AppDelegate.decreaseTextSize(_:)), "-"))
-        menu.addItem(item("Dimensione originale", #selector(AppDelegate.resetTextSize(_:)), "0"))
+        menu.addItem(item(L10n.string("menu.view.larger"), #selector(AppDelegate.increaseTextSize(_:)), "+"))
+        menu.addItem(item(L10n.string("menu.view.smaller"), #selector(AppDelegate.decreaseTextSize(_:)), "-"))
+        menu.addItem(item(L10n.string("menu.view.actualSize"), #selector(AppDelegate.resetTextSize(_:)), "0"))
         menu.addItem(.separator())
-        menu.addItem(item("Entra in modalit\u{00E0} a tutto schermo", #selector(NSWindow.toggleFullScreen(_:)), "f", [.command, .control]))
+        menu.addItem(item(L10n.string("menu.view.fullScreen"), #selector(NSWindow.toggleFullScreen(_:)), "f", [.command, .control]))
         return menu
     }
 
     private static func goMenu() -> NSMenu {
-        let menu = NSMenu(title: "Vai")
-        menu.addItem(item("Capitolo precedente", #selector(ReaderWindowController.goToPreviousChapter(_:)),
+        let menu = NSMenu(title: L10n.string("menu.go"))
+        menu.addItem(item(L10n.string("menu.go.previousChapter"), #selector(ReaderWindowController.goToPreviousChapter(_:)),
                           String(UnicodeScalar(UInt16(NSLeftArrowFunctionKey))!), []))
-        menu.addItem(item("Capitolo successivo", #selector(ReaderWindowController.goToNextChapter(_:)),
+        menu.addItem(item(L10n.string("menu.go.nextChapter"), #selector(ReaderWindowController.goToNextChapter(_:)),
                           String(UnicodeScalar(UInt16(NSRightArrowFunctionKey))!), []))
         menu.addItem(.separator())
         // WKWebView implements goBack:/goForward: over its history of chapters and links.
-        menu.addItem(item("Indietro", Selector(("goBack:")), "["))
-        menu.addItem(item("Avanti", Selector(("goForward:")), "]"))
+        menu.addItem(item(L10n.string("menu.go.back"), Selector(("goBack:")), "["))
+        menu.addItem(item(L10n.string("menu.go.forward"), Selector(("goForward:")), "]"))
         return menu
     }
 
     private static func styleMenu(updater: StyleMenuUpdater) -> NSMenu {
-        let menu = NSMenu(title: "Stile")
+        let menu = NSMenu(title: L10n.string("menu.style"))
         menu.delegate = updater
-        menu.addItem(item("Sovrascrivi stile del libro", #selector(AppDelegate.toggleStyleOverride(_:)), "."))
+        menu.addItem(item(L10n.string("menu.style.override"), #selector(AppDelegate.toggleStyleOverride(_:)), "."))
         menu.addItem(.separator())
-        menu.addItem(item("Stile precedente", #selector(AppDelegate.previousStyle(_:)), "'"))
-        menu.addItem(item("Stile successivo", #selector(AppDelegate.nextStyle(_:)), "\u{00EC}"))
-        menu.addItem(item("Elenco stili\u{2026}", #selector(ReaderWindowController.showStyleList(_:)), "1"))
+        menu.addItem(item(L10n.string("menu.style.previous"), #selector(AppDelegate.previousStyle(_:)), "'"))
+        menu.addItem(item(L10n.string("menu.style.next"), #selector(AppDelegate.nextStyle(_:)), "\u{00EC}"))
+        menu.addItem(item(L10n.string("menu.style.list"), #selector(ReaderWindowController.showStyleList(_:)), "1"))
         menu.addItem(.separator())
         StyleMenu.refresh(menu)
         menu.addItem(.separator())
-        menu.addItem(item("Mostra cartella stili", #selector(AppDelegate.showStylesFolder(_:))))
+        menu.addItem(item(L10n.string("menu.style.showFolder"), #selector(AppDelegate.showStylesFolder(_:))))
         return menu
     }
 
     private static func windowMenu() -> NSMenu {
-        let menu = NSMenu(title: "Finestra")
-        menu.addItem(item("Contrai", #selector(NSWindow.performMiniaturize(_:)), "m"))
-        menu.addItem(item("Zoom", #selector(NSWindow.performZoom(_:))))
+        let menu = NSMenu(title: L10n.string("menu.window"))
+        menu.addItem(item(L10n.string("menu.window.minimize"), #selector(NSWindow.performMiniaturize(_:)), "m"))
+        menu.addItem(item(L10n.string("menu.window.zoom"), #selector(NSWindow.performZoom(_:))))
         menu.addItem(.separator())
-        menu.addItem(item("Porta tutto in primo piano", #selector(NSApplication.arrangeInFront(_:))))
+        menu.addItem(item(L10n.string("menu.window.bringAll"), #selector(NSApplication.arrangeInFront(_:))))
         return menu
     }
 

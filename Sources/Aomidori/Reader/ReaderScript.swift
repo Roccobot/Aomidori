@@ -45,10 +45,13 @@ enum ReaderScript {
         'img, video { object-fit: contain; }',
         // A page that is just one picture (a cover, a plate) fits the window, whole.
         `html.${IMAGE_PAGE} img, html.${IMAGE_PAGE} svg { max-height: 100vh !important; object-fit: contain; }`,
+        // Centred on its own, since an override style may drop the book's centring rules.
+        `html.${IMAGE_PAGE} img, html.${IMAGE_PAGE} svg { display: block; margin-inline: auto; }`,
       ].join('\n');
 
       const doc = document;
-      const root = doc.documentElement;
+      let root = doc.documentElement;
+      let mounted = false;
       let config = { overrideEnabled: false, styleHref: null, styleHandlesColorScheme: false, night: false, nightPaletteCSS: '', scale: 1 };
       let parsing = doc.readyState === 'loading';
 
@@ -65,10 +68,6 @@ enum ReaderScript {
       const palette = ownElement('style', 'palette');
       const scale = ownElement('style', 'scale');
       const container = () => doc.head || root;
-
-      root.insertBefore(base, root.firstChild);
-      root.appendChild(palette);
-      root.appendChild(scale);
 
       // MARK: Book styles
 
@@ -113,7 +112,20 @@ enum ReaderScript {
       const observer = new MutationObserver((records) => {
         for (const record of records) for (const node of record.addedNodes) applyBookStyles(node);
       });
-      if (parsing) observer.observe(root, { childList: true, subtree: true });
+
+      // WebKit runs document-start scripts once the root element exists; other engines may run
+      // them earlier, so mounting waits for it if needed.
+      function mount() {
+        if (mounted) return true;
+        root = doc.documentElement;
+        if (!root) return false;
+        root.insertBefore(base, root.firstChild);
+        root.appendChild(palette);
+        root.appendChild(scale);
+        if (parsing) observer.observe(root, { childList: true, subtree: true });
+        mounted = true;
+        return true;
+      }
 
       // MARK: User style
 
@@ -258,8 +270,9 @@ enum ReaderScript {
 
       window.Aomidori = Object.freeze({
         apply(next) {
-          const anchor = parsing ? null : captureAnchor();
           config = Object.assign({}, config, next);
+          if (!mounted) return;
+          const anchor = parsing ? null : captureAnchor();
           applyBookStyles(root);
           applyUserStyle();
           refreshPalette();
@@ -269,6 +282,15 @@ enum ReaderScript {
         fraction,
         scrollToFraction,
       });
+
+      if (!mount()) {
+        const waiter = new MutationObserver(() => {
+          if (!mount()) return;
+          waiter.disconnect();
+          window.Aomidori.apply({});
+        });
+        waiter.observe(doc, { childList: true });
+      }
     })();
     """#
 }

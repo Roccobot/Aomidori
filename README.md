@@ -18,6 +18,8 @@ move between chapters, and the reader's own CSS can replace the book's at any mo
 - Day/Night with one click. Styles with `prefers-color-scheme` rules follow it natively; for CSS
   without them, Night applies only the colors of the default style's dark rules.
 - Minimal mode: no toolbar, title or window buttons, only text.
+- Book info window (`⌘I`): metadata and cover image.
+- English and Italian interface, following the system language.
 
 ## Architecture
 
@@ -30,9 +32,9 @@ Sources/
                   detection, Night palette extraction), text scale, reading positions,
                   the configuration sent to the page.
   Aomidori/       The AppKit/WebKit app.
-    App/          entry point, app delegate, menu bar, paths.
+    App/          entry point, app delegate, menu bar, paths, localization helper.
     Document/     BookDocument (NSDocument, read-only).
-    Reader/       window controller, TOC sidebar, reader view, and the rendering layer:
+    Reader/       window controller, TOC sidebar, book info window, reader view, and the rendering layer:
                   PageRenderer (one WKWebView), PageSchemeHandler, ReaderScript.
     Styles/       ReaderEnvironment (settings + styles folder), FSEvents watcher,
                   style menu, style picker HUD.
@@ -79,6 +81,12 @@ overwritten afterwards). The default style is the file named by the `AomidoriDef
 setting (`defaults write com.roccobot.aomidori AomidoriDefaultStyle Other.css`). FSEvents
 reload styles live when any app saves a file there.
 
+**Localization.** Exactly two languages: English (development language, `en.lproj`) and
+Italian (`it.lproj`), as `Localizable.strings` with semantic keys (`menu.style.next`). Every UI
+string goes through `L10n`; `scripts/bundle.sh` refuses to build if the two files' keys differ.
+(`.strings` rather than a String Catalog: catalogs need Xcode's compiler, the project builds
+with the Command Line Tools only.)
+
 ## Build
 
 Requirements: Apple Silicon, macOS 27, Swift 6.4 Command Line Tools (Xcode not needed).
@@ -95,7 +103,7 @@ ditto -c -k --keepParent build/Aomidori.app Aomidori-0.1.0.zip   # release archi
 IDPF font de-obfuscation needs CryptoKit and its test is skipped there.
 
 The app is ad-hoc signed, not notarized: on another Mac, the first launch needs right-click
-› Apri (or removing the quarantine attribute).
+› Open (or removing the quarantine attribute).
 
 **Continuous integration (not set up yet).** A GitHub Actions workflow on a `macos` runner
 could run `swift test` and `scripts/bundle.sh` on each push and attach the zip to tagged
@@ -104,21 +112,23 @@ releases, once hosted runners offer macOS 27 and Swift 6.4.
 ## Keyboard shortcuts
 
 Shortcuts are designed for the Italian keyboard layout (AppKit's automatic remapping is off).
+Menu names are given in English; in Italian they are Archivio, Vista, Vai, Stile.
 
 | Action | Shortcut | Menu |
 | --- | --- | --- |
-| Previous / next chapter | `←` / `→` | Vai |
-| Back / forward (history of jumps) | `⌘[` / `⌘]` | Vai |
-| Larger / smaller text | `+` / `-`, `⌘+` / `⌘-` | Vista |
-| Text at 100% of the style | `0`, `⌘0` | Vista |
-| Day ↔ Night | `⇧⌘N` (and toolbar) | Vista |
-| Table of contents | `⌃⌘S` | Vista |
-| Minimal mode | `⌃⌘M` | Vista |
-| Full screen | `⌃⌘F` | Vista |
-| Override book style on/off | `⌘.` (and toolbar) | Stile |
-| Previous / next style | `⌘'` / `⌘ì` | Stile |
-| Style list | `⌘1` or `⌃⇥` | Stile |
-| Open, close | `⌘O`, `⌘W` | Archivio |
+| Previous / next chapter | `←` / `→` | Go |
+| Back / forward (history of jumps) | `⌘[` / `⌘]` | Go |
+| Larger / smaller text | `+` / `-`, `⌘+` / `⌘-` | View |
+| Text at 100% of the style | `0`, `⌘0` | View |
+| Day ↔ Night | `⇧⌘N` (and toolbar) | View |
+| Table of contents | `⌃⌘S` | View |
+| Minimal mode | `⌃⌘M` | View |
+| Full screen | `⌃⌘F` | View |
+| Override book style on/off | `⌘.` (and toolbar) | Style |
+| Previous / next style | `⌘'` / `⌘ì` | Style |
+| Style list | `⌘1` or `⌃⇥` | Style |
+| Book info (metadata, cover) | `⌘I` (and toolbar) | File |
+| Open, close | `⌘O`, `⌘W` | File |
 
 Style list: a quick press opens a list that closes when you pick a style (click, or `↑` `↓`
 and `↩`; `esc` cancels). Holding `⌘` (or `⌃`) and pressing `1` (or `⇥`) again moves to the
@@ -145,11 +155,21 @@ Choosing a style turns the override on.
 
 ## Next phases
 
-1. **CSS Playground**: a window with a live preview (sample text or a real EPUB) and a
-   minimal HTML/CSS editor, built on `PageRenderer` and `ReaderConfiguration`.
+1. **CSS Playground**: a window with a live preview (sample text or a real EPUB, left) and a
+   minimal HTML/CSS editor with syntax highlighting (right), plus a style selector. Ready in
+   the code: the preview is a `PageRenderer` driven by `ReaderConfiguration` with a different
+   `PageResourceProvider`; *Save to Styles* uses `StyleLibrary.save(css:named:)` (UTF-8 without
+   BOM, LF), so the style appears at once in the reader's style list through the folder watcher
+   and can be tried live in any reader window; *Save As…* writes a `.css` anywhere with the same
+   normalisation.
 2. **Windows vs tabs**: test both and pick one.
-3. Bookmarks, search, per-book style memory, precise positions (element anchors),
-   landing at the end of the previous chapter, trackpad swipe between chapters.
+3. **Bookmarks** (Murasaki-like): `⌘D` with a title sheet, a Bookmarks pane next to the TOC in
+   the sidebar, stored per book next to the reading positions.
+4. Search, per-book style memory, precise positions (element anchors), landing at the end of
+   the previous chapter, trackpad swipe between chapters.
+
+Murasaki (closed source) is a reference for the toolbar, sidebar panes and Inspector; no assets
+or code are taken from it.
 
 ## Licenses
 
