@@ -200,6 +200,10 @@ scripts/check-icon.sh build/icon                   # icon in its six appearances
 ditto -c -k --keepParent build/Aomidori.app Aomidori-0.51.zip   # release archive
 ```
 
+Rules checks: in every clone, run `git config core.hooksPath .githooks` once. The two hooks hand
+the staged changes and the commit message to the checks of `Roccobot/roccobot.github.io`, when
+it is cloned next to this repo; the `rules-check` workflow runs the same checks on GitHub.
+
 `EPUBKit` and `AomidoriCore` also build and test on Linux (the app target is macOS-only);
 IDPF font de-obfuscation needs CryptoKit and its test is skipped there.
 

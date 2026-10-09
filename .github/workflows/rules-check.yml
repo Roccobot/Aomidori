@@ -1,0 +1,17 @@
+# Rules checks on every push and pull request, whoever made the commit.
+# The workflow and its logic live in the hub, Roccobot/roccobot.github.io
+# (.github/workflows/rules-check.yml and .memo/scripts/githook.py): this file only calls it.
+# Author: Rocco Casadei, a.k.a. Roccobot
+name: rules-check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    uses: Roccobot/roccobot.github.io/.github/workflows/rules-check.yml@master

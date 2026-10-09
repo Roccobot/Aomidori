@@ -145,6 +145,11 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
   posizione per capitolo, avviso di fine capitolo), `smoke-playground.sh` e `check-icon.sh`
   (le sei rese dell'icona e il contenuto di `Assets.car`). Un difetto trovato da Rocco torna con la
   prova che lo avrebbe fermato.
+- **Controlli delle regole**: in ogni clone si attivano gli hook con
+  `git config core.hooksPath .githooks` (i due file sono quelli dell'hub e passano il lavoro a
+  `githook.py` di `roccobot.github.io`, clonato accanto); l'Action `rules-check` rifà gli stessi
+  controlli su GitHub a ogni push. La copia sul Mac di Rocco si aggiorna con un tarball di
+  `git archive` e i commit si fanno dal box, quindi gli hook servono nel clone del box.
 - **Il libro di prova** è *Una descrizione di Terramare*, e non entra nel repo.
 - ⚠️ Nel repo non entrano libri, font coperti da diritti né percorsi del Mac di Rocco: il repo è
   pubblico.

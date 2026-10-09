@@ -258,6 +258,8 @@ Un file più specifico vince **dove parla**, e il suo silenzio non è una deroga
   `scripts/js-tests/`, e sul Mac `smoke-launch.sh`, `smoke-reader.sh`, `smoke-playground.sh` e
   `check-icon.sh`. Una funzione toccata si prova sul Mac prima del rilascio (`Rules.md` § '🧰 Build
   e prove').
+- **Hook e controlli**: `git config core.hooksPath .githooks` in ogni clone; l'Action
+  `rules-check` rifà i controlli a ogni push (`Rules.md` § '🧰 Build e prove').
 - **Il rilascio**: lo ZIP della build provata, `Aomidori-x.xx.zip`, fatto con
   `ditto -c -k --keepParent` nella stessa sessione, e `gh release create vx.xx` con quel file; il
   commit di versione è l'ultimo (`Rules.md` § '🚀 Che cosa produce un rilascio').
