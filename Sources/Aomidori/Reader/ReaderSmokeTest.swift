@@ -1,4 +1,5 @@
 import AppKit
+import CoreText
 import AomidoriCore
 import EPUBKit
 import WebKit
@@ -6,7 +7,8 @@ import WebKit
 /// A scripted reader session for `scripts/smoke-reader.sh`, enabled by the launch argument
 /// `-AomidoriReaderSmoke <folder>`. With the book's first spine item (usually the cover) it
 /// measures the picture at three window sizes and three rendering modes; then it checks the
-/// per-chapter position memory and the chapter-edge toast. Snapshots and `report.json` go in
+/// per-chapter position memory and the chapter-edge toast; last, the custom font: AppKit fonts
+/// turned into choices, and choices rendered in a chapter. Snapshots and `report.json` go in
 /// the folder. Reading state is kept there too (see `AppPaths`), settings are never changed,
 /// and the window frame is put back at the end.
 @MainActor
@@ -120,7 +122,109 @@ final class ReaderSmokeTest {
         }
         report["wheelAtBottomShows"] = reader.smokeToast.map { "\($0)" } ?? "nothing"
         await snapshotWindow("toast-bottom")
+
+        // 5. The custom font, rendered only (the saved choice is not changed).
+        report["fontConversions"] = fontConversions()
+        reader.smokeScroll(toFraction: 0)
+        var rendered: [String: Any] = [:]
+        for (name, choice) in Self.fontChoices() {
+            reader.smokeConfigure { $0 = ReaderEnvironment.shared.configuration(customFont: choice) }
+            try? await Task.sleep(for: .milliseconds(900))
+            rendered[name] = await measureFont()
+            await snapshot("font-\(name)")
+        }
+        reader.smokeConfigure(nil)
+        report["fontRendered"] = rendered
         finish(window: window, originalFrame: originalFrame)
+    }
+
+    /// Choices to render: a light face (bold must come out at 600), a condensed face, a feature,
+    /// an italic face, and a variable font's named instance.
+    private static func fontChoices() -> [(String, CustomFontChoice)] {
+        let faces = ["HelveticaNeue-Light", "HelveticaNeue-CondensedBold", "Georgia-Italic", "Skia-Regular_Light"]
+        var choices: [(String, CustomFontChoice)] = faces.compactMap { name in
+            NSFont(name: name, size: 16).map { (name, FontChoiceConversion.choice(from: $0).choice) }
+        }
+        choices.append(("Georgia+smcp", CustomFontChoice(family: "Georgia", features: ["smcp": 1, "onum": 1])))
+        return choices
+    }
+
+    /// AppKit fonts as choices: faces, an Apple-style small caps feature, an OpenType feature,
+    /// a variable font's axes, and the way back to an AppKit font.
+    private func fontConversions() -> [String: Any] {
+        var result: [String: Any] = [:]
+        func describe(_ choice: CustomFontChoice) -> String {
+            String(decoding: choice.record(), as: UTF8.self) + " bold=\(choice.boldWeight.map(CustomFontCSS.number) ?? "-")"
+        }
+        for name in ["HelveticaNeue-Light", "HelveticaNeue-CondensedBold", "AvenirNext-DemiBoldItalic", "Skia-Regular"] {
+            guard let font = NSFont(name: name, size: 16) else { result[name] = "missing"; continue }
+            result[name] = describe(FontChoiceConversion.choice(from: font).choice)
+        }
+        if let font = NSFont(name: "HoeflerText-Regular", size: 16) {
+            let apple = font.fontDescriptor.addingAttributes([.featureSettings: [[
+                NSFontDescriptor.FeatureKey.typeIdentifier: kLowerCaseType,
+                NSFontDescriptor.FeatureKey.selectorIdentifier: kLowerCaseSmallCapsSelector,
+            ]]])
+            let openType = font.fontDescriptor.addingAttributes([.featureSettings: [[
+                kCTFontOpenTypeFeatureTag as String: "onum", kCTFontOpenTypeFeatureValue as String: 1,
+            ] as [String: Any]]])
+            for (name, descriptor) in [("appleSmallCaps", apple), ("openTypeOnum", openType)] {
+                let made = NSFont(descriptor: descriptor, size: 16) ?? font
+                let converted = FontChoiceConversion.choice(from: made)
+                result[name] = describe(converted.choice) + " unknown=\(converted.unknownFeatures)"
+                result[name + "Raw"] = "descriptor=\(made.fontDescriptor.object(forKey: .featureSettings).map { "\($0)" } ?? "nil")"
+                    + " coreText=\(CTFontCopyFeatureSettings(made as CTFont).map { "\($0)" } ?? "nil")"
+            }
+            let expected = ["smcp": 1]
+            if FontChoiceConversion.choice(from: NSFont(descriptor: apple, size: 16) ?? font).choice.features != expected {
+                failures.append("Apple small caps feature")
+            }
+        }
+        if let light = NSFont(name: "HelveticaNeue-Light", size: 16) {
+            let choice = FontChoiceConversion.choice(from: light).choice
+            if choice.weight.map({ abs($0 - 300) > 30 }) ?? true || choice.boldWeight.map({ abs($0 - 600) > 30 }) ?? true {
+                failures.append("Helvetica Neue Light weights")
+            }
+        }
+        result["SkiaFaces"] = ReaderEnvironment.shared.fonts.faces(forFamily: "Skia").map { face in
+            "\(face.postScriptName ?? "-") \(face.url ?? "-") w=\(face.weightRange.map { "\($0)" } ?? "\(face.weight)")"
+                + " s=\(face.stretchRange.map { "\($0)" } ?? "\(face.stretch)") i=\(face.italic)"
+        }
+        result["SkiaAxes"] = CustomFonts.variationAxes(ofFace: "Skia-Regular").map { "\($0.tag) \($0.name) \($0.range) \($0.defaultValue)" }
+        // The system font has CSS-scale axes: a weight between named instances survives the round trip.
+        let system = NSFont.systemFont(ofSize: 16)
+        result["systemAxes"] = CustomFonts.variationAxes(of: system as CTFont).map { "\($0.tag) \($0.range) \($0.defaultValue)" }
+        var roundTrip = FontChoiceConversion.choice(from: system).choice
+        roundTrip.weight = 550
+        result["systemRoundTrip"] = FontChoiceConversion.font(for: roundTrip, size: 16)
+            .map { describe(FontChoiceConversion.choice(from: $0).choice) } ?? "nil"
+        return result
+    }
+
+    /// The custom font as the page computes it: on plain text, on bold and on italic text, and
+    /// the faces the page has loaded.
+    private func measureFont() async -> [String: Any] {
+        guard let reader else { return [:] }
+        let script = """
+        const describe = (el) => {
+          if (!el) return null;
+          const s = getComputedStyle(el);
+          return [el.localName, s.fontFamily.slice(0, 60), s.fontWeight, s.fontStyle, s.fontStretch,
+                  s.fontFeatureSettings, s.fontVariationSettings].join(' | ');
+        };
+        const text = [...document.querySelectorAll('p')].find((p) => p.textContent.trim().length > 40);
+        return JSON.stringify({
+          text: describe(text),
+          bold: describe(document.querySelector('[data-aomidori-bold]')),
+          italic: describe(document.querySelector('[data-aomidori-italic]')),
+          loadedFaces: [...document.fonts].filter((f) => f.status === 'loaded')
+            .map((f) => [f.family, f.weight, f.style, f.stretch].join(' ')),
+          failedFaces: [...document.fonts].filter((f) => f.status === 'error').length });
+        """
+        let value = try? await reader.webView.callAsyncJavaScript(script, arguments: [:], in: nil, contentWorld: .defaultClient)
+        guard let text = value as? String, let data = text.data(using: .utf8),
+              let entry = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return ["error": "no measurement"] }
+        return entry
     }
 
     private func finish(window: NSWindow, originalFrame: NSRect) {
