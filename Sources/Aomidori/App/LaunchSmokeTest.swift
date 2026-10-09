@@ -49,8 +49,9 @@ final class LaunchSmokeTest {
         content.display()
         snapshot(emptyWindow, name: "empty-highlighted.png")
         content.smokeHighlight(false)
-        emptyWindow.setContentSize(EmptyReaderWindowController.minimumSize)
-        content.layoutSubtreeIfNeeded()
+        // The window's real minimum: AppKit adds the toolbar to the minimum set in code.
+        emptyWindow.setFrame(NSRect(origin: emptyWindow.frame.origin, size: emptyWindow.minSize), display: true)
+        emptyWindow.layoutIfNeeded()
         snapshot(emptyWindow, name: "empty-minimum.png")
         let emptyFrame = emptyWindow.frame
 

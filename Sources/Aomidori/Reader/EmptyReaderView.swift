@@ -114,8 +114,16 @@ final class EmptyReaderView: NSView, NSTableViewDataSource, NSTableViewDelegate 
         tableView.reloadData()
         recentsHeader.isHidden = recents.isEmpty
         scrollView.isHidden = recents.isEmpty
-        tableHeight?.constant = CGFloat(min(recents.count, Self.maximumVisibleRows)) * Self.rowHeight
-        tableMinimumHeight?.constant = CGFloat(min(recents.count, Self.minimumVisibleRows)) * Self.rowHeight
+        tableHeight?.constant = listHeight(rows: min(recents.count, Self.maximumVisibleRows))
+        tableMinimumHeight?.constant = listHeight(rows: min(recents.count, Self.minimumVisibleRows))
+    }
+
+    /// The height that shows `rows` whole rows, with the padding the inset table style puts
+    /// above the first row and below the last.
+    private func listHeight(rows: Int) -> CGFloat {
+        guard rows > 0, tableView.numberOfRows >= rows else { return 0 }
+        let padding = tableView.rect(ofRow: 0).minY
+        return tableView.rect(ofRow: rows - 1).maxY + padding
     }
 
     func numberOfRows(in tableView: NSTableView) -> Int { recents.count }

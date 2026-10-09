@@ -14,7 +14,8 @@ final class EmptyReaderWindowController: NSWindowController, NSWindowDelegate, N
     /// The empty window a book is being opened from, so that this window is the one replaced.
     private static weak var pendingTarget: EmptyReaderWindowController?
 
-    /// Big enough for the drop zone, the invitation and about five recent books.
+    /// Big enough for the drop zone, the invitation and about five recent books. AppKit adds
+    /// the toolbar to it: the window frame is at least 440×580 pt.
     static let minimumSize = NSSize(width: 440, height: 560)
 
     private let environment = ReaderEnvironment.shared
