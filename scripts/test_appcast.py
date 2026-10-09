@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Tests of scripts/appcast.py: python3 scripts/test_appcast.py (runs on the box too)."""
+import re
 import sys
 import unittest
 import xml.etree.ElementTree as ET
@@ -16,11 +17,18 @@ DATE = "Fri, 09 Oct 2026 17:00:00 GMT"
 
 class AppcastTests(unittest.TestCase):
     def setUp(self):
-        self.empty = (ROOT / "publish/appcast.xml").read_text(encoding="utf-8")
+        self.published = (ROOT / "publish/appcast.xml").read_text(encoding="utf-8")
+        # The published channel without its items: the tests add their own.
+        self.empty = re.sub(r"    <item>.*?</item>\n", "", self.published, flags=re.S)
 
     def test_the_published_appcast_is_well_formed(self):
-        channel = ET.fromstring(self.empty).find("channel")
+        channel = ET.fromstring(self.published).find("channel")
         self.assertEqual(channel.findtext("link"), "https://roccobot.github.io/Aomidori/")
+        builds = [int(b) for b in appcast.builds(self.published)]
+        self.assertEqual(builds, sorted(set(builds), reverse=True), "newest first, each build once")
+        for item in channel.findall("item"):
+            version = item.findtext("sparkle:shortVersionString", namespaces=NS)
+            self.assertEqual(item.find("enclosure").get("url"), appcast.zip_url(version))
 
     def test_an_item_carries_what_sparkle_needs(self):
         text = appcast.add(self.empty, appcast.item(9, "0.52", 2745000, "c2ln+/w==", date=DATE))
