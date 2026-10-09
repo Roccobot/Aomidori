@@ -209,8 +209,8 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
 
 ## 🚧 Limiti noti e punti aperti
 
-L'elenco aggiornato vive nel `README.md`, § 'Known limits'; qui restano solo quelli che decidono
-il lavoro:
+L'elenco aggiornato vive nella sezione *Known limits* del `README.md`; qui restano solo quelli
+che decidono il lavoro:
 
 - La sezione Tipografia del pannello font di macOS va verificata a mano da Rocco.
 - Le prove di barra spaziatrice, trackpad e scorciatoie con l'app in primo piano sono sue.
