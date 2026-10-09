@@ -98,8 +98,10 @@ lì. L'elenco completo è nel `README.md`: qui non si ricopia.
   restano i capitoli.
 - `⌘G` / `⇧⌘G`: risultato di ricerca successivo e precedente, anche in altri capitoli; senza
   una ricerca, `⌘G` apre la ricerca.
-- Chiaro e scuro seguono l'aspetto di macOS. `⇧⌘N` e il sole nella barra passano all'altro
-  aspetto; quando la scelta coincide con quello di sistema, si torna a seguire macOS.
+- Chiaro e scuro seguono l'aspetto di macOS. `⇧⌘N`, il sole nella barra e `T` da solo nel
+  lettore passano all'altro aspetto, per l'app e per il testo insieme; quando la scelta coincide
+  con quello di sistema, si torna a seguire macOS. `T` non vale in un campo di testo, nel campo
+  di ricerca e nell'editor della Playground.
 - `⌘R` ricarica capitolo, immagini, font e stile, e lascia il lettore nel punto in cui era.
 
 ## 🖌️ Icona e decorazione: sono di Graphe

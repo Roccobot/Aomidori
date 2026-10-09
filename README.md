@@ -62,7 +62,7 @@ Download: <https://roccobot.github.io/Aomidori/> (the latest release, from `publ
   Typography features (small caps, old-style figures, ligatures, stylistic sets…). With a
   chosen face, bold text is 300 heavier (at most 900: Light → Semibold, Regular → Bold), and
   an italic face makes italic text upright, as emphasis does in italic typesetting.
-- Light and dark follow macOS; one click (or `⇧⌘N`) shows the other, and choosing the system's
+- Light and dark follow macOS; one click (or `⇧⌘N`, or `T` while reading) shows the other, and choosing the system's
   own appearance follows macOS again. Styles with `prefers-color-scheme` rules follow it
   natively; for CSS without them, Night applies only the colors of the default style's dark rules.
 - Minimal mode: no toolbar, title or window buttons, only text.
@@ -283,7 +283,7 @@ Menu names are given in English; in Italian they are Archivio, Vista, Vai, Stile
 | Back / forward (links followed, exact place) | `⌘←` / `⌘→` (also `⌘[` / `⌘]`; not while typing) | Go |
 | Larger / smaller text | `+` / `-`, `⌘+` / `⌘-` | View |
 | Text at 100% of the style | `0`, `⌘0` | View |
-| Light ↔ dark (back to following macOS when it matches) | `⇧⌘N` (and toolbar) | View |
+| Light ↔ dark (back to following macOS when it matches) | `⇧⌘N`, `T` while reading (and toolbar) | View |
 | Sidebar on/off | `⌘\` (and toolbar) | View |
 | Sidebar: Chapters, Bookmarks, Search | `⌥⌘1`, `⌥⌘2`, `⌥⌘5` | View |
 | Find in book | `⌘F` | Edit |

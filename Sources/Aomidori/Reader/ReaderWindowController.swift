@@ -268,7 +268,7 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
 
     // MARK: Keyboard
 
-    /// Keys handled outside the menu bar: plain `←` `→` `+` `-` `0` while reading, the
+    /// Keys handled outside the menu bar: plain `←` `→` `+` `-` `0` `T` while reading, the
     /// style list shortcuts, whose hold-to-cycle behaviour needs key-up and modifier tracking,
     /// and the keys and scrolling that push past the edge of a chapter (seen, not consumed,
     /// unless they take the reader to another chapter).
@@ -304,12 +304,16 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         case KeyCode.rightArrow: reader.goToNextChapter(); return true
         default: break
         }
-        switch event.charactersIgnoringModifiers {
-        case "+", "=": NSApp.sendAction(#selector(AppDelegate.increaseTextSize(_:)), to: nil, from: self)
-        case "-": NSApp.sendAction(#selector(AppDelegate.decreaseTextSize(_:)), to: nil, from: self)
-        case "0": NSApp.sendAction(#selector(AppDelegate.resetTextSize(_:)), to: nil, from: self)
+        let action: Selector
+        switch Shortcuts.readingCommand(characters: event.charactersIgnoringModifiers ?? "") {
+        // Held down, T would flicker between light and dark: once per press.
+        case .night?: guard !event.isARepeat else { return true }; action = #selector(AppDelegate.toggleNight(_:))
+        case .larger?: action = #selector(AppDelegate.increaseTextSize(_:))
+        case .smaller?: action = #selector(AppDelegate.decreaseTextSize(_:))
+        case .actualSize?: action = #selector(AppDelegate.resetTextSize(_:))
         default: return false
         }
+        NSApp.sendAction(action, to: nil, from: self)
         return true
     }
 

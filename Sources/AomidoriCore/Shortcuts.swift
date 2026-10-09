@@ -120,6 +120,21 @@ public enum Shortcuts {
         .minimize: KeyShortcut("m"),
     ]
 
+    /// Plain keys (no modifiers) that work while reading, besides `←` `→`: only with the page
+    /// in focus, never in a text field, the search field or the Playground editor (the reader
+    /// window routes them before the page sees them). `T` swaps light and dark like `⇧⌘N`.
+    public static let readingKeys: [String: ShortcutCommand] = [
+        "t": .night,
+        "+": .larger, "=": .larger,
+        "-": .smaller,
+        "0": .actualSize,
+    ]
+
+    /// The command of a plain key pressed while reading (`characters` without modifiers).
+    public static func readingCommand(characters: String) -> ShortcutCommand? {
+        readingKeys[characters.lowercased()]
+    }
+
     /// The windows a command's shortcut acts in. Two commands may share a shortcut only if
     /// their scopes do not overlap: the key then means one thing per window.
     public enum Scope: Sendable {

@@ -39,6 +39,20 @@ struct ShortcutsTests {
         #expect(Shortcuts.shortcut(.back) != Shortcuts.shortcut(.previousChapter))
     }
 
+    @Test func plainTSwapsLightAndDarkWhileReading() {
+        #expect(Shortcuts.readingCommand(characters: "t") == .night)
+        #expect(Shortcuts.readingCommand(characters: "T") == .night, "caps lock")
+        #expect(Shortcuts.shortcut(.night).description == "⇧⌘N", "the menu shortcut stays")
+        #expect(Shortcuts.readingCommand(characters: "+") == .larger && Shortcuts.readingCommand(characters: "=") == .larger)
+        #expect(Shortcuts.readingCommand(characters: "-") == .smaller && Shortcuts.readingCommand(characters: "0") == .actualSize)
+        #expect(Shortcuts.readingCommand(characters: "y") == nil)
+    }
+
+    @Test func readingKeysDoNotClashWithPlainMenuShortcuts() {
+        let plainMenuKeys = Shortcuts.all.filter { $0.shortcut.modifiers.isEmpty }.map { $0.shortcut.key.lowercased() }
+        #expect(Set(plainMenuKeys).isDisjoint(with: Shortcuts.readingKeys.keys))
+    }
+
     @Test func findNextAndPreviousAreCommandG() {
         #expect(Shortcuts.shortcut(.findNext).description == "⌘G")
         #expect(Shortcuts.shortcut(.findPrevious).description == "⇧⌘G")
