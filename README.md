@@ -9,11 +9,17 @@ move between chapters, and the reader's own CSS can replace the book's at any mo
 - One window per book (`NSDocument`); macOS window tabs work out of the box.
 - Web-style reading: a chapter scrolls vertically as a single entity. No pages, no
   horizontal scrolling, a single view mode.
-- Internal links between chapters, table of contents in a sidebar, history (`⌘[` / `⌘]`).
-- Reading position remembered per book.
+- Internal links between chapters, history (`⌘[` / `⌘]`).
+- One sidebar (`⌘\`, one toolbar button) with a Liquid Glass pane selector: **Chapters**
+  (table of contents), **Bookmarks** (`⌘D` adds one, named after the chapter by default;
+  Delete removes it) and **Search** (`⌘F`; case-, accent- and quote-insensitive, every
+  occurrence with its context; picking one selects it in the page). The last pane is
+  remembered per book.
+- Reading position remembered per book (`Positions.json`); bookmarks and the last sidebar pane
+  in `Books.json`, both in `~/Library/Application Support/Aomidori/`.
 - Text size with `+` `-` `0` (or `⌘+` `⌘-` `⌘0`); pinch-to-zoom never scales the page.
 - User styles: every `.css` in `~/Library/Application Support/Aomidori/Styles/`, edited live
-  with any external editor. The book's CSS is used by default; *Sovrascrivi stile* (`⌘.`)
+  with any external editor. The book's CSS is used by default; *Override Book Style* (`⌘.`)
   replaces it with the selected user style.
 - Day/Night with one click. Styles with `prefers-color-scheme` rules follow it natively; for CSS
   without them, Night applies only the colors of the default style's dark rules.
@@ -34,7 +40,8 @@ Sources/
   Aomidori/       The AppKit/WebKit app.
     App/          entry point, app delegate, menu bar, paths, localization helper.
     Document/     BookDocument (NSDocument, read-only).
-    Reader/       window controller, TOC sidebar, book info window, reader view, and the rendering layer:
+    Sidebar/      pane selector, contents, bookmarks and search panes.
+    Reader/       window controller, book info window, reader view, and the rendering layer:
                   PageRenderer (one WKWebView), PageSchemeHandler, ReaderScript.
     Styles/       ReaderEnvironment (settings + styles folder), FSEvents watcher,
                   style menu, style picker HUD.
@@ -121,7 +128,10 @@ Menu names are given in English; in Italian they are Archivio, Vista, Vai, Stile
 | Larger / smaller text | `+` / `-`, `⌘+` / `⌘-` | View |
 | Text at 100% of the style | `0`, `⌘0` | View |
 | Day ↔ Night | `⇧⌘N` (and toolbar) | View |
-| Table of contents | `⌃⌘S` | View |
+| Sidebar on/off | `⌘\` (and toolbar) | View |
+| Sidebar: Chapters, Bookmarks, Search | `⌥⌘1`, `⌥⌘2`, `⌥⌘5` | View |
+| Find in book | `⌘F` | Edit |
+| Add bookmark | `⌘D` | Go |
 | Minimal mode | `⌃⌘M` | View |
 | Full screen | `⌃⌘F` | View |
 | Override book style on/off | `⌘.` (and toolbar) | Style |
@@ -147,7 +157,10 @@ Choosing a style turns the override on.
 - With the override off, the book's CSS is used as is: a book without margins touches the
   window edges.
 - `⌃⇥` is also the system shortcut for the next window tab; Aomidori takes it for the style list.
-- `←` / `→` are menu shortcuts too, so they change chapter even while the sidebar has focus.
+- `←` / `→` are menu shortcuts too, so they change chapter even while a sidebar list has focus
+  (not while typing in a text field).
+- Search hits are found in the chapter text and then selected with WebKit's find; if the two
+  count occurrences differently (hidden text, accents), the page scrolls to the approximate place.
 - Not supported yet: fixed-layout EPUBs, vertical writing (it would scroll sideways),
   unpacked (folder) EPUBs, `xml-stylesheet` instructions, DRM-protected books (reported).
 - Fonts installed in the system may or may not be visible to web content; the `Fonts`
@@ -163,10 +176,11 @@ Choosing a style turns the override on.
    and can be tried live in any reader window; *Save As…* writes a `.css` anywhere with the same
    normalisation.
 2. **Windows vs tabs**: test both and pick one.
-3. **Bookmarks** (Murasaki-like): `⌘D` with a title sheet, a Bookmarks pane next to the TOC in
-   the sidebar, stored per book next to the reading positions.
-4. Search, per-book style memory, precise positions (element anchors), landing at the end of
-   the previous chapter, trackpad swipe between chapters.
+3. **More sidebar panes**, slots and shortcuts already reserved: Thumbnails (`⌥⌘3`, the
+   book's pages in miniature), Images (`⌥⌘4`, every picture in the book), Notes (`⌥⌘6`,
+   footnotes and endnotes from `epub:type` / `role` markup). Bookmark renaming and notes.
+4. Per-book style memory, precise positions (element anchors), landing at the end of the
+   previous chapter, trackpad swipe between chapters, find next/previous (`⌘G`).
 
 Murasaki (closed source) is a reference for the toolbar, sidebar panes and Inspector; no assets
 or code are taken from it.

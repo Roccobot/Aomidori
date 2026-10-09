@@ -1,7 +1,7 @@
 import AppKit
 import EPUBKit
 
-/// The table of contents, shown in the window's sidebar.
+/// The table of contents pane of the window's sidebar.
 @MainActor
 final class TOCViewController: NSViewController, NSOutlineViewDataSource, NSOutlineViewDelegate {
     /// Called when the reader picks an entry that has a target.
@@ -10,6 +10,8 @@ final class TOCViewController: NSViewController, NSOutlineViewDataSource, NSOutl
     private let roots: [TOCNode]
     private let outlineView = NSOutlineView()
     private var isRevealing = false
+    /// The chapter to highlight, also when the pane is loaded or shown later.
+    private var revealedPath: String?
 
     init(entries: [TOCEntry]) {
         roots = entries.map { TOCNode($0, parent: nil) }
@@ -55,8 +57,15 @@ final class TOCViewController: NSViewController, NSOutlineViewDataSource, NSOutl
         view = scrollView
     }
 
+    override func viewWillAppear() {
+        super.viewWillAppear()
+        if let revealedPath { reveal(path: revealedPath) }
+    }
+
     /// Selects the first entry that points at `path`, expanding its ancestors, without navigating.
     func reveal(path: String) {
+        revealedPath = path
+        guard isViewLoaded, outlineView.dataSource != nil else { return }
         guard let node = TOCNode.first(in: roots, where: { $0.entry.path == path }) else {
             outlineView.deselectAll(nil)
             return

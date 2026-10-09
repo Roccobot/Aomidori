@@ -15,11 +15,14 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
     weak var delegate: ReaderViewControllerDelegate?
 
     let publication: EPUBPublication
-    private let bookKey: String
+    let bookKey: String
     private let renderer: PageRenderer
     private let environment = ReaderEnvironment.shared
     private(set) var currentSpineIndex: Int?
     private var pendingFraction: Double?
+    /// A search hit to reveal once its chapter has loaded.
+    private var pendingFind: (hit: SearchHit, query: String)?
+    private var findTask: Task<Void, Never>?
 
     var book: EPUBBook { publication.book }
     var webView: WKWebView { renderer.webView }
@@ -99,6 +102,56 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
         renderer.load(path: book.spine[index].path)
     }
 
+    /// Opens a bookmark's chapter at its scroll position.
+    func show(_ bookmark: Bookmark) {
+        guard let index = book.spineIndex(forPath: bookmark.spinePath)
+                ?? (book.spine.indices.contains(bookmark.spineIndex) ? bookmark.spineIndex : nil) else { NSSound.beep(); return }
+        if index == currentSpineIndex {
+            renderer.scroll(toFraction: bookmark.fraction)
+        } else {
+            showSpineItem(at: index, fraction: bookmark.fraction)
+        }
+    }
+
+    /// Opens a search hit's chapter and selects the occurrence with WebKit's find, which also
+    /// scrolls to it. If WebKit counts occurrences differently (hidden text, diacritics), the
+    /// page scrolls to the hit's approximate position instead.
+    func show(_ hit: SearchHit, query: String) {
+        guard book.spine.indices.contains(hit.spineIndex) else { return }
+        if hit.spineIndex == currentSpineIndex, !webView.isLoading {
+            reveal(hit, query: query)
+        } else {
+            pendingFind = (hit, query)
+            showSpineItem(at: hit.spineIndex)
+        }
+    }
+
+    private func reveal(_ hit: SearchHit, query: String) {
+        findTask?.cancel()
+        findTask = Task { [weak self] in
+            guard let webView = self?.webView else { return }
+            // Find continues from the current selection: start from the top of the document.
+            webView.evaluateJavaScript("window.getSelection().removeAllRanges()", in: nil, in: .defaultClient)
+            let configuration = WKFindConfiguration()
+            configuration.caseSensitive = false
+            configuration.wraps = false
+            var found = false
+            for _ in 0...hit.occurrence {
+                guard !Task.isCancelled, let result = try? await webView.find(query, configuration: configuration) else { return }
+                found = result.matchFound
+                if !found { break }
+            }
+            if !found, !Task.isCancelled { self?.renderer.scroll(toFraction: hit.fraction) }
+        }
+    }
+
+    /// Scroll position in the current chapter, 0...1, as last reported by the page.
+    var currentFraction: Double {
+        guard let index = currentSpineIndex, let saved = environment.positions.position(forBook: bookKey),
+              saved.spinePath == book.spine[index].path else { return 0 }
+        return saved.fraction
+    }
+
     /// Title of the TOC entry for the current chapter, if any.
     var currentChapterTitle: String? {
         currentSpineIndex.flatMap { book.tocTitle(forPath: book.spine[$0].path) }
@@ -112,7 +165,7 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
             ReadingPosition(spinePath: book.spine[index].path, spineIndex: index, fraction: fraction),
             forBook: bookKey
         )
-        environment.savePositionsSoon()
+        environment.saveStateSoon()
     }
 
     // MARK: WKNavigationDelegate
@@ -143,6 +196,10 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
         if let fraction = pendingFraction {
             pendingFraction = nil
             renderer.scroll(toFraction: fraction)
+        }
+        if let find = pendingFind {
+            pendingFind = nil
+            if find.hit.spineIndex == currentSpineIndex { reveal(find.hit, query: find.query) }
         }
         if let path = UserDefaults.standard.string(forKey: Self.snapshotDefaultsKey) {
             writeDiagnosticSnapshot(to: URL(fileURLWithPath: path))

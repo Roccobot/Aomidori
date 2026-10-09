@@ -14,7 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        environment.savePositionsNow()
+        environment.saveStateNow()
     }
 
     /// Shortcuts are designed for the Italian layout (`⌘'`, `⌘ì`): AppKit must not remap them.

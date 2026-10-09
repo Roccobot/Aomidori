@@ -14,6 +14,8 @@ enum AppPaths {
     static let fonts = support.appendingPathComponent("Fonts", isDirectory: true)
     /// Last reading position of every book.
     static let positions = support.appendingPathComponent("Positions.json")
+    /// Bookmarks and other per-book state.
+    static let books = support.appendingPathComponent("Books.json")
 
     /// The style shipped inside the app bundle and installed on first launch.
     static let bundledStyleName = "ReadingRoccobot.css"

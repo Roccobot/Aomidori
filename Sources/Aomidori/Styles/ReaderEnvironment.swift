@@ -24,13 +24,14 @@ final class ReaderEnvironment {
     private let defaults = UserDefaults.standard
     let library = StyleLibrary(directory: AppPaths.styles)
     let positions = ReadingPositionStore(fileURL: AppPaths.positions)
+    let books = BookStateStore(fileURL: AppPaths.books)
 
     private(set) var styles: [StyleFile] = []
     private(set) var nightPaletteCSS = ""
     private var colorSchemeCache: [String: Bool] = [:]
     private var watcher: DirectoryWatcher?
     private var appearanceObservation: NSKeyValueObservation?
-    private var positionsSaveTask: Task<Void, Never>?
+    private var stateSaveTask: Task<Void, Never>?
 
     private init() {}
 
@@ -174,20 +175,24 @@ final class ReaderEnvironment {
         return "/\(PageSchemeHandler.userPrefix)Styles/\(name)?v=\(version)"
     }
 
-    // MARK: Positions
+    // MARK: Per-book state
 
-    func savePositionsSoon() {
-        positionsSaveTask?.cancel()
-        positionsSaveTask = Task { [positions] in
+    /// Saves reading positions and book state (bookmarks, sidebar pane) after a short pause,
+    /// coalescing bursts of changes such as scrolling.
+    func saveStateSoon() {
+        stateSaveTask?.cancel()
+        stateSaveTask = Task { [positions, books] in
             try? await Task.sleep(for: .seconds(1.5))
             guard !Task.isCancelled else { return }
             try? positions.save()
+            try? books.save()
         }
     }
 
-    func savePositionsNow() {
-        positionsSaveTask?.cancel()
+    func saveStateNow() {
+        stateSaveTask?.cancel()
         try? positions.save()
+        try? books.save()
     }
 
     private func notify() {

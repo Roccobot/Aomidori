@@ -238,6 +238,8 @@ enum KeyCode {
     static let returnKey: UInt16 = 36
     static let enter: UInt16 = 76
     static let escape: UInt16 = 53
+    static let delete: UInt16 = 51
+    static let forwardDelete: UInt16 = 117
     static let leftArrow: UInt16 = 123
     static let rightArrow: UInt16 = 124
     static let downArrow: UInt16 = 125

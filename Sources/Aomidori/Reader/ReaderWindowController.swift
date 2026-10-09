@@ -1,7 +1,8 @@
 import AppKit
+import AomidoriCore
 import EPUBKit
 
-/// One window per open book: a sidebar with the table of contents and the reading view.
+/// One window per open book: a sidebar (contents, bookmarks, search) and the reading view.
 @MainActor
 final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSToolbarDelegate,
     NSMenuItemValidation, ReaderViewControllerDelegate {
@@ -16,6 +17,9 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
 
     let reader: ReaderViewController
     private let toc: TOCViewController
+    private let bookmarks: BookmarksViewController
+    private let search: SearchViewController
+    private let sidebar: SidebarViewController
     private let splitViewController = NSSplitViewController()
     private let sidebarItem: NSSplitViewItem
     private let picker = StylePicker()
@@ -32,7 +36,15 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
     init(publication: EPUBPublication, bookKey: String) {
         reader = ReaderViewController(publication: publication, bookKey: bookKey)
         toc = TOCViewController(entries: publication.book.toc)
-        sidebarItem = NSSplitViewItem(sidebarWithViewController: toc)
+        bookmarks = BookmarksViewController(book: publication.book)
+        search = SearchViewController(publication: publication)
+        let state = ReaderEnvironment.shared.books.state(forBook: bookKey)
+        sidebar = SidebarViewController(
+            initialPane: state.sidebarPane ?? .contents,
+            panes: [.contents: toc, .bookmarks: bookmarks, .search: search]
+        )
+        bookmarks.bookmarks = state.sortedBookmarks
+        sidebarItem = NSSplitViewItem(sidebarWithViewController: sidebar)
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 860, height: 980),
@@ -42,7 +54,7 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         super.init(window: window)
 
         sidebarItem.isCollapsed = true
-        sidebarItem.minimumThickness = 200
+        sidebarItem.minimumThickness = 220
         sidebarItem.maximumThickness = 420
         splitViewController.addSplitViewItem(sidebarItem)
         splitViewController.addSplitViewItem(NSSplitViewItem(viewController: reader))
@@ -68,6 +80,11 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
             reader.go(to: entry)
             window.makeFirstResponder(reader.webView)
         }
+        bookmarks.onSelect = { [weak self] bookmark in self?.reader.show(bookmark) }
+        bookmarks.onDelete = { [weak self] bookmark in self?.deleteBookmark(bookmark) }
+        // Focus stays in the results, so the next hit is one arrow key away.
+        search.onSelect = { [weak self] hit, query in self?.reader.show(hit, query: query) }
+        sidebar.onPaneChange = { [weak self] pane in self?.rememberPane(pane) }
 
         environmentObserver = NotificationCenter.default.addObserver(forName: .readerEnvironmentDidChange, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.environmentDidChange() }
@@ -123,6 +140,69 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         let inspector = inspector ?? InspectorWindowController(publication: reader.publication)
         self.inspector = inspector
         inspector.showWindow(nil)
+    }
+
+    // MARK: Sidebar
+
+    /// `⌥⌘1`…`⌥⌘6`: opens the sidebar on a pane (the menu item's tag is the pane's digit).
+    @objc func showSidebarPane(_ sender: NSMenuItem) {
+        guard let pane = SidebarPane.allCases.first(where: { $0.shortcutDigit == sender.tag }) else { return }
+        show(pane)
+    }
+
+    /// `⌘F`: the search pane, with the cursor in its field.
+    @objc func showSearch(_ sender: Any?) {
+        show(.search)
+        search.focusSearchField()
+    }
+
+    private func show(_ pane: SidebarPane) {
+        guard pane.isAvailable, !isMinimal else { NSSound.beep(); return }
+        sidebar.select(pane)
+        rememberPane(pane)
+        if sidebarItem.isCollapsed { sidebarItem.animator().isCollapsed = false }
+    }
+
+    private func rememberPane(_ pane: SidebarPane) {
+        environment.books.update(forBook: reader.bookKey) { $0.sidebarPane = pane }
+        environment.saveStateSoon()
+    }
+
+    // MARK: Bookmarks
+
+    /// `⌘D`: asks for a title (the chapter's, by default) and bookmarks the current place.
+    @objc func addBookmark(_ sender: Any?) {
+        guard let window, let index = reader.currentSpineIndex else { NSSound.beep(); return }
+        let path = reader.book.spine[index].path
+        let fraction = reader.currentFraction
+
+        let alert = NSAlert()
+        alert.messageText = L10n.string("bookmarks.add.title")
+        alert.informativeText = L10n.string("bookmarks.add.message")
+        let field = NSTextField(string: reader.currentChapterTitle ?? reader.book.title ?? "")
+        field.frame = NSRect(x: 0, y: 0, width: 280, height: 24)
+        alert.accessoryView = field
+        alert.addButton(withTitle: L10n.string("bookmarks.add.confirm"))
+        alert.addButton(withTitle: L10n.string("common.cancel"))
+        alert.window.initialFirstResponder = field
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self, response == .alertFirstButtonReturn else { return }
+            let title = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            let bookmark = Bookmark(title: title.isEmpty ? L10n.string("bookmarks.untitled") : title,
+                                    spinePath: path, spineIndex: index, fraction: fraction)
+            updateBookmarks { $0.append(bookmark) }
+            show(.bookmarks)
+        }
+    }
+
+    private func deleteBookmark(_ bookmark: Bookmark) {
+        updateBookmarks { $0.removeAll { $0.id == bookmark.id } }
+    }
+
+    private func updateBookmarks(_ change: (inout [Bookmark]) -> Void) {
+        environment.books.update(forBook: reader.bookKey) { change(&$0.bookmarks) }
+        bookmarks.bookmarks = environment.books.state(forBook: reader.bookKey).sortedBookmarks
+        environment.saveStateSoon()
     }
 
     @objc func toggleMinimalMode(_ sender: Any?) {
@@ -189,16 +269,25 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         return (responder as? NSView)?.isDescendant(of: reader.webView) ?? false
     }
 
+    private var isEditingText: Bool { window?.firstResponder is NSText }
+
     // MARK: Validation
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         switch menuItem.action {
-        case #selector(goToPreviousChapter(_:)): return reader.canGoToPreviousChapter
-        case #selector(goToNextChapter(_:)): return reader.canGoToNextChapter
+        // `←` `→` are plain-key shortcuts: disabled while typing, so text fields get them.
+        case #selector(goToPreviousChapter(_:)): return reader.canGoToPreviousChapter && !isEditingText
+        case #selector(goToNextChapter(_:)): return reader.canGoToNextChapter && !isEditingText
         case #selector(toggleMinimalMode(_:)):
             menuItem.state = isMinimal ? .on : .off
             return true
         case #selector(showStyleList(_:)): return !environment.styles.isEmpty
+        case #selector(showSidebarPane(_:)):
+            let pane = SidebarPane.allCases.first { $0.shortcutDigit == menuItem.tag }
+            menuItem.state = !sidebarItem.isCollapsed && pane == sidebar.pane ? .on : .off
+            return pane?.isAvailable == true && !isMinimal
+        case #selector(showSearch(_:)): return !isMinimal
+        case #selector(addBookmark(_:)): return reader.currentSpineIndex != nil
         default: return true
         }
     }
@@ -301,6 +390,6 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         inspector?.close()
         if let environmentObserver { NotificationCenter.default.removeObserver(environmentObserver) }
         environmentObserver = nil
-        environment.savePositionsNow()
+        environment.saveStateNow()
     }
 }

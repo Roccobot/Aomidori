@@ -1,4 +1,5 @@
 import AppKit
+import AomidoriCore
 
 /// The menu bar, built in code (no nib). Every reading feature is here with its shortcut.
 @MainActor
@@ -54,12 +55,22 @@ enum MainMenu {
         let menu = NSMenu(title: L10n.string("menu.edit"))
         menu.addItem(item(L10n.string("menu.edit.copy"), #selector(NSText.copy(_:)), "c"))
         menu.addItem(item(L10n.string("menu.edit.selectAll"), #selector(NSText.selectAll(_:)), "a"))
+        menu.addItem(.separator())
+        menu.addItem(item(L10n.string("menu.edit.find"), #selector(ReaderWindowController.showSearch(_:)), "f"))
         return menu
     }
 
     private static func viewMenu() -> NSMenu {
         let menu = NSMenu(title: L10n.string("menu.view"))
-        menu.addItem(item(L10n.string("menu.view.toc"), #selector(NSSplitViewController.toggleSidebar(_:)), "s", [.command, .control]))
+        menu.addItem(item(L10n.string("menu.view.sidebar"), #selector(NSSplitViewController.toggleSidebar(_:)), "\\"))
+        // Every pane keeps its digit; the ones not built yet are simply not listed.
+        for pane in SidebarPane.available {
+            let paneItem = item(pane.title, #selector(ReaderWindowController.showSidebarPane(_:)), "\(pane.shortcutDigit)", [.command, .option])
+            paneItem.tag = pane.shortcutDigit
+            paneItem.indentationLevel = 1
+            menu.addItem(paneItem)
+        }
+        menu.addItem(.separator())
         menu.addItem(item(L10n.string("menu.view.minimal"), #selector(ReaderWindowController.toggleMinimalMode(_:)), "m", [.command, .control]))
         menu.addItem(.separator())
         menu.addItem(item(L10n.string("menu.view.night"), #selector(AppDelegate.toggleNight(_:)), "n", [.command, .shift]))
@@ -82,6 +93,8 @@ enum MainMenu {
         // WKWebView implements goBack:/goForward: over its history of chapters and links.
         menu.addItem(item(L10n.string("menu.go.back"), Selector(("goBack:")), "["))
         menu.addItem(item(L10n.string("menu.go.forward"), Selector(("goForward:")), "]"))
+        menu.addItem(.separator())
+        menu.addItem(item(L10n.string("menu.go.addBookmark"), #selector(ReaderWindowController.addBookmark(_:)), "d"))
         return menu
     }
 
