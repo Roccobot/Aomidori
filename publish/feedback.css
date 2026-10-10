@@ -148,14 +148,15 @@ h1 {
 .df-icon-dark {
   display: none;
 }
-/* A black shadow around the icon (the user's request, 2026-10-10): gradual and marked on the
-   dark theme, where the icon's dark square would sink into the page, lighter and discreet on
-   the light one. drop-shadow follows the icon's own outline, transparent margin excluded. */
+/* A black shadow around the icon (the user's request, 2026-10-10): lighter and discreet on the
+   light theme; on the dark one, where the icon's dark square would sink into the page, wide and
+   soft, without the tight dark ring of the first version (his note: *più sfumata e più tenue*).
+   drop-shadow follows the icon's own outline, transparent margin excluded. */
 .df-icon-light {
   filter: drop-shadow(0 0.02em 0.08em rgb(0 0 0 / 0.2));
 }
 .df-icon-dark {
-  filter: drop-shadow(0 0 0.05em rgb(0 0 0 / 0.9)) drop-shadow(0 0 0.3em rgb(0 0 0 / 0.9));
+  filter: drop-shadow(0 0 0.4em rgb(0 0 0 / 0.6));
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) .df-icon-light {
