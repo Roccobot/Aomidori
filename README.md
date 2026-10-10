@@ -6,7 +6,12 @@ and later), in the spirit of Murasaki: each chapter is one web page that scrolls
 
 Download: <https://roccobot.github.io/Aomidori/> (the latest release, from `publish/`).
 
-## Features (v1.00)
+## Features (v1.01)
+
+- The page's context menu has no items that would do nothing in Aomidori: WebKit's "Open … in
+  New Window" (pictures, links, frames, media) and "Download …" go. On a link of the book, "Open
+  Link in New Tab" opens it in a tab, as a `⇧`-click does (`PageContextMenu`, `PageWebView`);
+  the page reports which link was right-clicked.
 
 - Split view (`⌘S`, the View menu or the toolbar): this tab on the left with the sidebar,
   another on the right. The only other tab goes straight in; with several, a list numbered

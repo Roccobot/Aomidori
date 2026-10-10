@@ -114,6 +114,11 @@ lì. L'elenco completo è nel `README.md`: qui non si ricopia.
 
 **Decisioni di Rocco** (non si cambiano senza chiederglielo):
 - `⌘T` apre una tab nuova vuota, come in Safari e nel Finder.
+- **Il menu contestuale della pagina non offre voci che in Aomidori non fanno niente** (sua
+  segnalazione, nella 1.01): via le voci di WebKit per aprire in una nuova finestra e per
+  scaricare; su un link del libro c'è *Apri il link in una nuova scheda*, che apre una scheda
+  di Aomidori. Su un'immagine non c'è niente al posto della voce tolta: una scheda mostra sempre
+  il libro, e un'immagine da sola sarebbe un tipo di scheda nuovo, da proporgli a parte.
 - `⌘;` apre le Impostazioni (sua scelta), con `⌘,` nascosto come alternativa, come nelle altre
   app Mac.
 - **I link in schede nuove** (sue richieste a Techne, nella 0.90): con l'opzione *Apri i link in
