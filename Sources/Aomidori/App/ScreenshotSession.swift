@@ -4,17 +4,18 @@ import AppKit
 /// `-AomidoriScreenshot <folder>`. The app starts with factory settings and its own support
 /// folder (see `AppPaths.smokeFolder`), in the theme of `-AomidoriScreenshotTheme light|dark`
 /// without touching macOS's, opens the book at the spine item `-AomidoriScreenshotSpine <n>` in a
-/// window of a fixed size with the table of contents shown, and writes `window.txt` with the
-/// window number once the page is laid out; the script captures that window.
+/// window of a fixed size, without the sidebar (the owner's request, 2026-10-10), and writes
+/// `window.txt` with the window number once the page is laid out; the script captures that window.
 /// Author: Rocco Casadei, a.k.a. Roccobot
 @MainActor
 enum ScreenshotSession {
     nonisolated static let defaultsKey = "AomidoriScreenshot"
     static let themeKey = "AomidoriScreenshotTheme"
     static let spineKey = "AomidoriScreenshotSpine"
-    /// 800 x 800 points: a square of 1600 pixels on a Retina screen, which fits the download
-    /// page's right column.
-    static let contentSize = NSSize(width: 800, height: 800)
+    /// 800 x 890 points, 1600 x 1780 pixels on a Retina screen: the download page shows it in a
+    /// 428 px column, where it is 476 px tall, as tall as the left column from the icon's tile to
+    /// the end of the install steps (measured in both languages).
+    static let contentSize = NSSize(width: 800, height: 890)
 
     static var isActive: Bool { UserDefaults.standard.string(forKey: defaultsKey) != nil }
 
@@ -24,12 +25,12 @@ enum ScreenshotSession {
         NSApp.appearance = NSAppearance(named: theme == "dark" ? .darkAqua : .aqua)
     }
 
-    /// Once the reader window exists: its size, the contents pane, the chapter, then the signal.
+    /// Once the reader window exists: its size, the sidebar closed, the chapter, then the signal.
     static func prepare(_ controller: ReaderWindowController) {
         guard isActive, let folder = AppPaths.smokeFolder, let window = controller.window else { return }
         window.setContentSize(contentSize)
         window.center()
-        controller.showContentsForScreenshot()
+        controller.hideSidebarForScreenshot()
         let spine = UserDefaults.standard.integer(forKey: spineKey)
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(800))

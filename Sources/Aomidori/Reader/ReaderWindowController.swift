@@ -200,10 +200,9 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         if sidebarItem.isCollapsed { sidebarItem.animator().isCollapsed = false }
     }
 
-    /// For `ScreenshotSession`: the table of contents, open, at once.
-    func showContentsForScreenshot() {
-        sidebar.select(.contents)
-        sidebarItem.isCollapsed = false
+    /// For `ScreenshotSession`: the page alone, the sidebar closed at once.
+    func hideSidebarForScreenshot() {
+        sidebarItem.isCollapsed = true
     }
 
     private func rememberPane(_ pane: SidebarPane) {
