@@ -262,6 +262,26 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
 - ⚠️ Nel repo non entrano libri, font coperti da diritti né percorsi del Mac di Rocco: il repo è
   pubblico.
 
+## 🔁 Il documento di feedback
+
+- **Il collaudo di ogni versione passa dal documento di feedback** (DF), copiato da quello di
+  AIV (scelte di Rocco del 2026-10-10: **M1** copia esatta adattata, **N1** lo stesso progetto
+  Supabase di AIV con tabelle e bucket `aomidori_*` e `aomidori-feedback`). Fonte unica
+  `docs/Feedback.md`, generatore `scripts/feedback-build.py`, pagina `publish/feedback.html`
+  servita dal Worker `aomidori-feedback` (<https://aomidori-feedback.roccobot-b90.workers.dev/feedback>).
+  Come si prende in carico e si aggiorna: `docs/Feedback-maintenance.md`; il servizio:
+  `cloud/feedback/README.md`.
+- ⚠️ **Dalla 0.61 alla 1.10 il DF mancava**, e le cose da validare si sono accumulate nel brief:
+  a ogni versione pubblicata il DF si aggiorna nello stesso giro, e un testo italiano nuovo o
+  cambiato senza etichetta ferma il generatore (`docs/Labels-approved.json`).
+- **Un dispositivo solo, il Mac di Rocco**, già compilato in una bozza nuova (`OWNER_MAC` in
+  `publish/feedback-data.js`, sua nota del 2026-10-10: non ha altri Mac).
+- ⚠️ **`publish/` è anche il sito**: `pages.yml` toglie i file del DF prima di pubblicare, e
+  non riparte quando cambiano solo loro. Il Worker serve tutta la cartella, sito compreso.
+- **Le prove**: `npm --prefix cloud/feedback test`, `node scripts/feedback-read-test.mjs`, e la
+  pagina con `python3 scripts/feedback-check.py publish/feedback.html`, che chiede Playwright e
+  un `chromium` nel `PATH` (sul Mac non sono installati: si mettono in un ambiente temporaneo).
+
 ## 🚀 Che cosa produce un rilascio
 
 - **Versione**: SlimVer `x.xx`, come in ogni progetto di Rocco (sua decisione del 2026-10-09):

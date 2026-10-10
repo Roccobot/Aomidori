@@ -284,6 +284,9 @@ Un file più specifico vince **dove parla**, e il suo silenzio non è una deroga
   dichiarata').
 - **Nessuna licenza, per ora**: tutti i diritti riservati, e niente file `LICENSE` senza una sua
   decisione; `THIRD_PARTY.md` con la nota MIT di foliate-js resta (`Rules.md` § '⚖️ Licenza').
+- **Il collaudo** passa dal documento di feedback: fonte `docs/Feedback.md`, pagina generata da
+  `scripts/feedback-build.py` e servita dal Worker `aomidori-feedback`; si aggiorna a ogni
+  versione pubblicata (`Rules.md` § '🔁 Il documento di feedback').
 - **Il sito** è <https://roccobot.github.io/Aomidori/>, servito da `publish/` con
   `.github/workflows/pages.yml`: il pulsante prende lo ZIP dell'ultima release dall'API di GitHub,
   quindi un rilascio non chiede deploy (`Rules.md` § '🌐 Il sito').

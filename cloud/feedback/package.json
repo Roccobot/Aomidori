@@ -1,0 +1,12 @@
+{
+  "name": "aomidori-feedback-cloud",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node worker-test.mjs && node supabase-sql-test.mjs && node supabase-test.mjs && node feedback-transfer-test.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.3.14",
+    "wrangler": "4.45.0"
+  }
+}

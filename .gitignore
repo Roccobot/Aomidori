@@ -5,3 +5,5 @@ build/
 .DS_Store
 .transfer/
 scripts/js-tests/node_modules
+cloud/feedback/node_modules/
+cloud/feedback/.wrangler/

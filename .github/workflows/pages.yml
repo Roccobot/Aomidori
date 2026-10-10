@@ -11,10 +11,20 @@ name: Pages
 # ⚠️ On `main` and never on a tag or a release event: the `github-pages` environment lets only
 # the default branch deploy. Watching `publish/` alone keeps a code push from redeploying an
 # unchanged page.
+#
+# ⚠️ `publish/` also holds the feedback document (DF), which the `aomidori-feedback` Worker
+# serves with its API: on GitHub Pages it would load without a cloud and save nothing. Its
+# files are listed once, in DF_FILES, removed before the upload, and kept out of the trigger.
 on:
   push:
     branches: [main]
-    paths: ['publish/**']
+    paths:
+      - 'publish/**'
+      - '!publish/feedback*'
+      - '!publish/assets/feedback-*'
+      - '!publish/assets/Roboto*'
+      - '!publish/assets/github-mark.svg'
+      - '!publish/assets/changeMac.svg'
   workflow_dispatch:
 
 permissions:
@@ -40,6 +50,13 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v6
+
+      - name: Leave the feedback document out
+        env:
+          DF_FILES: >-
+            publish/feedback* publish/assets/feedback-* publish/assets/Roboto*
+            publish/assets/github-mark.svg publish/assets/changeMac.svg
+        run: rm -f $DF_FILES
 
       - name: Upload the page
         uses: actions/upload-pages-artifact@v5

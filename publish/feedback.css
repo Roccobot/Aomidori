@@ -1,0 +1,1670 @@
+@font-face {
+  font-family: Roboto;
+  src: url("assets/Roboto.ttf") format("truetype");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+/* DF theme tokens: each color is written once, as light-dark(light, dark). The root
+   follows the system until feedback.js sets data-theme; T then overrides it for the session. */
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#fcfbf8, #151b1a);
+  --ink: light-dark(#1b2d25, #e3eee8);
+  --ink-strong: light-dark(#173b2c, #e3eee8);
+  --muted: light-dark(#485d51, #b6c8bd);
+  --placeholder: light-dark(#65756d, #b6c8bd);
+  --surface: light-dark(#fffefc, #1e2523);
+  --surface-soft: light-dark(#f4faf7, #1e2523);
+  --surface-archive: light-dark(#edf5ef, #20332b);
+  --surface-strip: light-dark(#fffefcf5, #1e2523f5);
+  --surface-code: light-dark(#e8f2ed, #285347);
+  --surface-hover: light-dark(#e6f4ed, #30483b);
+  --surface-hover-soft: light-dark(#dff3eb, #285347);
+  --surface-drop: light-dark(#ccefe3, #285347);
+  --surface-response: light-dark(#eef0f4, #2c323a);
+  --surface-ok: light-dark(#d2f1e3, #1c4c3d);
+  --surface-warn: light-dark(#fff0c4, #4a3815);
+  --surface-bad: light-dark(#ffe0de, #4d2528);
+  --border: light-dark(#d4ded7, #43564c);
+  --border-strong: #718c7e;
+  --border-field: light-dark(#91a697, #718c7e);
+  --border-chip: light-dark(#86b5a5, #43b59e);
+  --border-response: light-dark(#718096, #8593a6);
+  --accent: light-dark(#0b6b5b, #43b59e);
+  --accent-focus: light-dark(#13896f, #4fd9be);
+  --accent-on: light-dark(#fff, #0b1f18);
+  /* The pill's fill over the frosted glass. Dark: 25% is enough (the user's choice). Light:
+     white glyphs need 65% to reach 3:1 over the page, so 70% (3.4:1, the user's choice). */
+  --pill-fill: light-dark(color-mix(in srgb, var(--accent) 70%, transparent),
+    color-mix(in srgb, var(--accent) 25%, transparent));
+  --link: light-dark(#0b6b5b, #4fd9be);
+  --warn: light-dark(#745713, #e4b348);
+  --bad: light-dark(#a23737, #ff9999);
+  --bad-text: light-dark(#923434, #ffb5b5);
+  --chip-ok: light-dark(#0b6b5b, #4fd9be);
+  --chip-warn: light-dark(#745713, #e6c35c);
+  --chip-bad: light-dark(#a23737, #ffb5b5);
+  --shadow-strip: 0 4px 12px light-dark(#153c2410, #00000040);
+  --shadow-fab: 0 4px 12px light-dark(#0003, #0006);
+  --shadow-modal: 0 12px 40px light-dark(#0b1f1833, #0008);
+  --scrim: light-dark(#0b1f1888, #00000099);
+}
+[data-theme="light"] {
+  color-scheme: light;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+/* The hidden attribute always wins over a component's own display. */
+[hidden] {
+  display: none !important;
+}
+/* No rectangle over what the finger touches on Android (the user's request); keyboard focus
+   keeps its own ring. */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+body {
+  margin: 0;
+  font:
+    16px/1.6 Roboto,
+    Arial,
+    sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+}
+.intro,
+main,
+footer {
+  max-width: 880px;
+  margin: auto;
+  padding: 28px 24px;
+}
+h1 {
+  font-size: clamp(36px, 6vw, 60px);
+  line-height: 1.08;
+  margin: 10px 0 24px;
+}
+/* Title + chip: chip sits on the h1 row (center of the capital V), not the eyebrow.
+   Spacing eyebrow→title is row-gap (not h1 margin), so align-self:center matches the glyphs. */
+.intro-title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  grid-template-rows: auto auto;
+  column-gap: 24px;
+  row-gap: 10px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.intro-title {
+  display: contents;
+}
+.intro-title-row > .eyebrow,
+.intro-title > .eyebrow {
+  grid-column: 1;
+  grid-row: 1;
+}
+/* The F of Roboto Bold starts 0.0625em right of its box (measured on the loaded font with
+   canvas measureText, 62.5px at 1000px): the margin puts its ink on the left edge of the lines
+   below (the user's request, 2026-10-06: *togli il rientro eccessivo*). */
+.intro-title-row h1 {
+  grid-column: 1;
+  grid-row: 2;
+  margin: 0 0 0 -0.0625em;
+  min-width: 0;
+  white-space: nowrap;
+}
+.cloud-account {
+  grid-column: 2;
+  grid-row: 2;
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  justify-self: end;
+  flex: 0 1 auto;
+  width: fit-content;
+  max-width: 100%;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 12px;
+  border: 1px solid var(--border-chip);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  line-height: 1;
+}
+/* Logged-out: only the filled Accedi control, no outer chip shell. */
+.cloud-account:not(.is-connected) {
+  gap: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+}
+/* Connected: each end sits as far from the outline on its side as above and below
+   (the user's optical centring): the mark 7px all round, Esci 6px. */
+.cloud-account.is-connected {
+  padding-left: 7px;
+  /* 7 and not 6 on the right since 2026-10-04: at 6 Esci looked 1px too far right (the
+     user's note). Above and below it stays 6. */
+  padding-right: 7px;
+}
+.cloud-account-logo {
+  display: block;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 20px;
+  object-fit: contain;
+}
+/* The source mark is black; keep it legible like the username in dark themes. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .cloud-account-logo {
+    filter: brightness(0) invert(1);
+  }
+}
+[data-theme="dark"] .cloud-account-logo {
+  filter: brightness(0) invert(1);
+}
+.cloud-account-user {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 700;
+}
+a.cloud-account-action,
+button.cloud-account-action {
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: auto;
+  height: 22px;
+  min-width: 0;
+  min-height: 22px;
+  max-height: 22px;
+  margin: 0;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-on);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+a.cloud-account-action:hover,
+button.cloud-account-action:hover {
+  background: var(--accent-focus);
+  color: var(--accent-on);
+}
+h2 {
+  font-size: 26px;
+  line-height: 1.25;
+  margin-top: 12px;
+}
+h3 {
+  font-size: 22px;
+  line-height: 1.3;
+  margin-top: 6px;
+}
+.eyebrow {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--link);
+}
+a {
+  color: var(--link);
+}
+nav {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+button,
+input,
+textarea {
+  font: inherit;
+}
+button,
+.file-button {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink-strong);
+  border-radius: 10px;
+  padding: 10px 16px;
+  min-height: 48px;
+  cursor: pointer;
+}
+button:hover,
+.file-button:hover {
+  background: var(--surface-hover);
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--accent-focus);
+  outline-offset: 3px;
+}
+button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-on);
+  border-color: var(--accent);
+}
+button[data-kind="warn"][aria-pressed="true"] {
+  background: var(--warn);
+  border-color: var(--warn);
+}
+button[data-kind="bad"][aria-pressed="true"] {
+  background: var(--bad);
+  border-color: var(--bad);
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.file-button:has(input:disabled),
+.attachment:has(input:disabled) {
+  opacity: 0.55;
+  cursor: default;
+}
+.file-button input:disabled {
+  cursor: default;
+}
+.dashboard {
+  position: sticky;
+  top: 0;
+  background: var(--surface-strip);
+  backdrop-filter: blur(8px);
+  border-block: 1px solid var(--border);
+  padding: 12px 24px;
+  z-index: 2;
+  box-shadow: var(--shadow-strip);
+}
+.dashboard > div,
+.dashboard > p,
+.dashboard > progress {
+  max-width: 832px;
+  margin: 0 auto;
+  display: block;
+}
+#counts {
+  display: flex;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+  font-size: 14px;
+}
+progress {
+  width: 100%;
+  height: 10px;
+  accent-color: var(--accent);
+}
+.dashboard p {
+  font-size: 13px;
+  color: var(--muted);
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  margin: 18px 0;
+}
+.card.test {
+  scroll-margin-top: 120px;
+}
+/* The copy mark of a card's reference (2026-10-09, his mockup): top right, in the color of the
+   card's border, faded; a 32px target around a 22px icon. */
+.card.test,
+.card.question {
+  position: relative;
+}
+.card-ref {
+  appearance: none;
+  -webkit-appearance: none;
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  width: 32px;
+  height: 32px;
+  min-width: 0;
+  min-height: 0;
+  padding: 5px;
+  margin: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--border-strong);
+  opacity: 0.45;
+  cursor: pointer;
+}
+.card-ref svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+.card-ref:hover,
+.card-ref:focus-visible {
+  background: transparent;
+  opacity: 0.9;
+}
+.card.has-response[data-outcome-kind="ok"] .card-ref {
+  color: var(--accent);
+}
+.card.has-response[data-outcome-kind="warn"] .card-ref {
+  color: var(--warn);
+}
+.card.has-response[data-outcome-kind="bad"] .card-ref {
+  color: var(--bad);
+}
+/* On a label card the screen reader mark keeps the corner, and the copy mark sits at its left. */
+.label-card:has(.label-a11y) .card-ref {
+  right: 41px;
+}
+fieldset {
+  border: 0;
+  margin: 20px 0;
+  padding: 0;
+}
+legend {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.outcome {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin: 8px 0;
+}
+label {
+  display: block;
+  font-weight: 600;
+  margin-top: 14px;
+}
+textarea,
+input:not([type="file"]) {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--border-field);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 6px;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+.attachment {
+  font-size: 14px;
+  border: 2px dashed var(--border-strong);
+  border-radius: 10px;
+  padding: 14px;
+}
+.attachment input {
+  display: block;
+  margin-top: 8px;
+  max-width: 100%;
+  font-size: 14px;
+}
+/* Two thumbnails per row, on desktop and mobile alike (the user's request, 2026-10-04). */
+.image-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.image-list:empty {
+  display: none;
+}
+.image-list figure {
+  margin: 0;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  /* The buttons read the width of their own card (below). */
+  container-type: inline-size;
+}
+.image-list img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 180px;
+  object-fit: contain;
+}
+/* The name, centred, a little larger and apart from the thumbnail and the buttons (the
+   user's request, 2026-10-06); a click on it writes it in the field, so it shows the hand. */
+.image-list figcaption {
+  margin: 10px 0 2px;
+  overflow-wrap: anywhere;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+.image-list img {
+  cursor: pointer;
+}
+/* Rinomina and Elimina on one row, centred, with the same room between and around them. */
+/* Two columns of the same width, so Rinomina and Elimina are the same size (the user's request,
+   2026-10-06). */
+.attachment-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: max-content;
+  margin: 10px auto 0;
+  gap: 8px;
+}
+.image-list button {
+  min-height: 40px;
+  padding: 6px 12px;
+  font-size: 14px;
+}
+/* Renaming in place: the name alone in the field, the extension beside it and out of reach. */
+.attachment-rename {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2px;
+  margin: 10px 0 2px;
+  font-size: 14px;
+}
+.attachment-rename-name {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  padding: 4px 6px;
+  font: inherit;
+  text-align: center;
+}
+.attachment-rename-extension {
+  flex: none;
+  color: var(--muted);
+}
+/* Rinomina and Elimina: on a wide screen the icon before the words, which alone looked alike at
+   a glance; on a phone the icon alone (the user's requests, 2026-10-06). The button's label stays
+   the same on both. */
+.image-list button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.image-list button svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+/* ⚠️ A card too narrow for the two buttons side by side stacks them, the same width and with
+   their words (his screenshot of 2026-10-09: in the side column of Altro, on a desktop, the two
+   rows of buttons ran out of their cards and over each other). The words stay, as he asked for
+   wide screens on 2026-10-06; the row is as wide as its content, so the words decide. */
+@container (max-width: 250px) {
+  .attachment-actions {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 720px) {
+  .image-list button {
+    min-width: 44px;
+    padding: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .image-list button svg {
+    width: 22px;
+    height: 22px;
+  }
+  .image-list button .attachment-action-text {
+    display: none;
+  }
+}
+.file-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  height: 48px;
+  font-weight: 400;
+  white-space: nowrap;
+  margin: 0;
+  position: relative;
+}
+.file-button input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.file-button:focus-within {
+  outline: 3px solid var(--accent-focus);
+  outline-offset: 3px;
+}
+.command[data-command="reset"] {
+  border-color: var(--bad);
+  color: var(--bad-text);
+}
+/* One vertical pill anchored at the bottom: it shows only the buttons that can act now, grows
+   and shrinks with them, and with a single button it is a circle (the user's request,
+   2026-10-03). The radius is half the width, so the ends stay round at any length. */
+.floating-controls {
+  position: fixed;
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  right: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 4px;
+  border-radius: 28px;
+  /* The fill depends on the theme (--pill-fill); the glyphs stay solid. */
+  background: var(--pill-fill);
+  /* Frosted glass under the fill (the user's request), light enough to let the page show a
+     little. Where the browser lacks it, the fill alone stays. */
+  -webkit-backdrop-filter: blur(8px) saturate(160%);
+  backdrop-filter: blur(8px) saturate(160%);
+  box-shadow: var(--shadow-fab);
+  z-index: 3;
+}
+.floating-controls button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--accent-on);
+  border: 0;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+}
+/* Only where a real pointer hovers (the user's note, 2026-10-07: a circle stayed on Salva). On a
+   phone :hover sticks to the last button touched until the next touch elsewhere, so the round
+   tint read as a state of the button. */
+@media (hover: hover) {
+  .floating-controls button:hover {
+    background: color-mix(in srgb, var(--accent-on) 14%, transparent);
+  }
+}
+.floating-controls button:disabled {
+  cursor: default;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.check-position {
+  font-size: 14px;
+  font-weight: 400;
+  margin: 0 0 6px;
+}
+.test,
+.extra {
+  scroll-margin-top: var(--feedback-scroll-offset, 132px);
+}
+
+.archive {
+  background: var(--surface-archive);
+}
+footer {
+  padding-bottom: 90px;
+  font-size: 14px;
+}
+/* .dashboard p sets the muted color with a stronger selector. */
+.error,
+.dashboard .error {
+  color: var(--bad-text);
+}
+@media (max-width: 500px) {
+  .intro,
+  main,
+  footer {
+    padding: 22px 16px;
+  }
+  .card {
+    padding: 18px;
+  }
+  .dashboard {
+    padding: 10px 16px;
+  }
+  h3 {
+    font-size: 20px;
+  }
+  #counts {
+    font-size: 12px;
+    gap: 4px 12px;
+  }
+  .floating-controls {
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    right: 10px;
+  }
+}
+
+/* Responses stand out without changing the cards' dimensions. */
+.card.has-response {
+  background: var(--surface-response);
+  border-color: var(--border-response);
+  box-shadow: inset 0 0 0 1px var(--border-response);
+}
+.attachment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 72px;
+  position: relative;
+  cursor: pointer;
+  font-weight: 400;
+}
+/* File inputs stay reachable by keyboard and screen reader, out of sight. */
+.attachment input,
+.altro-attach input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.attachment-plus {
+  font-size: 36px;
+  font-weight: 500;
+  line-height: 1;
+  pointer-events: none;
+}
+.drop-active .attachment {
+  border-color: var(--accent);
+  background: var(--surface-drop);
+}
+
+.file-kind {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  padding: 18px;
+  text-align: center;
+}
+.zip-download {
+  display: block;
+  padding: 6px 0;
+}
+
+/* Only an explicit outcome carries its semantic color. */
+.card.has-response[data-outcome-kind="ok"] {
+  background: var(--surface-ok);
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.card.has-response[data-outcome-kind="warn"] {
+  background: var(--surface-warn);
+  border-color: var(--warn);
+  box-shadow: inset 0 0 0 1px var(--warn);
+}
+.card.has-response[data-outcome-kind="bad"] {
+  background: var(--surface-bad);
+  border-color: var(--bad);
+  box-shadow: inset 0 0 0 1px var(--bad);
+}
+
+/* The page has no footer since 2026-10-03: the room under the last card, which keeps it clear
+   of the floating pill, is the main column's own. */
+body[data-feedback] main {
+  padding-bottom: calc(260px + env(safe-area-inset-bottom));
+}
+
+/* Row under the field: reset (etichette) on the left, format tools bottom-right. */
+.format-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  margin: 8px 0 0;
+}
+.format-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: max-content;
+  max-width: 100%;
+  /* Outside the field, anchored to the bottom-right of the field block. */
+  margin: 0 0 0 auto;
+}
+.format-actions > .label-reset,
+.format-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 10px;
+}
+/* Every format glyph keeps its 24px: in Altro on a phone a key is 38px wide, and with its
+   10px of padding a shrinkable icon came out 16px wide (the user's screenshot, 2026-10-05).
+   Bold alone had this before, which is why it was the only one at the right size. */
+.format-toolbar svg,
+.format-actions > .label-reset svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  fill: currentColor;
+}
+.format-actions > .label-reset svg {
+  fill: none;
+}
+/* Pressed state must beat the in-frame surface fill, or the icon stays
+   accent-on (near-black in dark, white in light) on the field background. */
+.formatted-field > .format-actions .format-toolbar button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-on);
+  border-color: var(--accent);
+}
+.formatted-field > .format-actions .format-toolbar button[aria-pressed="true"] svg {
+  fill: currentColor;
+}
+.rich-editor {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 200px;
+  height: 200px;
+  resize: vertical;
+  overflow: auto;
+  border: 1px solid var(--border-field);
+  border-radius: 8px;
+  padding: 10px;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--surface);
+  color: var(--ink-strong);
+}
+.extra .rich-editor {
+  min-height: 254px;
+  height: 254px;
+}
+.rich-editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--placeholder);
+  pointer-events: none;
+}
+/* No coloured ring on the field being written in (the user's request, 2026-10-04): the caret
+   already says where the text goes. Buttons and links keep theirs. */
+.rich-editor:focus-visible,
+input:not([type="checkbox"]):not([type="file"]):focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+.rich-editor[aria-disabled="true"] {
+  opacity: 0.55;
+}
+
+/* --- Feedback UX 3.38: strip, Altro overlay, editing-mobile --- */
+.dash-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 832px;
+  margin: 0 auto;
+}
+.dash-row #counts {
+  flex: 1;
+  min-width: 0;
+}
+.count-ratio {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  align-self: center;
+  margin-right: 4px;
+}
+.count-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.count-chip > span {
+  min-width: 1.25ch;
+  text-align: center;
+}
+.count-icon {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+.count-chip-ok { color: var(--chip-ok); }
+.count-chip-warn { color: var(--chip-warn); }
+.count-chip-bad { color: var(--chip-bad); }
+
+.rich-editor code,
+.card.test p code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.92em;
+  background: var(--surface-code);
+  border-radius: 4px;
+  padding: 0.05em 0.35em;
+}
+
+/* Mobile Altro overlay (long-press on floating ⇥); same notes field as bottom Altro */
+/* While it is open the page under it stays still (the user's request): a drag on the
+   overlay must not scroll it, nor chain to it from the panel. */
+html:has(body.altro-overlay-open),
+body.altro-overlay-open {
+  overflow: hidden;
+}
+.altro-overlay,
+.altro-overlay-panel {
+  overscroll-behavior: contain;
+}
+.altro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: var(--scrim);
+  display: flex;
+  justify-content: stretch;
+  align-items: stretch;
+}
+.altro-overlay-panel {
+  flex: 1;
+  background: var(--bg);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  /* The field starts at the top, with no title and no room above it (the user's request,
+     2026-10-06: *il titolo e lo spazio vuoto sono uno spreco*). Chiudi is in the row of keys. */
+  padding: 0 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  overflow: auto;
+}
+.altro-overlay-body {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+/* With the user's tall keyboard about 368px stay visible, and since 2026-10-06 the field and
+   both rows of keys fit in them: the rows are 2px lower than before and the field 4px taller
+   (his request). feedback-format.js moves the editor out of the body, so the rule names the
+   panel. The focus ring is off here: the field is the whole overlay. */
+.altro-overlay-panel textarea,
+.altro-overlay-panel .rich-editor {
+  height: 269px;
+  min-height: 269px;
+}
+.altro-overlay-panel textarea:focus-visible,
+.altro-overlay-panel .rich-editor:focus-visible {
+  outline: none;
+}
+
+/* Altro: real side column on desktop; in-flow before PP on mobile */
+.feedback-columns {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 24px 28px;
+}
+/* Undo main's horizontal padding for the columns wrapper; keep vertical via sections */
+main {
+  max-width: none;
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: 28px;
+  padding-bottom: 28px;
+}
+main > .feedback-columns {
+  padding-top: 0;
+}
+.feedback-primary > section:not(.card) {
+  max-width: none;
+}
+.feedback-primary > section > h2,
+.feedback-primary > section > p,
+.feedback-primary > section > #tests {
+  max-width: 832px;
+}
+
+#extra-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* Page-bottom Altro only: drop the heading's default bottom margin and the
+   label's top margin so the field sits on the section gap, not a double gap.
+   The overlay heading has its own rule and is not this card. */
+#extra-section > h2 {
+  margin-bottom: 0;
+  color: var(--muted);
+}
+#extra-section .altro-notes-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 0;
+}
+/* Dashed + fills the row left of the format tools (page Altro and overlay). */
+.altro-format-cluster {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  width: 100%;
+  margin-left: 0;
+  max-width: 100%;
+  min-width: 0;
+}
+.altro-format-cluster > .format-toolbar {
+  flex: 0 0 auto;
+  width: max-content;
+  margin-left: 0;
+  min-width: 0;
+}
+/* The dashed + of Altro and the one moved onto a proof card's format row. */
+.altro-attach,
+.altro-format-cluster > .attachment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  width: auto;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 2px dashed var(--border-strong);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-strong);
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  position: relative;
+}
+.altro-attach-mark,
+.altro-format-cluster > .attachment .attachment-plus {
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 1;
+  pointer-events: none;
+}
+.altro-attach:focus-within,
+.altro-format-cluster > .attachment:focus-within {
+  outline: 3px solid var(--accent-focus);
+  outline-offset: 3px;
+}
+.drop-active .altro-attach,
+.drop-active .altro-format-cluster > .attachment {
+  border-color: var(--accent);
+  background: var(--surface-drop);
+}
+
+/* Altro: the attach button and the four format buttons split the row exactly in half. */
+.altro-halves {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.altro-halves > .format-toolbar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: auto;
+}
+.altro-halves > .format-toolbar button {
+  width: auto;
+}
+/* The six Consegna commands, as icons, each a sixth of the row under the format row. */
+.altro-commands {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+.altro-commands > .command {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+}
+.altro-commands svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.altro-overlay-panel > .altro-commands {
+  margin-top: 8px;
+}
+#action-message:empty {
+  display: none;
+}
+
+/* The download row (the user's request, 2026-10-06): Scarica e installa with its sober
+   checkbox, and on the right the Mac with a small modifica. On a phone the Mac goes to the line
+   below. */
+.intro-actions {
+  justify-content: space-between;
+  align-items: baseline;
+  row-gap: 6px;
+}
+.intro-install,
+.devices {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 14px;
+  row-gap: 4px;
+}
+.installed-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 400;
+  margin-top: 0;
+  cursor: pointer;
+}
+.installed-check input {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.devices {
+  font-size: 14px;
+}
+.device-shown {
+  white-space: nowrap;
+}
+.device-row {
+  display: inline-flex;
+  align-items: center;
+}
+/* The per-row edit icons exist on a phone only; on a desktop the small modifica stays. */
+button.device-edit {
+  display: none;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  /* The buttons' rounded corners clipped the drawing, which fills its canvas sideways. */
+  border-radius: 0;
+  background: currentColor;
+  -webkit-mask: var(--edit-icon) center / contain no-repeat;
+  mask: var(--edit-icon) center / contain no-repeat;
+  cursor: pointer;
+}
+/* The Mac's icon is AIV's tablet drawing, copied as it is (a screen with a pencil). --ink-gap:
+   how much of its 800-unit canvas it leaves empty on the right, measured on the file (ink to
+   790.52): the icon moves by that much, so its ink, and not its canvas, reaches the vertical of
+   the GitHub chip's right side. */
+.device-edit-mac {
+  --edit-icon: url("assets/changeMac.svg");
+  --ink-gap: 0.0118;
+}
+/* On a phone (the user's mockup, 2026-10-06): no line of its own for modifica. The device row
+   is half transparent and fades out towards the right, and ends with its own icon. */
+@media (max-width: 720px) {
+  .devices {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    /* A flex item is as wide as its longest line unless told otherwise: without these the
+       rows ran off the screen instead of fading before their icons. */
+    flex: 1 1 100%;
+    min-width: 0;
+    row-gap: 2px;
+  }
+  button.devices-edit {
+    display: none;
+  }
+  /* A grid and not a flex row: with a long line a flex row grew past the screen. */
+  /* The user's request of 2026-10-06: smaller icons, coloured about #d4d8d2 over the page (the
+     muted ink at 22.5%: 0.222, 0.221 and 0.228 per channel), and the text a little more visible. */
+  .device-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--edit-size);
+    align-items: baseline;
+    gap: 8px;
+    color: var(--muted);
+    --edit-size: 20px;
+  }
+  .device-row .device-shown {
+    opacity: 0.7;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 64px), transparent calc(100% - 8px));
+    mask-image: linear-gradient(to right, #000 calc(100% - 64px), transparent calc(100% - 8px));
+  }
+  /* The icon's bottom sits on the text's baseline (grid baseline alignment of an empty box), then
+     it moves down by half its side less half a capital, so its centre is a capital's centre. */
+  button.device-edit {
+    display: block;
+    width: var(--edit-size);
+    height: var(--edit-size);
+    font: inherit;
+    /* The row's muted ink: a button takes the page's full ink otherwise, and came out darker. */
+    color: inherit;
+    opacity: 0.225;
+    transform: translate(calc(var(--ink-gap) * var(--edit-size)), calc(var(--edit-size) / 2 - 0.5cap));
+  }
+}
+button.devices-edit {
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--link);
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+button.devices-edit:hover {
+  background: none;
+}
+button.devices-edit:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+.devices-dialog {
+  width: min(440px, calc(100vw - 32px));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.devices-dialog::backdrop {
+  background: var(--scrim);
+}
+.devices-dialog h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+.devices-dialog label {
+  display: block;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+.devices-dialog input {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+}
+.devices-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+/* Keep the GitHub chip on the title row at every viewport width. */
+@media (max-width: 640px) {
+  .intro-title-row {
+    column-gap: 8px;
+  }
+  .intro-title-row h1 {
+    font-size: clamp(22px, 7vw, 40px);
+  }
+  .cloud-account {
+    width: max-content;
+    max-width: none;
+    justify-content: flex-start;
+    padding: 4px 8px;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .cloud-account-logo {
+    width: 18px;
+    height: 18px;
+    flex-basis: 18px;
+  }
+  .cloud-account-user {
+    font-size: 13px;
+  }
+  a.cloud-account-action,
+  button.cloud-account-action {
+    height: 20px;
+    min-height: 20px;
+    max-height: 20px;
+    padding: 0 8px;
+  }
+  /* Connected only: the mark 5px from the outline all round, Esci 4px all round (the
+     user's optical centring, as on desktop). */
+  .cloud-account.is-connected {
+    padding-left: 5px;
+    padding-right: 4px;
+  }
+  /* The service line (login, cloud, sync) stays discreet: smaller, lighter, centred. An
+     error keeps full strength. */
+  #saved {
+    font-size: 12px;
+    text-align: center;
+  }
+  #saved:not(.error) {
+    opacity: 0.7;
+  }
+  /* Connected, only the GitHub mark and Esci. */
+  .cloud-account.is-connected .cloud-account-user {
+    display: none;
+  }
+}
+
+/* Desktop: Altro sticky side column; shell shared with strips + intro */
+@media (min-width: 1100px) {
+  body {
+    /* Altro ~50% wider than the previous 300px cap; shell grows with it. */
+    --altro-rail: minmax(390px, 450px);
+    --df-shell: 1350px;
+  }
+  .intro,
+  .feedback-columns,
+  footer {
+    max-width: var(--df-shell);
+    margin-left: auto;
+    margin-right: auto;
+  }
+  /* The counts live at the top of Altro, which is always there, and nothing is fixed above the
+     page (the user's request, 2026-10-06): feedback-nav.js moves the strip into Altro. */
+  #extra-section .dashboard {
+    position: static;
+    margin: 0 0 18px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    backdrop-filter: none;
+    box-shadow: none;
+    z-index: auto;
+  }
+  .intro,
+  footer {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  /* 2px more on both sides: the title block moves right and the chip and the devices move left,
+     onto the cards' edges as he measured them (the user's request, 2026-10-06). */
+  .intro {
+    padding-left: 26px;
+    padding-right: 26px;
+    /* With the strip inside Altro the cards follow the devices' row at 30px, as in his
+       screenshot: 12 here, none above the page, and the cards' own 18. */
+    padding-bottom: 12px;
+  }
+  body[data-feedback] main {
+    padding-top: 0;
+  }
+  .dashboard > div,
+  .dashboard > p,
+  .dashboard > progress,
+  .dash-row {
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+  }
+  /* No gap between the rows: Prossimi passi follows the last card at the cards' own 18px,
+     and the bottom padding is what feedback-ui.js measures (--df-tail) so that, at the end
+     of the page, Prossimi passi ends where Altro does (the user's request, 2026-10-04). */
+  .feedback-columns {
+    display: grid;
+    grid-template-columns: var(--altro-rail) minmax(0, 1fr);
+    gap: 0 24px;
+    align-items: start;
+    padding: 0 24px var(--df-tail, 28px);
+  }
+  #extra-section {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    position: sticky;
+    top: 18px;
+    align-self: start;
+    max-height: calc(100vh - 36px);
+    overflow: auto;
+    margin: 18px 0;
+    z-index: 1;
+  }
+  .feedback-primary {
+    grid-column: 2;
+    min-width: 0;
+  }
+  #extra-section .rich-editor {
+    min-height: 280px;
+    height: 40vh;
+    max-height: 50vh;
+  }
+  /* A wheel or a touchpad over Altro never scrolls the page (the user's request, 2026-10-06):
+     here at the end of a scroll, and in feedback-ui.js where Altro has nothing to scroll.
+     ⚠️ On Altro only, not on its field: on the field it stopped the scroll at the end of the
+     text too, so with attachments below Altro could not be scrolled to them (his note,
+     2026-10-06, measured in Chromium: field at its end, Altro 292px from its end, stuck). */
+  #extra-section {
+    overscroll-behavior: contain;
+  }
+  /* Nothing to scroll, within a pixel: no scroll bar either (feedback-ui.js sets the class). */
+  #extra-section.fits {
+    overflow-y: hidden;
+  }
+  .feedback-columns > .next-steps {
+    grid-column: 2;
+    margin-top: 0;
+  }
+  /* No outline appears on an element when a key is pressed (the user's request, 2026-10-06,
+     desktop only): the page is used with the mouse, and a ring that comes and goes with the
+     keyboard read as a defect. ⚠️ `html` in front, or `button:focus-visible` above would win. */
+  html :focus-visible,
+  .file-button:focus-within,
+  .altro-attach:focus-within,
+  .altro-format-cluster > .attachment:focus-within,
+  #labels .label-id:focus-visible {
+    outline: none;
+  }
+  /* The three outcomes on one row under their title (the user's request, 2026-10-06): at rest
+     each is outlined in its own color, chosen it is filled, and the card is colored as before. */
+  .card.test fieldset {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .card.test fieldset > legend {
+    margin-bottom: 10px;
+  }
+  .card.test .outcome {
+    margin: 0;
+    border-width: 2px;
+  }
+  .card.test .outcome[data-kind="ok"] {
+    border-color: var(--accent);
+  }
+  .card.test .outcome[data-kind="warn"] {
+    border-color: var(--warn);
+  }
+  .card.test .outcome[data-kind="bad"] {
+    border-color: var(--bad);
+  }
+}
+
+
+/* --- Domande: the questions taken from the brief, after the tests and before the labels (the
+   user's rule of 2026-10-08). No number and no outcome: the options are stacked toggles, the
+   advised one carries a small tag, and Rimando is set apart as the way to leave it open. --- */
+#questions .question {
+  margin-top: 12px;
+  padding-top: 8px;
+}
+#questions .question-id {
+  margin: 0 0 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--muted);
+  opacity: 0.4;
+}
+#questions .question h3 {
+  margin-top: 0;
+}
+#questions .choices {
+  display: grid;
+  gap: 10px;
+}
+#questions .choice {
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+#questions .choice .advised {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border: 1px solid currentColor;
+  border-radius: 99px;
+  font-size: 13px;
+  vertical-align: 1px;
+  opacity: 0.8;
+}
+#questions .choice.postpone {
+  width: fit-content;
+  margin-top: 4px;
+}
+#questions .advice {
+  color: var(--muted);
+}
+
+/* --- Etichette testuali --- */
+#labels .label-card {
+  position: relative;
+  margin-top: 12px;
+  /* Id sits nearer the top edge than the title. Icon stays in this band. */
+  padding-top: 8px;
+}
+#labels .label-id {
+  appearance: none;
+  -webkit-appearance: none;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 0 14px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  min-height: 0;
+  min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: lowercase;
+  text-align: left;
+  color: var(--muted);
+  opacity: 0.4;
+  cursor: pointer;
+}
+#labels .label-id:hover,
+#labels .label-id:focus-visible {
+  background: transparent;
+  color: var(--muted);
+}
+#labels .label-card h3 {
+  margin-top: 0;
+}
+.label-card h3 .label-modified {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-left: 8px;
+  border-radius: 50%;
+  background: var(--warn);
+  vertical-align: 2px;
+}
+/* Top-right of the card border, same color as that border. Not inside the field. */
+.label-a11y {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 22px;
+  height: 22px;
+  color: var(--border);
+  pointer-events: none;
+}
+.label-card:has(.label-a11y) .label-id {
+  /* Clear the 22px mark at top: 14px; right: 14px. */
+  padding-right: 28px;
+  max-width: calc(100% - 28px);
+}
+/* Mobile: the strip shows only the centered counts; Altro flows before Prossimi passi and
+   opens as an overlay on a long press of ⇥ or of Salva. This block comes last so it
+   overrides the base rules. */
+@media (max-width: 720px) {
+  .dashboard {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .dash-row {
+    max-width: none;
+    justify-content: center;
+  }
+  .dash-row #counts {
+    flex: 0 1 auto;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    gap: 22px 32px;
+    font-size: 14px;
+  }
+  .count-chip {
+    gap: 6px;
+    min-width: 3.5rem;
+    justify-content: center;
+  }
+  .count-chip > span {
+    min-width: 2ch;
+  }
+  body.editing-mobile .floating-controls button:not(#floating-save) {
+    display: none;
+  }
+  body.editing-mobile .floating-controls {
+    bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+  .feedback-columns {
+    display: flex;
+    flex-direction: column;
+    padding: 0 16px 20px;
+  }
+  .feedback-primary {
+    order: 1;
+  }
+  #extra-section {
+    order: 2;
+  }
+  .feedback-columns > .next-steps {
+    order: 3;
+  }
+}
+
+/* On mobile the intro has no summary line: Scarica Aomidori follows the title (the user's
+   request, 2026-10-04). */
+@media (max-width: 720px) {
+  .intro .intro-summary {
+    display: none;
+  }
+}
+
+/* A short notice that rises at the bottom of the page after Invia (the user's request,
+   2026-10-04: there was no visible answer to the tap). The same words also go to
+   #action-message, which screen readers hear. */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  z-index: 30;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: var(--ink-strong);
+  color: var(--bg);
+  font-size: 15px;
+  line-height: 1.4;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  transform: translate(-50%, 12px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+.toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.toast.is-error {
+  background: var(--bad-text);
+}
+
+/* Mobile Altro: two rows of six keys, both always visible and spread over the whole width (the
+   user's request, 2026-10-06), in the order written below. Until
+   then one row with two states and a switch key in front (the mockup Altro_mobile). */
+.altro-overlay-panel .format-actions {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  align-items: stretch;
+}
+.altro-overlay-panel .format-actions > .altro-format-cluster,
+.altro-overlay-panel .format-actions > .altro-format-cluster > .format-toolbar,
+.altro-overlay-panel .format-actions > .altro-commands {
+  display: contents;
+}
+/* The order of the keys is his, 2026-10-06: Invia, Link, Codice, Grassetto, Corsivo, Allega;
+   then Azzera tutto, Copia, Esporta, Importa, Salva, Chiudi. The DOM keeps the page's order. */
+.altro-overlay-panel .format-actions [data-command="send"] { order: 1; }
+.altro-overlay-panel .format-actions [data-format="link"] { order: 2; }
+.altro-overlay-panel .format-actions [data-format="code"] { order: 3; }
+.altro-overlay-panel .format-actions [data-format="bold"] { order: 4; }
+.altro-overlay-panel .format-actions [data-format="italic"] { order: 5; }
+.altro-overlay-panel .format-actions .altro-attach { order: 6; }
+.altro-overlay-panel .format-actions [data-command="reset"] { order: 7; }
+.altro-overlay-panel .format-actions [data-command="copy"] { order: 8; }
+.altro-overlay-panel .format-actions [data-command="export"] { order: 9; }
+.altro-overlay-panel .format-actions [data-command="import"] { order: 10; }
+.altro-overlay-panel .format-actions [data-command="save"] { order: 11; }
+.altro-overlay-panel .format-actions .altro-row-close { order: 12; }
+.altro-overlay-panel .format-actions button,
+.altro-overlay-panel .format-actions .command,
+.altro-overlay-panel .format-actions .altro-attach {
+  width: auto;
+  min-width: 0;
+  height: 42px;
+  min-height: 42px;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.altro-overlay-panel .format-actions .altro-row-key {
+  background: var(--surface-hover);
+}
+.altro-overlay-panel .format-actions .altro-row-key svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}

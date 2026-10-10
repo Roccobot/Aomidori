@@ -1,0 +1,35 @@
+import {PGlite} from '@electric-sql/pglite';
+import {readFile} from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const db=new PGlite();
+await db.exec('create role anon; create role authenticated; create role service_role bypassrls; create schema storage; create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);');
+const sql=await readFile(process.argv[2] || new URL('./supabase-setup.sql',import.meta.url),'utf8');
+await db.exec(sql);
+assert.equal((await db.query("select count(*)::int as count from pg_tables where tablename in ('aomidori_feedback_drafts','aomidori_feedback_history') and rowsecurity")).rows[0].count,2);
+for(const role of ['anon','authenticated']) {
+  assert.equal((await db.query("select has_function_privilege($1,'public.aomidori_feedback_save(text,text,jsonb)','EXECUTE') as allowed",[role])).rows[0].allowed,false);
+  await db.exec('set role '+role);
+  await assert.rejects(db.query('select * from public.aomidori_feedback_drafts'),error=>error.code==='42501');
+  await assert.rejects(db.query('select * from public.aomidori_feedback_history'),error=>error.code==='42501');
+  await assert.rejects(db.query("select public.aomidori_feedback_save('10722164','empty','{}')"),error=>error.code==='42501');
+  await db.exec('reset role');
+}
+await db.exec('set role service_role');
+const draft={schema:1,project:'Aomidori',notes:'Riscontro da conservare',entries:{},decisions:{},extra:{images:[]}};
+const save=async(revision,value=draft)=>(await db.query('select public.aomidori_feedback_save($1,$2,$3) as saved',['10722164',revision,JSON.stringify(value)])).rows[0].saved;
+const first=await save('empty');assert(first.revision);
+assert.equal(await save('empty'),null);
+const second=await save(first.revision,{...draft,notes:'Riscontro aggiornato'});assert(second.revision!==first.revision);
+assert.equal(await save(first.revision),null);
+assert.equal(await save(null),null);
+await assert.rejects(save(second.revision,{...draft,schema:2}),error=>error.code==='22023');
+const history=(await db.query('select draft from public.aomidori_feedback_history order by saved_at')).rows;
+assert.equal(history.length,2);assert.deepEqual(history[0].draft,draft);
+assert.equal((await db.query('select draft from public.aomidori_feedback_drafts')).rows[0].draft.notes,'Riscontro aggiornato');
+await db.exec('reset role');await db.exec(sql);
+assert.equal((await db.query('select count(*)::int as count from public.aomidori_feedback_history')).rows[0].count,2);
+const bucket=(await db.query('select * from storage.buckets')).rows[0];
+assert.equal(bucket.public,false);assert.equal(bucket.file_size_limit,8388608);
+assert.deepEqual(bucket.allowed_mime_types,['application/octet-stream']);
+await db.close();
+console.log('SQL: accesso privato, privilegi, salvataggio condizionale, revisioni conservate, riesecuzione senza perdita e bucket privato verificati in PostgreSQL.');

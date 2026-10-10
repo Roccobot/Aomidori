@@ -1,0 +1,57 @@
+name: Leggi feedback inviato
+run-name: Feedback richiesto ${{ inputs.request_id }}
+on:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: Identificativo della richiesta esplicita
+        required: true
+      public_key:
+        description: Chiave pubblica temporanea in base64
+        required: true
+      requested_at:
+        description: Data UTC della richiesta esplicita
+        required: true
+      version:
+        description: Versione del giro, vuota per l'ultimo inviato
+        required: false
+      verify_only:
+        description: Prova con dati sintetici, senza leggere il feedback
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci --prefix cloud/feedback
+      - run: node cloud/feedback/feedback-transfer-test.mjs
+  read:
+    needs: check
+    if: github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Prepara soltanto il giro inviato e cifra il trasferimento
+        env:
+          FEEDBACK_RECIPIENT_KEY: ${{ inputs.public_key }}
+          FEEDBACK_REQUEST_ID: ${{ inputs.request_id }}
+          FEEDBACK_REQUESTED_AT: ${{ inputs.requested_at }}
+          FEEDBACK_VERSION: ${{ inputs.version }}
+          FEEDBACK_VERIFY_ONLY: ${{ inputs.verify_only }}
+          FEEDBACK_SUPABASE_SECRET_KEY: ${{ secrets.FEEDBACK_SUPABASE_SECRET_KEY }}
+        run: node cloud/feedback/feedback-export.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: feedback-envelope
+          path: /tmp/aomidori-feedback-export/feedback-envelope.json
+          if-no-files-found: error
+          retention-days: 1

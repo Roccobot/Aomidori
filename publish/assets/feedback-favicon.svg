@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="32" height="32" viewBox="0 0 32 32">
+  <title>Feedback AIV</title>
+  <defs>
+    <mask id="notepad" maskUnits="userSpaceOnUse" x="0" y="0" width="32" height="32">
+      <rect x="3" y="4.5" width="26" height="26" rx="5" fill="white"/>
+      <rect x="10" y="1.5" width="12" height="9" rx="3" fill="white"/>
+      <rect x="13" y="4.5" width="6" height="3" rx="1" fill="black"/>
+      <g fill="black" transform="translate(6.9 9.7) scale(.26) translate(-19 -19)">
+        <path d="M30,19a10,10 0 1,0 0,20a10,10 0 1,0 0,-20z"/>
+        <path fill-rule="evenodd" d="M58.1311,27.1833L88.1311,71.1833A5,5 0 0 1 84,79L24,79A5,5 0 0 1 19.8689,71.1833L49.8689,27.1833A5,5 0 0 1 58.1311,27.1833ZM56.0424,49.5583L68.0424,66.5583A2.5,2.5 0 0 1 66,70.5L42,70.5A2.5,2.5 0 0 1 39.9576,66.5583L51.9576,49.5583A2.5,2.5 0 0 1 56.0424,49.5583Z"/>
+      </g>
+    </mask>
+  </defs>
+  <rect width="32" height="32" fill="#43B59E" mask="url(#notepad)"/>
+</svg>

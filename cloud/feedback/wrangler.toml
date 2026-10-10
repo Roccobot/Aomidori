@@ -1,0 +1,15 @@
+name = "aomidori-feedback"
+main = "worker.mjs"
+compatibility_date = "2025-09-01"
+workers_dev = true
+preview_urls = false
+
+[assets]
+directory = "../../publish"
+binding = "ASSETS"
+run_worker_first = true
+
+[vars]
+# Public GitHub ID; it remains valid if the account is renamed.
+OWNER_ID = "10722164"
+SUPABASE_URL = "https://ueahkfpelwpznpxvopsx.supabase.co"
