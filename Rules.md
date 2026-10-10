@@ -114,6 +114,16 @@ lì. L'elenco completo è nel `README.md`: qui non si ricopia.
 
 **Decisioni di Rocco** (non si cambiano senza chiederglielo):
 - `⌘T` apre una tab nuova vuota, come in Safari e nel Finder.
+- `⌘;` apre le Impostazioni (sua scelta), con `⌘,` nascosto come alternativa, come nelle altre
+  app Mac.
+- **I link in schede nuove** (sue richieste a Techne, nella 0.90): con l'opzione *Apri i link in
+  nuove schede* spenta, che è il predefinito, `⇧`-clic apre il link in una scheda nuova davanti
+  e `⌥`-clic dietro; accesa, ogni clic apre una scheda nuova (`⌥` sempre dietro), accanto a
+  quella d'origine o in fondo se *Apri ogni link accanto alla scheda di origine* è spenta. Ogni
+  scheda è una vista sua del libro, con posto e cronologia propri; i segnalibri sono in comune.
+  I link verso il web vanno sempre nel browser. ⚠️ I tasti si leggono anche dalla pagina:
+  WebKit li riporta solo per i clic fatti col mouse, quindi senza la pagina un clic simulato
+  (le prove) non li avrebbe.
 - `⇧⌘T` apre la scelta del font personalizzato; il pannello font di sistema si apre dal suo
   pulsante e dal menu Stile.
 - `⌘Y` passa dal font del libro o dello stile al font personalizzato e viceversa (in tutte le

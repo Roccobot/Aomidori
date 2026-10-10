@@ -6,7 +6,16 @@ and later), in the spirit of Murasaki: each chapter is one web page that scrolls
 
 Download: <https://roccobot.github.io/Aomidori/> (the latest release, from `publish/`).
 
-## Features (v0.80)
+## Features (v0.90)
+
+- Settings (`⌘;`, also `⌘,`), two tabs. Features: "Open links in new tabs" (off by default)
+  and, under it, "Open each link next to its source tab" (on). With the first off, `⇧`-click
+  opens a link of the book in a new tab in front and `⌥`-click in a new tab behind; with it on,
+  every click opens a new tab (`⌥` still behind), next to its source or at the end of the tab
+  bar. Each tab is a view of its own of the book, with its place and history; bookmarks are
+  shared, and the book's saved place is the one last moved. Web links always go to the browser.
+  The keys are read by the page as well as from WebKit, which reports them only for clicks made
+  with the mouse. Updates: Sparkle's automatic check, and Check Now.
 
 - Comics: a CBZ (a ZIP of pictures) or a CBR (a RAR) opens like a one-chapter book, its pages
   one below the other as wide as the text column, in the Finder's order (`2` before `10`,
@@ -304,6 +313,8 @@ Menu names are given in English; in Italian they are Archivio, Vista, Vai, Stile
 | At a chapter's end / start: offer the next / previous chapter | `Space`, `↓`, `PgDn` / `⇧Space`, `↑`, `PgUp`, or scroll | (toast) |
 | Go there | click the toast, or the same key or scroll with the pointer on it | (toast) |
 | Back / forward (links followed, exact place) | `⌘←` / `⌘→` (also `⌘[` / `⌘]`; not while typing) | Go |
+| A link in a new tab, in front / behind | `⇧`-click / `⌥`-click (every click, with the setting on) | (click) |
+| Settings | `⌘;` (also `⌘,`) | Aomidori |
 | Larger / smaller text | `+` / `-`, `⌘+` / `⌘-` | View |
 | Text at 100% of the style | `0`, `⌘0` | View |
 | Light ↔ dark (back to following macOS when it matches) | `⇧⌘N`, `T` while reading (and toolbar) | View |
