@@ -122,6 +122,12 @@ lì. L'elenco completo è nel `README.md`: qui non si ricopia.
   `⌘J`, la voce del menu Stile e il pulsante nella barra **passano al giustificato e
   ritornano**, per tutte le finestre, e la scelta è ricordata. Centrati e allineati a destra non
   si toccano (sue scelte del 2026-10-10: P1, e *è un commutatore sinistra ↔ giustificato*).
+- **La sillabazione segue l'allineamento**, sopra qualunque CSS: spenta a bandiera, dove ogni
+  trattino sporge dal margine irregolare (restano i trattini morbidi del libro), accesa col
+  giustificato, dove serve a tenere uniformi gli spazi (sua scelta A1 del 2026-10-10, nella
+  0.71, e sua precisazione: col giustificato *può andare (e in un certo senso deve)*). ⚠️ La
+  0.70 non spezzava più parole della 0.62: lo stesso capitolo in WebKit ne spezza tante
+  giustificato quante a bandiera, e a bandiera si notano di più.
 
 ## 🖌️ Icona e decorazione: sono di Graphe
 

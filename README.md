@@ -6,7 +6,7 @@ and later), in the spirit of Murasaki: each chapter is one web page that scrolls
 
 Download: <https://roccobot.github.io/Aomidori/> (the latest release, from `publish/`).
 
-## Features (v0.70)
+## Features (v0.71)
 
 - Comics: a CBZ (a ZIP of pictures) opens like a one-chapter book, its pages one below the
   other as wide as the text column, in the Finder's order (`2` before `10`, folders included,
@@ -15,8 +15,9 @@ Download: <https://roccobot.github.io/Aomidori/> (the latest release, from `publ
   on the window or `⌘O` (type `cx.c3.cbz-archive`, the identifier comic apps share). CBR comes
   later. Search finds nothing in pictures.
 - Running text is flush left over any CSS, the book's and the user style's; `⌘J` (Style menu,
-  toolbar) switches to justified and back, for every window, and is remembered. Centred and
-  right-aligned text keeps its alignment.
+  toolbar) switches to justified and back, for every window, and is remembered. Hyphenation
+  follows: off when flush left (soft hyphens in the book stay), on when justified. Centred and
+  right-aligned text keeps its alignment and its hyphenation.
 
 - Automatic updates with Sparkle 2 (from 0.52): *Check for Updates…* in the app menu, and a
   daily check once allowed (Sparkle asks on the second launch). See [Updates](#updates).
@@ -120,9 +121,9 @@ JavaScript is disabled.
 4. `#aomidori-palette`: Night colors, only when the active CSS has no `prefers-color-scheme`;
 5. `#aomidori-scale`: the text size (below);
 6. `#aomidori-font`: the custom font, when on;
-7. `#aomidori-align`: running text flush left, or justified with `⌘J`; the elements are
-   marked from the cascade read without it (left, start or justified: centred and right
-   aligned text is not marked).
+7. `#aomidori-align`: running text flush left without automatic hyphenation, or justified and
+   hyphenated with `⌘J`; the elements are marked from the cascade read without it (left, start
+   or justified: centred and right aligned text is not marked).
 
 The base sheet declares the cascade layer `aomidori` before anything else. `!important` rules
 in the first declared layer beat every other author rule, whatever its specificity or order
