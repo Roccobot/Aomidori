@@ -318,6 +318,11 @@ miglioria al sistema fatta in uno dei due progetti va riportata a mano nell'altr
   supporto usano la favicon `assets/feedback-favicon.svg` (il blocco note col glifo), colore
   `#43B59E`, e alternativa PNG. ⚠️ La paginetta di download `index.html` **non** la usa: ha il
   glifo nudo dell'app, e non cambia (segnalazione dell'utente, 2026-10-03).
+  - **In Aomidori** (sua richiesta, 2026-10-10) il blocco note è quello di AIV, e il glifo
+    intagliato è il libro di Graphe, con le stesse forme della favicon del sito
+    (`assets/favicon.svg`: le quattro colonne disegnate per le misure piccole), nello spazio che
+    occupa il glifo di AIV; le colonne restano nel colore del blocco note. Il PNG da 32 px è
+    reso da Chromium dallo stesso SVG, su fondo trasparente.
 - `Azzera tutto` richiede conferma e riguarda la bozza su tutti i dispositivi.
   Un comando disabilitato non indica un caricamento: cursore normale e aspetto coerente,
   anche per il selettore di `Importa`.
