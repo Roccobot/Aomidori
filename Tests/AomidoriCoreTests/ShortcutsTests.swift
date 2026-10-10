@@ -22,10 +22,11 @@ struct ShortcutsTests {
         #expect(!Shortcuts.all.contains { $0.shortcut == KeyShortcut("f", [.command, .shift]) }, "⇧⌘F is free")
     }
 
-    @Test func commandSIsSaveInThePlaygroundAndFreeInTheReader() {
+    @Test func commandSIsSplitInTheReaderAndSaveInThePlayground() {
         let uses = Shortcuts.all.filter { $0.shortcut == KeyShortcut("s") }
-        #expect(uses.map(\.name) == ["playgroundSave"], "⌘S is kept free in the reader for Split")
-        #expect(Shortcuts.scope(.playgroundSave) == .playground)
+        #expect(Set(uses.map(\.name)) == ["playgroundSave", "split"])
+        #expect(Shortcuts.scope(.playgroundSave) == .playground && Shortcuts.scope(.split) == .outsidePlayground)
+        #expect(Shortcuts.conflicts[KeyShortcut("s")] == nil)
         #expect(Shortcuts.scope(.customFont) == .everywhere)
         #expect(Shortcuts.all.filter { $0.shortcut == KeyShortcut("y") }.map(\.name) == ["customFont"])
     }

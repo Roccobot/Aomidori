@@ -10,6 +10,7 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
     private enum ToolbarID {
         static let chapters = NSToolbarItem.Identifier("Aomidori.chapters")
         static let info = NSToolbarItem.Identifier("Aomidori.info")
+        static let split = NSToolbarItem.Identifier("Aomidori.split")
     }
 
     let reader: ReaderViewController
@@ -19,6 +20,22 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
     private let sidebar: SidebarViewController
     private let splitViewController = NSSplitViewController()
     private let sidebarItem: NSSplitViewItem
+    private let readerItem: NSSplitViewItem
+    private var splitToolbarItem: NSToolbarItem?
+
+    // Split view: the right half shows another tab's reader (`splitGuest`, whose own window is
+    // hidden meanwhile), or the chooser when several tabs could go there.
+    private var splitItem: NSSplitViewItem?
+    private var splitGuest: ReaderWindowController?
+    /// The right half is a view made for the split (no other tab to show): it closes with it.
+    private var splitGuestIsOwned = false
+    private var chooser: SplitChooserViewController?
+    private var chooserTabs: [NSWindow] = []
+    /// Set while this window's reader is shown in another window's split.
+    private(set) weak var splitHost: ReaderWindowController?
+    /// The tabs beside this one when it went into a split, so it goes back to its place.
+    private weak var tabBefore: NSWindow?
+    private weak var tabAfter: NSWindow?
     private let picker = StylePicker()
     private let environment = ReaderEnvironment.shared
     private let globalItems = GlobalToolbarItems()
@@ -42,6 +59,7 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         )
         bookmarks.bookmarks = state.sortedBookmarks
         sidebarItem = NSSplitViewItem(sidebarWithViewController: sidebar)
+        readerItem = NSSplitViewItem(viewController: reader)
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 860, height: 980),
@@ -54,7 +72,7 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         sidebarItem.minimumThickness = 220
         sidebarItem.maximumThickness = 420
         splitViewController.addSplitViewItem(sidebarItem)
-        splitViewController.addSplitViewItem(NSSplitViewItem(viewController: reader))
+        splitViewController.addSplitViewItem(readerItem)
 
         window.contentViewController = splitViewController
         window.setContentSize(NSSize(width: 860, height: 980))
@@ -137,16 +155,190 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         updateToolbar()
     }
 
-    /// A link to open in another tab: a new view of this book, beside this tab.
+    /// A link to open in another tab: a new view of this book, beside this tab (beside the
+    /// split's window, when this reader is its right half).
     func reader(_ reader: ReaderViewController, openInNewTab opening: ReaderViewController.Opening, inBackground: Bool) {
-        (document as? BookDocument)?.openView(opening, besides: window, placement: environment.linkTabPlacement,
-                                              inBackground: inBackground)
+        (document as? BookDocument)?.openView(opening, besides: splitHost?.window ?? window,
+                                              placement: environment.linkTabPlacement, inBackground: inBackground)
     }
 
     private func bookStateDidChange(forBook key: String?) {
         guard key == reader.bookKey else { return }
         bookmarks.bookmarks = environment.books.state(forBook: reader.bookKey).sortedBookmarks
     }
+
+    // MARK: Split view
+
+    var isSplit: Bool { splitItem != nil }
+
+    /// `⌘S` and the toolbar button: this tab on the left (with the sidebar) and another on the
+    /// right; again, back to one, the other tab back in its place in the tab bar (Rocco's
+    /// requests). The only other tab goes straight in; with several, a numbered list chooses,
+    /// another view of this book preselected, else the tab to the right; with none, a second
+    /// view of this book at the same place.
+    @objc func toggleSplit(_ sender: Any?) {
+        if isSplit { endSplit() } else { beginSplit() }
+    }
+
+    private func beginSplit() {
+        guard let window, splitHost == nil, !isMinimal else { NSSound.beep(); return }
+        let tabWindows = window.tabbedWindows ?? [window]
+        let tabs = tabWindows.map { tab -> SplitChooser.Tab in
+            let other = tab.windowController as? ReaderWindowController
+            return SplitChooser.Tab(title: tab.title, isReader: other != nil,
+                                    isSameBook: other.map { $0.document === document } ?? false)
+        }
+        let model = SplitChooser(tabs: tabs, current: tabWindows.firstIndex(of: window) ?? 0)
+        switch model.outcome {
+        case .newViewOfCurrentBook:
+            Task { [weak self] in
+                guard let self else { return }
+                let place = await reader.currentPlace()
+                guard !isSplit, let document = document as? BookDocument,
+                      let guest = document.makeView(place.map { .place($0) } ?? .saved) else { return }
+                showInSplit(guest)
+                splitGuestIsOwned = true
+            }
+        case .tab(let index):
+            guard let guest = tabWindows[index].windowController as? ReaderWindowController else { return }
+            showInSplit(guest)
+        case .chooser:
+            showChooser(model.candidates.map { tabWindows[$0] }, preselected: model.preselected ?? 0)
+        }
+    }
+
+    private func showChooser(_ candidates: [NSWindow], preselected: Int) {
+        guard let window else { return }
+        chooserTabs = candidates
+        let chooser = SplitChooserViewController(titles: candidates.map(\.title), preselected: preselected)
+        chooser.onPick = { [weak self] row in self?.pickFromChooser(row) }
+        chooser.onCancel = { [weak self] in self?.endSplit() }
+        let item = NSSplitViewItem(viewController: chooser)
+        item.minimumThickness = 220
+        splitViewController.addSplitViewItem(item)
+        splitItem = item
+        self.chooser = chooser
+        equalizeHalves()
+        window.makeFirstResponder(chooser.tableView)
+        updateToolbar()
+    }
+
+    private func pickFromChooser(_ row: Int) {
+        guard chooserTabs.indices.contains(row),
+              let guest = chooserTabs[row].windowController as? ReaderWindowController, guest !== self else { return }
+        showInSplit(guest)
+    }
+
+    private func removeChooser() {
+        guard chooser != nil, let item = splitItem else { return }
+        splitViewController.removeSplitViewItem(item)
+        splitItem = nil
+        chooser = nil
+        chooserTabs = []
+    }
+
+    private func showInSplit(_ guest: ReaderWindowController) {
+        guard let window, splitGuest == nil else { return }
+        removeChooser()
+        guest.leaveForSplit(in: self)
+        splitGuest = guest
+        let item = NSSplitViewItem(viewController: guest.reader)
+        item.minimumThickness = 220
+        splitViewController.addSplitViewItem(item)
+        splitItem = item
+        equalizeHalves()
+        window.makeFirstResponder(guest.reader.webView)
+        updateToolbar()
+    }
+
+    private func endSplit() {
+        guard let window else { return }
+        if chooser != nil {
+            removeChooser()
+        } else if let guest = splitGuest, let item = splitItem {
+            splitViewController.removeSplitViewItem(item)
+            splitItem = nil
+            splitGuest = nil
+            if splitGuestIsOwned {
+                splitGuestIsOwned = false
+                guest.close()
+            } else {
+                guest.returnFromSplit(besides: window)
+            }
+            // This tab stays the one in front.
+            window.tabGroup?.selectedWindow = window
+            window.makeKeyAndOrderFront(nil)
+        }
+        window.makeFirstResponder(reader.webView)
+        updateToolbar()
+    }
+
+    /// The guest side: the reader moves to the host's right half; this window leaves the tab
+    /// bar, noting its neighbours.
+    private func leaveForSplit(in host: ReaderWindowController) {
+        splitHost = host
+        picker.dismiss()
+        splitViewController.removeSplitViewItem(readerItem)
+        guard let window else { return }
+        let tabs = window.tabbedWindows ?? []
+        if let index = tabs.firstIndex(of: window) {
+            tabBefore = index > 0 ? tabs[index - 1] : nil
+            tabAfter = index + 1 < tabs.count ? tabs[index + 1] : nil
+        }
+        window.tabGroup?.removeWindow(window)
+        window.orderOut(nil)
+    }
+
+    /// The reader comes back, and the window goes back in the tab bar where it was (beside its
+    /// old neighbours, else beside `host`), or on its own at `fallbackFrame` when there is no tab
+    /// bar to go back to (the split's window is closing alone).
+    private func returnFromSplit(besides host: NSWindow?, fallbackFrame: NSRect? = nil) {
+        splitHost = nil
+        splitViewController.addSplitViewItem(readerItem)
+        guard let window else { return }
+        // A tab that is not the selected one is not "visible" to AppKit: the group says it is open.
+        let group = host?.tabGroup
+        if let before = tabBefore, group != nil, before.tabGroup === group {
+            before.addTabbedWindow(window, ordered: .above)
+        } else if let after = tabAfter, group != nil, after.tabGroup === group {
+            after.addTabbedWindow(window, ordered: .below)
+        } else if let host, host.isVisible {
+            host.addTabbedWindow(window, ordered: .above)
+        } else {
+            if let frame = fallbackFrame ?? host?.frame { window.setFrame(frame, display: false) }
+            window.makeKeyAndOrderFront(nil)
+        }
+        tabBefore = nil
+        tabAfter = nil
+        window.makeFirstResponder(reader.webView)
+    }
+
+    /// The two halves equal, the sidebar left as it is.
+    private func equalizeHalves() {
+        let split = splitViewController.splitView
+        split.layoutSubtreeIfNeeded()
+        let count = splitViewController.splitViewItems.count
+        guard count >= 3 else { return }
+        let left = sidebarItem.isCollapsed ? 0 : sidebar.view.frame.maxX + split.dividerThickness
+        split.setPosition(left + (split.bounds.width - left) / 2, ofDividerAt: count - 2)
+    }
+
+    /// The reader the keys act on: the right half's when the focus is there.
+    private var focusedReader: ReaderViewController {
+        if let guest = splitGuest, let view = window?.firstResponder as? NSView, view.isDescendant(of: guest.reader.view) {
+            return guest.reader
+        }
+        return reader
+    }
+
+    /// For `ReaderSmokeTest`.
+    var smokeSplit: [String: Any] {
+        ["isSplit": isSplit, "items": splitViewController.splitViewItems.count, "chooser": chooser != nil,
+         "chooserRows": chooser?.smokeRows ?? [], "chooserSelected": chooser?.tableView.selectedRow ?? -1,
+         "guestIsOwned": splitGuestIsOwned, "guestPath": splitGuest?.reader.currentPath ?? "",
+         "guestIsSameDocument": splitGuest.map { $0.document === document } ?? false]
+    }
+    var smokeChooser: SplitChooserViewController? { chooser }
 
     // MARK: Actions (window-specific; global ones live in AppDelegate)
 
@@ -157,15 +349,15 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
 
     /// `⌘R`: the chapter again from the book and the style from disk, at the same place.
     /// (Not `reload(_:)`: the web view, first in the responder chain, would take that one.)
-    @objc func reloadPage(_ sender: Any?) { reader.reload() }
+    @objc func reloadPage(_ sender: Any?) { focusedReader.reload() }
 
-    @objc func goToPreviousChapter(_ sender: Any?) { reader.goToPreviousChapter() }
-    @objc func goToNextChapter(_ sender: Any?) { reader.goToNextChapter() }
+    @objc func goToPreviousChapter(_ sender: Any?) { focusedReader.goToPreviousChapter() }
+    @objc func goToNextChapter(_ sender: Any?) { focusedReader.goToNextChapter() }
 
     /// `⌘←` (`⌘[`): back to where the last link was followed, at the exact position.
-    @objc func goBackInHistory(_ sender: Any?) { reader.goBack() }
+    @objc func goBackInHistory(_ sender: Any?) { focusedReader.goBack() }
     /// `⌘→` (`⌘]`).
-    @objc func goForwardInHistory(_ sender: Any?) { reader.goForward() }
+    @objc func goForwardInHistory(_ sender: Any?) { focusedReader.goForward() }
 
     @objc func showStyleList(_ sender: Any?) {
         guard let window else { return }
@@ -303,11 +495,21 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
     /// unless they take the reader to another chapter).
     func handle(_ event: NSEvent) -> Bool {
         if event.type == .scrollWheel {
-            guard event.window === window, reader.view.bounds.contains(reader.view.convert(event.locationInWindow, from: nil)) else { return false }
-            return reader.handleEdgeScroll(event)
+            guard event.window === window else { return false }
+            let halves = [reader] + (splitGuest.map { [$0.reader] } ?? [])
+            guard let target = halves.first(where: { $0.view.bounds.contains($0.view.convert(event.locationInWindow, from: nil)) }) else { return false }
+            return target.handleEdgeScroll(event)
         }
         if picker.handle(event) { return true }
         guard event.type == .keyDown, let window else { return false }
+
+        // ⌘S: the split view. The menu has ⌘S twice (Save is the Playground's), so the reader
+        // takes it here, before the menu bar; this monitor only sees reader windows.
+        if !event.isARepeat, Shortcuts.matches(Shortcuts.shortcut(.split), characters: event.charactersIgnoringModifiers ?? "",
+                                               modifiers: KeyShortcut.Modifiers(event.modifierFlags)) {
+            toggleSplit(nil)
+            return true
+        }
 
         if StylePicker.isPickerShortcut(event) {
             picker.show(over: window, heldModifier: .command)
@@ -316,21 +518,21 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
 
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask).subtracting([.capsLock, .numericPad, .function])
         if isReadingFocused, !event.isARepeat, let direction = Self.edgeDirection(keyCode: event.keyCode, flags: flags),
-           reader.handleEdgeKey(direction) {
+           focusedReader.handleEdgeKey(direction) {
             return true
         }
         // `⌘←` `⌘→` while reading: the history, before the web view can take them for the page.
         if flags == [.command], isReadingFocused {
             switch event.keyCode {
-            case KeyCode.leftArrow where reader.canGoBack: reader.goBack(); return true
-            case KeyCode.rightArrow where reader.canGoForward: reader.goForward(); return true
+            case KeyCode.leftArrow where focusedReader.canGoBack: focusedReader.goBack(); return true
+            case KeyCode.rightArrow where focusedReader.canGoForward: focusedReader.goForward(); return true
             default: break
             }
         }
         guard flags.isEmpty, isReadingFocused else { return false }
         switch event.keyCode {
-        case KeyCode.leftArrow: reader.goToPreviousChapter(); return true
-        case KeyCode.rightArrow: reader.goToNextChapter(); return true
+        case KeyCode.leftArrow: focusedReader.goToPreviousChapter(); return true
+        case KeyCode.rightArrow: focusedReader.goToNextChapter(); return true
         default: break
         }
         let action: Selector
@@ -362,7 +564,8 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
     private var isReadingFocused: Bool {
         guard let responder = window?.firstResponder else { return false }
         if responder === window { return true }
-        return (responder as? NSView)?.isDescendant(of: reader.webView) ?? false
+        guard let view = responder as? NSView else { return false }
+        return view.isDescendant(of: reader.webView) || splitGuest.map { view.isDescendant(of: $0.reader.webView) } == true
     }
 
     private var isEditingText: Bool { window?.firstResponder is NSText }
@@ -372,8 +575,8 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         switch menuItem.action {
         // `←` `→` are plain-key shortcuts: disabled while typing, so text fields get them.
-        case #selector(goToPreviousChapter(_:)): return reader.canGoToPreviousChapter && !isEditingText
-        case #selector(goToNextChapter(_:)): return reader.canGoToNextChapter && !isEditingText
+        case #selector(goToPreviousChapter(_:)): return focusedReader.canGoToPreviousChapter && !isEditingText
+        case #selector(goToNextChapter(_:)): return focusedReader.canGoToNextChapter && !isEditingText
         case #selector(toggleMinimalMode(_:)):
             menuItem.state = isMinimal ? .on : .off
             return true
@@ -385,9 +588,12 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         case #selector(showSearch(_:)): return !isMinimal
         case #selector(findNextMatch(_:)), #selector(findPreviousMatch(_:)): return search.hasResults || !isMinimal
         // `⌘←` `⌘→` move the cursor in text fields: off while typing.
-        case #selector(goBackInHistory(_:)): return reader.canGoBack && !isEditingText
-        case #selector(goForwardInHistory(_:)): return reader.canGoForward && !isEditingText
+        case #selector(goBackInHistory(_:)): return focusedReader.canGoBack && !isEditingText
+        case #selector(goForwardInHistory(_:)): return focusedReader.canGoForward && !isEditingText
         case #selector(addBookmark(_:)): return reader.currentSpineIndex != nil
+        case #selector(toggleSplit(_:)):
+            menuItem.state = isSplit ? .on : .off
+            return isSplit || (splitHost == nil && !isMinimal)
         default: return true
         }
     }
@@ -395,7 +601,7 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
     // MARK: Toolbar
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [.toggleSidebar, .sidebarTrackingSeparator, ToolbarID.chapters, ToolbarID.info, .flexibleSpace]
+        [.toggleSidebar, .sidebarTrackingSeparator, ToolbarID.chapters, ToolbarID.info, ToolbarID.split, .flexibleSpace]
             + GlobalToolbarItems.identifiers
     }
 
@@ -433,6 +639,16 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
             item.target = self
             item.isBordered = true
             return item
+        case ToolbarID.split:
+            let item = NSToolbarItem(itemIdentifier: identifier)
+            item.label = L10n.string("toolbar.split")
+            item.toolTip = L10n.string("toolbar.split.help")
+            item.action = #selector(toggleSplit(_:))
+            item.target = self
+            item.isBordered = true
+            splitToolbarItem = item
+            updateToolbar()
+            return item
         default:
             return globalItems.item(for: identifier)
         }
@@ -441,6 +657,8 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
     private func updateToolbar() {
         chaptersItem?.subitems.first?.isEnabled = reader.canGoToPreviousChapter
         chaptersItem?.subitems.last?.isEnabled = reader.canGoToNextChapter
+        splitToolbarItem?.image = Self.symbol(isSplit ? "rectangle.split.2x1.fill" : "rectangle.split.2x1",
+                                              L10n.string(isSplit ? "a11y.split.on" : "a11y.split.off"))
         globalItems.update()
     }
 
@@ -451,6 +669,20 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
     // MARK: Window delegate
 
     func windowWillClose(_ notification: Notification) {
+        // The right half's tab stays open: back in the tab bar, or in a window of its own where
+        // this one was.
+        if let guest = splitGuest, let item = splitItem {
+            splitViewController.removeSplitViewItem(item)
+            splitItem = nil
+            splitGuest = nil
+            if splitGuestIsOwned {
+                splitGuestIsOwned = false
+                guest.close()
+            } else {
+                let others = window?.tabbedWindows?.filter { $0 !== window && $0.isVisible } ?? []
+                guest.returnFromSplit(besides: others.first, fallbackFrame: window?.frame)
+            }
+        }
         picker.dismiss()
         inspector?.close()
         if let environmentObserver { NotificationCenter.default.removeObserver(environmentObserver) }

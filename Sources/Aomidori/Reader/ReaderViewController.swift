@@ -47,11 +47,12 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
     var book: EPUBBook { publication.book }
     var webView: WKWebView { renderer.webView }
 
-    /// Where a view starts: where the book was left, or at a link's target (a link opened in a
-    /// new tab, Settings › Features).
+    /// Where a view starts: where the book was left, at a link's target (a link opened in a new
+    /// tab, Settings › Features), or at a place (a second view of the book in a split).
     enum Opening {
         case saved
         case link(path: String, fragment: String?)
+        case place(ReadingPlace)
     }
 
     private let opening: Opening
@@ -112,9 +113,11 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
     }
 
     /// Opens the book where the reader left it (or at the first linear item), unless this view
-    /// was opened for a link.
+    /// was opened for a link or at a place.
     func start() {
-        if case .link(let path, let fragment) = opening {
+        switch opening {
+        case .saved: break
+        case .link(let path, let fragment):
             if fragment == nil, let index = book.spineIndex(forPath: path) {
                 showSpineItem(at: index, landing: .remembered)
             } else {
@@ -122,6 +125,11 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
                 renderer.load(path: path, fragment: fragment)
             }
             return
+        case .place(let place):
+            if let index = book.spineIndex(forPath: place.path) {
+                showSpineItem(at: index, landing: .position(place.position))
+                return
+            }
         }
         if let saved = environment.positions.position(forBook: bookKey),
            let index = book.spineIndex(forPath: saved.spinePath) ?? (book.spine.indices.contains(saved.spineIndex) ? saved.spineIndex : nil) {
@@ -195,7 +203,7 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
     }
 
     /// Where the reader is now, read from the page (the last report may be pending).
-    private func currentPlace() async -> ReadingPlace? {
+    func currentPlace() async -> ReadingPlace? {
         guard let path = currentPath else { return nil }
         let position = await renderer.currentPosition() ?? ChapterPosition(fraction: currentFraction)
         return ReadingPlace(path: path, position: position)

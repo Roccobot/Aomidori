@@ -46,7 +46,7 @@ public enum ShortcutCommand: String, CaseIterable, Sendable {
     // Edit
     case undo, redo, cut, copy, paste, selectAll, find, findNext, findPrevious, useSelectionForFind
     // View
-    case sidebar, minimal, night, larger, smaller, actualSize, fullScreen
+    case sidebar, split, minimal, night, larger, smaller, actualSize, fullScreen
     // Go
     case previousChapter, nextChapter, back, forward, backAlternate, forwardAlternate, addBookmark
     // Style
@@ -89,6 +89,8 @@ public enum Shortcuts {
         .useSelectionForFind: KeyShortcut("e"),
 
         .sidebar: KeyShortcut("\\"),
+        // Split view in the reader; ⌘S stays Save in the Playground (see `scope`).
+        .split: KeyShortcut("s"),
         .minimal: KeyShortcut("m", [.command, .control]),
         .night: KeyShortcut("n", [.command, .shift]),
         .larger: KeyShortcut("+"),
@@ -116,8 +118,8 @@ public enum Shortcuts {
         // The chapter from the book and the style from disk, keeping the reading position.
         .reload: KeyShortcut("r"),
         .playground: KeyShortcut("p", [.command, .shift]),
-        // Book or style font ↔ custom font. ⌘S until 0.52; since 0.53 ⌘S is left free in the
-        // reader (for Split) and is Save only in the Playground.
+        // Book or style font ↔ custom font. ⌘S until 0.52; since 1.00 ⌘S is the split view in the
+        // reader and Save in the Playground.
         .customFont: KeyShortcut("y"),
         // The custom font chooser, with a button for the system Font panel.
         .defineFont: KeyShortcut("t", [.command, .shift]),
@@ -146,9 +148,7 @@ public enum Shortcuts {
         case everywhere
         /// The CSS Playground window.
         case playground
-        /// Any window but the Playground (reader windows, the empty window, panels). No command
-        /// uses it since `⌘S` left the custom font (0.53); kept for keys that will mean one
-        /// thing in the reader and another in the Playground.
+        /// Any window but the Playground (reader windows, the empty window, panels).
         case outsidePlayground
 
         func overlaps(_ other: Scope) -> Bool {
@@ -162,6 +162,7 @@ public enum Shortcuts {
     public static func scope(_ command: ShortcutCommand) -> Scope {
         switch command {
         case .playgroundOpenCSS, .playgroundLoadEPUB, .playgroundSample, .playgroundSave, .playgroundSaveAs: .playground
+        case .split: .outsidePlayground
         default: .everywhere
         }
     }

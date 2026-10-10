@@ -199,3 +199,12 @@
 "settings.updates.checkNow" = "Controlla ora";
 "settings.updates.version" = "Versione installata: %@";
 "settings.updates.off" = "Gli aggiornamenti automatici non sono attivi in questa copia di Aomidori.";
+
+/* Split view (1.00) */
+"menu.view.split" = "Vista divisa";
+"toolbar.split" = "Dividi";
+"toolbar.split.help" = "Affianca un'altra scheda, o un'altra vista del libro (⌘S)";
+"a11y.split.on" = "Vista divisa attiva";
+"a11y.split.off" = "Vista singola";
+"split.chooser.heading" = "Quale scheda affiancare?";
+"split.chooser.hint" = "Digita il numero, oppure scegli e premi Invio. Esc annulla.";

@@ -174,7 +174,67 @@ final class ReaderSmokeTest {
         // a second view of the book at the link's target, beside this tab; this view stays put.
         // With "Open links in new tabs" on, a plain click opens one in front.
         await checkLinksInNewTabs()
+
+        // 12. The split view: alone, a second view of the book that closes on exit; with two
+        // other tabs, the numbered chooser, the second one chosen, back in its place on exit.
+        await checkSplit()
         finish(window: window, originalFrame: originalFrame)
+    }
+
+    private func checkSplit() async {
+        guard let windowController, let window = windowController.window, let reader,
+              let document = windowController.document as? NSDocument,
+              let target = reader.book.nextReadableIndex(after: 0) else { return }
+        func views() -> [ReaderWindowController] { document.windowControllers.compactMap { $0 as? ReaderWindowController } }
+        let before = views().count
+        var result: [String: Any] = [:]
+
+        windowController.toggleSplit(nil)
+        try? await Task.sleep(for: .milliseconds(1500))
+        let alone = windowController.smokeSplit
+        result["alone"] = alone
+        if !windowController.isSplit || alone["items"] as? Int != 3 || alone["guestIsSameDocument"] as? Bool != true {
+            failures.append("split: alone, a second view of the book on the right")
+        }
+        windowController.toggleSplit(nil)
+        try? await Task.sleep(for: .milliseconds(800))
+        if windowController.isSplit || views().count != before { failures.append("split: alone, the second view closes on exit") }
+
+        // Two more tabs of the book, opened as a ⇧-click opens them.
+        for _ in 0..<2 {
+            (document as? BookDocument)?.openView(.link(path: reader.book.spine[target].path, fragment: nil), besides: window,
+                                                  placement: .end, inBackground: true)
+        }
+        try? await Task.sleep(for: .milliseconds(1500))
+        window.tabGroup?.selectedWindow = window
+        window.makeKeyAndOrderFront(nil)
+        let tabsBefore = window.tabbedWindows ?? []
+        windowController.toggleSplit(nil)
+        try? await Task.sleep(for: .milliseconds(800))
+        let chooser = windowController.smokeSplit
+        result["chooser"] = chooser
+        if (chooser["chooserRows"] as? [String])?.count != 2 || chooser["chooserSelected"] as? Int != 0 {
+            failures.append("split: two numbered rows, the first other view preselected")
+        }
+        windowController.smokeChooser?.smokePick(1)
+        try? await Task.sleep(for: .milliseconds(800))
+        result["chosen"] = windowController.smokeSplit
+        result["tabsWhileSplit"] = window.tabbedWindows?.count ?? 1
+        if !windowController.isSplit || (window.tabbedWindows?.count ?? 1) != tabsBefore.count - 1 {
+            failures.append("split: the chosen tab leaves the tab bar for the right half")
+        }
+        windowController.toggleSplit(nil)
+        try? await Task.sleep(for: .milliseconds(800))
+        let tabsAfter = window.tabbedWindows ?? []
+        result["backInPlace"] = tabsAfter == tabsBefore
+        result["orderAfter"] = tabsAfter.map { tab in tabsBefore.firstIndex { $0 === tab } ?? -1 }
+        if windowController.isSplit || tabsAfter != tabsBefore { failures.append("split: on exit the tab goes back to its place") }
+        if window.tabGroup?.selectedWindow !== window { failures.append("split: this tab stays in front on exit") }
+
+        report["split"] = result
+        views().filter { $0 !== windowController }.forEach { $0.close() }
+        try? await Task.sleep(for: .milliseconds(400))
+        window.makeKeyAndOrderFront(nil)
     }
 
     private func checkLinksInNewTabs() async {
@@ -205,13 +265,18 @@ final class ReaderSmokeTest {
             let tab = views().first { !known.contains(ObjectIdentifier($0)) }
             result[name] = [
                 "newTabPath": tab?.reader.currentPath ?? "",
-                "besideSource": tab?.window?.tabbedWindows?.contains(window) == true,
+                "indexFromSource": tab?.window.flatMap { tabWindow in
+                    (window.tabbedWindows?.firstIndex(of: tabWindow)).map { $0 - (window.tabbedWindows?.firstIndex(of: window) ?? 0) }
+                } ?? 0,
                 "selected": tab?.window.map { $0.tabGroup?.selectedWindow === $0 } ?? false,
                 "sourceStays": reader.currentPath == sourcePath,
             ] as [String: Any]
             if tab == nil { failures.append("links: \(name)-click opens a new tab") }
             if tab?.reader.currentPath != reader.book.spine[target].path { failures.append("links: \(name)-click shows the link's target") }
-            if tab?.window?.tabbedWindows?.contains(window) != true { failures.append("links: \(name)-click tab beside its source") }
+            if let tabWindow = tab?.window, let tabs = window.tabbedWindows,
+               tabs.firstIndex(of: tabWindow) != tabs.firstIndex(of: window).map({ $0 + 1 }) {
+                failures.append("links: \(name)-click tab right after its source")
+            }
             if (tab?.window.map { $0.tabGroup?.selectedWindow === $0 } ?? false) != !option {
                 failures.append("links: \(name)-click tab \(option ? "behind" : "in front")")
             }

@@ -199,3 +199,12 @@
 "settings.updates.checkNow" = "Check Now";
 "settings.updates.version" = "Installed version: %@";
 "settings.updates.off" = "Automatic updates are not active in this copy of Aomidori.";
+
+/* Split view (1.00) */
+"menu.view.split" = "Split View";
+"toolbar.split" = "Split";
+"toolbar.split.help" = "Show another tab, or another view of the book, alongside (⌘S)";
+"a11y.split.on" = "Split view on";
+"a11y.split.off" = "Single view";
+"split.chooser.heading" = "Which tab goes alongside?";
+"split.chooser.hint" = "Type its number, or select it and press Return. Escape cancels.";

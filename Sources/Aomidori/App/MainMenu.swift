@@ -103,6 +103,9 @@ enum MainMenu {
             paneItem.indentationLevel = 1
             menu.addItem(paneItem)
         }
+        // ⌘S here and in the Playground's File menu (Save): the reader window takes the key
+        // first (`ReaderWindowController.handle`), the Playground leaves this item disabled.
+        menu.addItem(item(L10n.string("menu.view.split"), #selector(ReaderWindowController.toggleSplit(_:)), .split))
         menu.addItem(.separator())
         menu.addItem(item(L10n.string("menu.view.minimal"), #selector(ReaderWindowController.toggleMinimalMode(_:)), .minimal))
         menu.addItem(.separator())
