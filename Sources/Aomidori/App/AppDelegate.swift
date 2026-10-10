@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = MainMenu.build(styleMenuUpdater: styleMenuUpdater)
+        ScreenshotSession.applyTheme()
         environment.start()
         installKeyMonitor()
     }

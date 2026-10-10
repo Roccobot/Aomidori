@@ -31,7 +31,15 @@ final class ReaderEnvironment {
         static let customFont = "AomidoriCustomFont"
     }
 
-    private let defaults = UserDefaults.standard
+    /// The reader's settings. A scripted session (smoke test or screenshots) shares the bundle
+    /// identifier of the installed app: it gets its own settings, emptied at every start, so it
+    /// begins from the factory values and never writes the user's.
+    private let defaults: UserDefaults = {
+        guard AppPaths.smokeFolder != nil, let session = UserDefaults(suiteName: ReaderEnvironment.sessionSuite) else { return .standard }
+        session.removePersistentDomain(forName: ReaderEnvironment.sessionSuite)
+        return session
+    }()
+    nonisolated static let sessionSuite = "com.roccobot.aomidori.session"
     let library = StyleLibrary(directory: AppPaths.styles)
     let positions = ReadingPositionStore(fileURL: AppPaths.positions)
     let books = BookStateStore(fileURL: AppPaths.books)

@@ -4,12 +4,12 @@ import WebKit
 
 /// A scripted Playground session for `scripts/smoke-playground.sh`, enabled by the launch
 /// argument `-AomidoriPlaygroundSmoke <folder>`. It types into the editor, toggles Night,
-/// saves to the styles folder (the file is removed again at the end), loads an EPUB if
+/// saves to the styles folder (the session's own, see `AppPaths.support`), loads an EPUB if
 /// `-AomidoriPlaygroundEPUB <book.epub>` is given, and writes numbered snapshots of the
 /// preview and the window plus `report.json` into the folder.
 @MainActor
 final class PlaygroundSmokeTest {
-    static let defaultsKey = "AomidoriPlaygroundSmoke"
+    nonisolated static let defaultsKey = "AomidoriPlaygroundSmoke"
     static let epubDefaultsKey = "AomidoriPlaygroundEPUB"
     static let savedStyleName = "PlaygroundSmoke.css"
 

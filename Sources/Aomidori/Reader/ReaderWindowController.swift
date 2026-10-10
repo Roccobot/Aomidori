@@ -64,7 +64,7 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         window.delegate = self
         window.isRestorable = false
         // A smoke session resizes the window: its frame is not remembered.
-        if !ReaderSmokeTest.isActive && !LaunchSmokeTest.isActive { window.setFrameAutosaveName(Self.frameAutosaveName) }
+        if AppPaths.smokeFolder == nil { window.setFrameAutosaveName(Self.frameAutosaveName) }
 
         let toolbar = NSToolbar(identifier: "AomidoriReaderToolbar")
         toolbar.delegate = self
@@ -95,6 +95,7 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         reader.start()
         window.makeFirstResponder(reader.webView)
         if ReaderSmokeTest.isActive { smokeTest = ReaderSmokeTest(windowController: self) }
+        ScreenshotSession.prepare(self)
     }
 
     @available(*, unavailable)
@@ -197,6 +198,12 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         sidebar.select(pane)
         rememberPane(pane)
         if sidebarItem.isCollapsed { sidebarItem.animator().isCollapsed = false }
+    }
+
+    /// For `ScreenshotSession`: the table of contents, open, at once.
+    func showContentsForScreenshot() {
+        sidebar.select(.contents)
+        sidebarItem.isCollapsed = false
     }
 
     private func rememberPane(_ pane: SidebarPane) {

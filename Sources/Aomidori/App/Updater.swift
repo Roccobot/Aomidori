@@ -29,9 +29,8 @@ final class Updater {
         guard controller == nil else { return }
         let info = Bundle.main.infoDictionary ?? [:]
         // Every scripted session (scripts/smoke*.sh) starts with one of these launch arguments.
-        let smokeKeys = [LaunchSmokeTest.defaultsKey, ReaderSmokeTest.defaultsKey,
-                         PlaygroundSmokeTest.defaultsKey, ReaderViewController.snapshotDefaultsKey]
-        let smokeTestActive = smokeKeys.contains { UserDefaults.standard.string(forKey: $0) != nil }
+        let smokeTestActive = AppPaths.smokeFolder != nil
+            || UserDefaults.standard.string(forKey: ReaderViewController.snapshotDefaultsKey) != nil
         reasonNotStarted = UpdatePolicy.reasonNotToStart(
             feedURL: info["SUFeedURL"] as? String,
             publicEDKey: info["SUPublicEDKey"] as? String,
