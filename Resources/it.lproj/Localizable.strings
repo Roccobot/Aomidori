@@ -185,7 +185,7 @@
 "empty.title" = "Aomidori";
 "empty.message" = "Apri un documento o trascinalo qui";
 "empty.open" = "Apri…";
-"empty.open.help" = "Scegli un libro EPUB da leggere (⌘O)";
+"empty.open.help" = "Scegli un libro o un fumetto da leggere (⌘O)";
 "empty.recents" = "File recenti";
 
 /* Settings (0.90) */
