@@ -88,6 +88,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     @objc func checkForUpdates(_ sender: Any?) { Updater.shared.checkForUpdates(sender) }
 
+    // MARK: Settings
+
+    private lazy var settings = SettingsWindowController()
+
+    /// `⌘;` (and `⌘,`): the Settings window.
+    @objc func showSettings(_ sender: Any?) { settings.showWindow(sender) }
+
+    /// For `LaunchSmokeTest`.
+    var smokeSettings: SettingsWindowController { settings }
+
     // MARK: Global reading actions
 
     @objc func toggleNight(_ sender: Any?) { environment.toggleNight() }

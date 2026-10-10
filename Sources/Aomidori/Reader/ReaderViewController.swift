@@ -6,6 +6,8 @@ import WebKit
 @MainActor
 protocol ReaderViewControllerDelegate: AnyObject {
     func readerDidShowChapter(_ reader: ReaderViewController)
+    /// A link in the book to open in another tab (Settings › Features, `⇧`/`⌥`-click).
+    func reader(_ reader: ReaderViewController, openInNewTab opening: ReaderViewController.Opening, inBackground: Bool)
 }
 
 /// Shows one spine item at a time as a real web document that scrolls vertically.
@@ -45,9 +47,19 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
     var book: EPUBBook { publication.book }
     var webView: WKWebView { renderer.webView }
 
-    init(publication: EPUBPublication, bookKey: String) {
+    /// Where a view starts: where the book was left, or at a link's target (a link opened in a
+    /// new tab, Settings › Features).
+    enum Opening {
+        case saved
+        case link(path: String, fragment: String?)
+    }
+
+    private let opening: Opening
+
+    init(publication: EPUBPublication, bookKey: String, opening: Opening = .saved) {
         self.publication = publication
         self.bookKey = bookKey
+        self.opening = opening
         renderer = PageRenderer(provider: publication, configuration: ReaderEnvironment.shared.configuration())
         super.init(nibName: nil, bundle: nil)
         renderer.onPosition = { [weak self] path, position in self?.record(position, path: path) }
@@ -99,8 +111,18 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
         case position(ChapterPosition)
     }
 
-    /// Opens the book where the reader left it, or at the first linear item.
+    /// Opens the book where the reader left it (or at the first linear item), unless this view
+    /// was opened for a link.
     func start() {
+        if case .link(let path, let fragment) = opening {
+            if fragment == nil, let index = book.spineIndex(forPath: path) {
+                showSpineItem(at: index, landing: .remembered)
+            } else {
+                pendingLanding = .top
+                renderer.load(path: path, fragment: fragment)
+            }
+            return
+        }
         if let saved = environment.positions.position(forBook: bookKey),
            let index = book.spineIndex(forPath: saved.spinePath) ?? (book.spine.indices.contains(saved.spineIndex) ? saved.spineIndex : nil) {
             showSpineItem(at: index, landing: .position(saved.chapterPosition))
@@ -370,11 +392,23 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
         let url = navigationAction.request.url
         if let path = renderer.path(for: url) {
+            // A link clicked in this page (or in a new window it asks for): read once, for where
+            // it was clicked and with which keys.
+            let isLink = navigationAction.navigationType == .linkActivated && navigationAction.targetFrame?.isMainFrame != false
+            let click = isLink ? await renderer.takeLinkClick() : nil
+            // A link to open in another tab (Settings › Features, ⇧/⌥-click): this view stays
+            // where it is. A link within the chapter has already scrolled the page, so it goes back.
+            let modifiers = KeyShortcut.Modifiers(navigationAction.modifierFlags).union(click?.modifiers ?? [])
+            if isLink, case .newTab(let inBackground) = LinkOpening.decide(newTabsSetting: environment.opensLinksInNewTabs, modifiers: modifiers) {
+                if let departure = click?.departure, path == currentPath { renderer.restore(departure) }
+                delegate?.reader(self, openInNewTab: .link(path: path, fragment: url?.fragment), inBackground: inBackground)
+                return .cancel
+            }
             // A link asking for a new window (`target="_blank"`) has no target frame and, with no
             // windows to open, would go nowhere: it is followed here, like any link in the book.
             if navigationAction.targetFrame == nil {
-                if navigationAction.navigationType == .linkActivated, let current = currentPath {
-                    let departure = await renderer.takeLinkDeparture()
+                if isLink, let current = currentPath {
+                    let departure = click?.departure
                     let position = await renderer.currentPosition()
                     history.departed(from: ReadingPlace(path: current, position: departure ?? position ?? ChapterPosition(fraction: currentFraction)))
                     if current != path, let position { record(position, path: current) }
@@ -389,7 +423,7 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
             // Leaving a chapter: note exactly where, since the last scroll report may be pending.
             if let current = currentPath, isMainFrame, followsLink || current != path {
                 // A link in the same document has already scrolled: the page noted where it was.
-                let departure = followsLink ? await renderer.takeLinkDeparture() : nil
+                let departure = followsLink ? click?.departure : nil
                 let position = await renderer.currentPosition()
                 if followsLink {
                     history.departed(from: ReadingPlace(path: current, position: departure ?? position ?? ChapterPosition(fraction: currentFraction)))

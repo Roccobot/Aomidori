@@ -39,7 +39,7 @@ public struct KeyShortcut: Hashable, Sendable, CustomStringConvertible {
 /// so a shortcut is moved with a one-line change and conflicts are caught by a test.
 public enum ShortcutCommand: String, CaseIterable, Sendable {
     // App
-    case hide, hideOthers, quit
+    case settings, settingsAlternate, hide, hideOthers, quit
     // File
     case open, newTab, inspector, playgroundOpenCSS, playgroundLoadEPUB, playgroundSample, close
     case playgroundSave, playgroundSaveAs
@@ -59,6 +59,9 @@ public enum ShortcutCommand: String, CaseIterable, Sendable {
 public enum Shortcuts {
     /// The shortcuts, designed for the Italian keyboard layout (`⌘'`, `⌘ì`).
     public static let table: [ShortcutCommand: KeyShortcut] = [
+        // Settings: ⌘; (Rocco's choice), with the usual ⌘, as a hidden alternative.
+        .settings: KeyShortcut(";"),
+        .settingsAlternate: KeyShortcut(","),
         .hide: KeyShortcut("h"),
         .hideOthers: KeyShortcut("h", [.command, .option]),
         .quit: KeyShortcut("q"),

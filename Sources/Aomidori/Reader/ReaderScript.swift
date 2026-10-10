@@ -591,16 +591,18 @@ enum ReaderScript {
 
       // MARK: Links
 
-      // Where a link was clicked, read before the click's navigation: an anchor in the same
-      // document scrolls before the native side can ask the page where it was.
-      let linkDeparture = null;
+      // Where a link was clicked, read before the click's navigation (an anchor in the same
+      // document scrolls before the native side can ask the page where it was), and with which
+      // keys: ⇧ and ⌥ open it in a new tab, and the page sees them on any click, where WebKit's
+      // navigation reports them only for clicks made with the mouse.
+      let linkClick = null;
       addEventListener('click', (event) => {
         const link = event.target && event.target.closest ? event.target.closest('a[href]') : null;
-        if (link) linkDeparture = position();
+        if (link) linkClick = { position: position(), shift: event.shiftKey, option: event.altKey };
       }, true);
-      function takeLinkDeparture() {
-        const value = linkDeparture;
-        linkDeparture = null;
+      function takeLinkClick() {
+        const value = linkClick;
+        linkClick = null;
         return value;
       }
 
@@ -676,7 +678,7 @@ enum ReaderScript {
         scrollToFraction,
         position,
         restorePosition,
-        takeLinkDeparture,
+        takeLinkClick,
       });
 
       if (!mount()) {

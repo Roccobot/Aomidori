@@ -25,12 +25,13 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
     private var chaptersItem: NSToolbarItemGroup?
     private var inspector: InspectorWindowController?
     private var environmentObserver: (any NSObjectProtocol)?
+    private var bookStateObserver: (any NSObjectProtocol)?
     private var isMinimal = false
     private var sidebarWasCollapsed = true
     private var smokeTest: ReaderSmokeTest?
 
-    init(publication: EPUBPublication, bookKey: String) {
-        reader = ReaderViewController(publication: publication, bookKey: bookKey)
+    init(publication: EPUBPublication, bookKey: String, opening: ReaderViewController.Opening = .saved) {
+        reader = ReaderViewController(publication: publication, bookKey: bookKey, opening: opening)
         toc = TOCViewController(entries: publication.book.toc)
         bookmarks = BookmarksViewController(book: publication.book)
         search = SearchViewController(publication: publication)
@@ -89,13 +90,21 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         environmentObserver = NotificationCenter.default.addObserver(forName: .readerEnvironmentDidChange, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.environmentDidChange() }
         }
+        // Another view of the same book changed its bookmarks.
+        bookStateObserver = NotificationCenter.default.addObserver(forName: .readerBookStateDidChange, object: nil, queue: .main) { [weak self] note in
+            let key = note.userInfo?["bookKey"] as? String
+            MainActor.assumeIsolated { self?.bookStateDidChange(forBook: key) }
+        }
 
         applyAppearance()
         if environment.prefersMinimal { setMinimal(true) }
         reader.start()
         window.makeFirstResponder(reader.webView)
-        if ReaderSmokeTest.isActive { smokeTest = ReaderSmokeTest(windowController: self) }
-        ScreenshotSession.prepare(self)
+        // Scripted sessions run in the book's first window, not in the views opened from it.
+        if case .saved = opening {
+            if ReaderSmokeTest.isActive { smokeTest = ReaderSmokeTest(windowController: self) }
+            ScreenshotSession.prepare(self)
+        }
     }
 
     @available(*, unavailable)
@@ -126,6 +135,17 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         window?.subtitle = reader.currentChapterTitle ?? ""
         if let path = reader.currentPath { toc.reveal(path: path) }
         updateToolbar()
+    }
+
+    /// A link to open in another tab: a new view of this book, beside this tab.
+    func reader(_ reader: ReaderViewController, openInNewTab opening: ReaderViewController.Opening, inBackground: Bool) {
+        (document as? BookDocument)?.openView(opening, besides: window, placement: environment.linkTabPlacement,
+                                              inBackground: inBackground)
+    }
+
+    private func bookStateDidChange(forBook key: String?) {
+        guard key == reader.bookKey else { return }
+        bookmarks.bookmarks = environment.books.state(forBook: reader.bookKey).sortedBookmarks
     }
 
     // MARK: Actions (window-specific; global ones live in AppDelegate)
@@ -243,7 +263,8 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
 
     private func updateBookmarks(_ change: (inout [Bookmark]) -> Void) {
         environment.books.update(forBook: reader.bookKey) { change(&$0.bookmarks) }
-        bookmarks.bookmarks = environment.books.state(forBook: reader.bookKey).sortedBookmarks
+        // Every view of the book shows the same bookmarks, this one included.
+        NotificationCenter.default.post(name: .readerBookStateDidChange, object: nil, userInfo: ["bookKey": reader.bookKey])
         environment.saveStateSoon()
     }
 
@@ -434,6 +455,8 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         inspector?.close()
         if let environmentObserver { NotificationCenter.default.removeObserver(environmentObserver) }
         environmentObserver = nil
+        if let bookStateObserver { NotificationCenter.default.removeObserver(bookStateObserver) }
+        bookStateObserver = nil
         environment.saveStateNow()
     }
 }

@@ -40,6 +40,15 @@ final class Updater {
         controller = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
     }
 
+    /// Whether the updater runs (not in scripted sessions or builds without a feed or key).
+    var isRunning: Bool { controller != nil }
+
+    /// Settings › Updates: Sparkle's own setting, the one its first-run question sets.
+    var automaticallyChecksForUpdates: Bool {
+        get { controller?.updater.automaticallyChecksForUpdates ?? false }
+        set { controller?.updater.automaticallyChecksForUpdates = newValue }
+    }
+
     /// False while a check or an update is under way, and when the updater does not run.
     var canCheckForUpdates: Bool { controller?.updater.canCheckForUpdates ?? false }
 

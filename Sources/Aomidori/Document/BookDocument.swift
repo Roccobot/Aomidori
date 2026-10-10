@@ -33,6 +33,29 @@ final class BookDocument: NSDocument {
         empty?.handOver(to: controller)
     }
 
+    /// A new tab with another view of this book (a link opened in a new tab), next to `source`
+    /// or at the end of its tabs, in front or behind. Every view keeps its own place and
+    /// history; the book's saved position is the one last moved, and bookmarks are shared.
+    @discardableResult
+    func openView(_ opening: ReaderViewController.Opening, besides source: NSWindow?,
+                  placement: LinkOpening.Placement, inBackground: Bool) -> ReaderWindowController? {
+        guard let publication else { return nil }
+        let controller = ReaderWindowController(publication: publication, bookKey: bookKey(for: publication.book), opening: opening)
+        addWindowController(controller)
+        guard let window = controller.window else { return nil }
+        if let source, source.isVisible {
+            let anchor = placement == .end ? (source.tabbedWindows?.last ?? source) : source
+            anchor.addTabbedWindow(window, ordered: .above)
+        }
+        if inBackground, let source, source.isVisible {
+            source.tabGroup?.selectedWindow = source
+            source.makeKeyAndOrderFront(nil)
+        } else {
+            controller.showWindow(nil)
+        }
+        return controller
+    }
+
     /// Reading positions are keyed by the package identifier and title, so the same book is
     /// recognised even if the file moves; books without an identifier fall back to their path.
     private func bookKey(for book: EPUBBook) -> String {

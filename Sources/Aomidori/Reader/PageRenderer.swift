@@ -134,11 +134,21 @@ final class PageRenderer: NSObject {
         return Self.chapterPosition(from: value as? [String: Any])
     }
 
-    /// Where the page was when a link was last clicked (once: reading it clears it).
-    func takeLinkDeparture() async -> ChapterPosition? {
+    /// The last click on a link, as the page saw it: where the page was, and the ⇧ and ⌥ keys.
+    struct LinkClick {
+        var departure: ChapterPosition?
+        var modifiers: KeyShortcut.Modifiers
+    }
+
+    /// The last click on a link (once: reading it clears it).
+    func takeLinkClick() async -> LinkClick? {
         let value = try? await webView.callAsyncJavaScript(
-            "return window.Aomidori ? Aomidori.takeLinkDeparture() : null", arguments: [:], in: nil, contentWorld: .defaultClient)
-        return Self.chapterPosition(from: value as? [String: Any])
+            "return window.Aomidori ? Aomidori.takeLinkClick() : null", arguments: [:], in: nil, contentWorld: .defaultClient)
+        guard let message = value as? [String: Any] else { return nil }
+        var modifiers: KeyShortcut.Modifiers = []
+        if message["shift"] as? Bool == true { modifiers.insert(.shift) }
+        if message["option"] as? Bool == true { modifiers.insert(.option) }
+        return LinkClick(departure: Self.chapterPosition(from: message["position"] as? [String: Any]), modifiers: modifiers)
     }
 
     private static func chapterPosition(from message: [String: Any]?) -> ChapterPosition? {

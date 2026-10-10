@@ -34,6 +34,7 @@ final class LaunchSmokeTest {
         try? await Task.sleep(for: .milliseconds(1500))
 
         checkUpdater()
+        await checkSettings()
 
         // 1. Launch with no book: the empty window, and nothing else.
         report["atLaunch"] = windows()
@@ -150,6 +151,41 @@ final class LaunchSmokeTest {
         if !framework.hasPrefix(embedded + "/") { failures.append("Sparkle not loaded from Contents/Frameworks") }
         if menuItem == nil { failures.append("no Check for Updates menu item") }
         if Updater.shared.reasonNotStarted != "smoke test" { failures.append("updater must stay off in smoke sessions") }
+    }
+
+    /// Settings opens from the app menu with ⌘; (and ⌘,), with its two tabs and the link options
+    /// at their defaults, and closes again. Nothing is changed in it.
+    private func checkSettings() async {
+        let appMenu = NSApp.mainMenu?.items.first?.submenu?.items ?? []
+        let items = appMenu.filter { $0.action == #selector(AppDelegate.showSettings(_:)) }
+        guard let delegate = NSApp.delegate as? AppDelegate else { failures.append("settings: no app delegate"); return }
+        delegate.showSettings(nil)
+        try? await Task.sleep(for: .milliseconds(500))
+        let settings = delegate.smokeSettings
+        let features = settings.smokeFeatureStates
+        report["settings"] = [
+            "keys": items.map { "⌘" + $0.keyEquivalent + ($0.isHidden ? " (hidden)" : "") },
+            "visible": settings.window?.isVisible ?? false,
+            "tabs": settings.smokeTabLabels,
+            "features": features,
+        ] as [String: Any]
+        if Set(items.map(\.keyEquivalent)) != [";", ","] { failures.append("settings: ⌘; and ⌘, in the app menu") }
+        if settings.window?.isVisible != true { failures.append("settings: the window did not open") }
+        if settings.smokeTabLabels.count != 2 { failures.append("settings: two tabs") }
+        if features != ["newTabs": false, "nextToSource": true, "nextToSourceEnabled": false] {
+            failures.append("settings: link options at their defaults")
+        }
+        if let window = settings.window {
+            snapshot(window, name: "settings.png")
+            settings.smokeSelectTab(1)
+            try? await Task.sleep(for: .milliseconds(500))
+            snapshot(window, name: "settings-updates.png")
+            report["settingsTitleOnSecondTab"] = window.title
+            if window.title != settings.smokeTabLabels[1] { failures.append("settings: the window takes the tab's name") }
+            settings.smokeSelectTab(0)
+        }
+        settings.close()
+        try? await Task.sleep(for: .milliseconds(200))
     }
 
     /// The drop zone within half the width and 30% of the height (or at its minimum, Graphe's

@@ -28,6 +28,14 @@ enum MainMenu {
         // Sparkle's usual place, with no shortcut, as in other Mac apps.
         menu.addItem(item(L10n.string("menu.app.checkForUpdates"), #selector(AppDelegate.checkForUpdates(_:))))
         menu.addItem(.separator())
+        let settings = #selector(AppDelegate.showSettings(_:))
+        menu.addItem(item(L10n.string("menu.app.settings"), settings, .settings))
+        // ⌘, as in every Mac app: hidden, still working.
+        let settingsAlternate = item(L10n.string("menu.app.settings"), settings, .settingsAlternate)
+        settingsAlternate.isHidden = true
+        settingsAlternate.allowsKeyEquivalentWhenHidden = true
+        menu.addItem(settingsAlternate)
+        menu.addItem(.separator())
         let services = NSMenu(title: L10n.string("menu.app.services"))
         NSApp.servicesMenu = services
         menu.addItem(submenu(services))

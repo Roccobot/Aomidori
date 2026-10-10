@@ -5,6 +5,8 @@ import AomidoriCore
 extension Notification.Name {
     /// Posted on the main thread whenever a reading setting or the styles folder changes.
     static let readerEnvironmentDidChange = Notification.Name("AomidoriReaderEnvironmentDidChange")
+    /// A book's bookmarks changed in one of its views; `userInfo["bookKey"]` names the book.
+    static let readerBookStateDidChange = Notification.Name("AomidoriReaderBookStateDidChange")
 }
 
 /// App-wide reading settings and the user styles folder. Every reader window renders from it.
@@ -25,6 +27,9 @@ final class ReaderEnvironment {
         /// at launch, so every reader starts 0.53 following the system.
         static let legacyNight = "AomidoriNight"
         static let minimal = "AomidoriMinimal"
+        /// Settings › Features (0.90).
+        static let linksInNewTabs = "AomidoriOpenLinksInNewTabs"
+        static let linksNextToSource = "AomidoriOpenLinksNextToSource"
         static let customFontEnabled = "AomidoriCustomFontEnabled"
         /// The family alone; still written so earlier versions keep the family on a downgrade.
         static let customFontFamily = "AomidoriCustomFontFamily"
@@ -216,6 +221,24 @@ final class ReaderEnvironment {
     var prefersMinimal: Bool {
         get { defaults.bool(forKey: Key.minimal) }
         set { defaults.set(newValue, forKey: Key.minimal) }
+    }
+
+    // MARK: Settings › Features
+
+    /// "Open links in new tabs" (off by default).
+    var opensLinksInNewTabs: Bool {
+        get { defaults.bool(forKey: Key.linksInNewTabs) }
+        set { defaults.set(newValue, forKey: Key.linksInNewTabs) }
+    }
+
+    /// "Open each link next to its source tab" (on by default; it counts only with new tabs).
+    var opensLinksNextToSource: Bool {
+        get { defaults.object(forKey: Key.linksNextToSource) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: Key.linksNextToSource) }
+    }
+
+    var linkTabPlacement: LinkOpening.Placement {
+        LinkOpening.placement(newTabsSetting: opensLinksInNewTabs, nextToSourceSetting: opensLinksNextToSource)
     }
 
     // MARK: Custom font

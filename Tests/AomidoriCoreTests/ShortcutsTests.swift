@@ -54,6 +54,11 @@ struct ShortcutsTests {
         #expect(Set(plainMenuKeys).isDisjoint(with: Shortcuts.readingKeys.keys))
     }
 
+    @Test func settingsAreCommandSemicolonWithCommandCommaAsAlternative() {
+        #expect(Shortcuts.shortcut(.settings).description == "⌘;")
+        #expect(Shortcuts.shortcut(.settingsAlternate).description == "⌘,")
+    }
+
     @Test func findNextAndPreviousAreCommandG() {
         #expect(Shortcuts.shortcut(.findNext).description == "⌘G")
         #expect(Shortcuts.shortcut(.findPrevious).description == "⇧⌘G")

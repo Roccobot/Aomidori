@@ -187,3 +187,15 @@
 "empty.open" = "Apri…";
 "empty.open.help" = "Scegli un libro EPUB da leggere (⌘O)";
 "empty.recents" = "File recenti";
+
+/* Settings (0.90) */
+"menu.app.settings" = "Impostazioni…";
+"settings.features" = "Funzionalità";
+"settings.features.newTabs" = "Apri i link in nuove schede";
+"settings.features.nextToSource" = "Apri ogni link accanto alla scheda di origine";
+"settings.features.note" = "I link verso il web si aprono sempre nel browser. Anche con l'opzione disattivata, un clic con ⇧ apre il link in una nuova scheda in primo piano, un clic con ⌥ in una nuova scheda dietro.";
+"settings.updates" = "Aggiornamenti";
+"settings.updates.automatic" = "Controlla automaticamente gli aggiornamenti";
+"settings.updates.checkNow" = "Controlla ora";
+"settings.updates.version" = "Versione installata: %@";
+"settings.updates.off" = "Gli aggiornamenti automatici non sono attivi in questa copia di Aomidori.";

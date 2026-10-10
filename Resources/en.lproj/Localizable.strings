@@ -187,3 +187,15 @@
 "empty.open" = "Open…";
 "empty.open.help" = "Choose an EPUB book to read (⌘O)";
 "empty.recents" = "Recent Files";
+
+/* Settings (0.90) */
+"menu.app.settings" = "Settings…";
+"settings.features" = "Features";
+"settings.features.newTabs" = "Open links in new tabs";
+"settings.features.nextToSource" = "Open each link next to its source tab";
+"settings.features.note" = "Web links always open in your browser. Even with this option off, a click with ⇧ opens the link in a new tab in front, a click with ⌥ in a new tab behind.";
+"settings.updates" = "Updates";
+"settings.updates.automatic" = "Automatically check for updates";
+"settings.updates.checkNow" = "Check Now";
+"settings.updates.version" = "Installed version: %@";
+"settings.updates.off" = "Automatic updates are not active in this copy of Aomidori.";

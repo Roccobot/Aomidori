@@ -169,7 +169,60 @@ final class ReaderSmokeTest {
         // ⌘J's setting makes it justified and hyphenated, whatever the book says; centred text
         // keeps its alignment and its hyphenation.
         await checkAlignment()
+
+        // 11. ⇧-click opens a link in a new tab in front, ⌥-click in a new tab behind, each one
+        // a second view of the book at the link's target, beside this tab; this view stays put.
+        // With "Open links in new tabs" on, a plain click opens one in front.
+        await checkLinksInNewTabs()
         finish(window: window, originalFrame: originalFrame)
+    }
+
+    private func checkLinksInNewTabs() async {
+        guard let windowController, let window = windowController.window, let reader,
+              let document = windowController.document as? NSDocument,
+              let target = reader.book.nextReadableIndex(after: 0) else { return }
+        func views() -> [ReaderWindowController] { document.windowControllers.compactMap { $0 as? ReaderWindowController } }
+        let before = views().count
+        let sourcePath = reader.currentPath
+        let click = """
+        const a = document.createElement('a');
+        a.href = new URL('/' + href, location.href).href;
+        a.textContent = '·';
+        document.body.insertBefore(a, document.body.firstChild);
+        a.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, shiftKey: shift, altKey: option, view: window}));
+        a.remove();
+        """
+        var result: [String: Any] = [:]
+        let environment = ReaderEnvironment.shared
+        // The last one with "Open links in new tabs" on (this session's own settings).
+        for (name, shift, option, newTabs) in [("shift", true, false, false), ("option", false, true, false), ("plainWithSetting", false, false, true)] {
+            environment.opensLinksInNewTabs = newTabs
+            defer { environment.opensLinksInNewTabs = false }
+            let known = Set(views().map(ObjectIdentifier.init))
+            _ = try? await reader.webView.callAsyncJavaScript(click, arguments: ["href": reader.book.spine[target].path, "shift": shift, "option": option],
+                                                              in: nil, contentWorld: .defaultClient)
+            try? await Task.sleep(for: .milliseconds(1500))
+            let tab = views().first { !known.contains(ObjectIdentifier($0)) }
+            result[name] = [
+                "newTabPath": tab?.reader.currentPath ?? "",
+                "besideSource": tab?.window?.tabbedWindows?.contains(window) == true,
+                "selected": tab?.window.map { $0.tabGroup?.selectedWindow === $0 } ?? false,
+                "sourceStays": reader.currentPath == sourcePath,
+            ] as [String: Any]
+            if tab == nil { failures.append("links: \(name)-click opens a new tab") }
+            if tab?.reader.currentPath != reader.book.spine[target].path { failures.append("links: \(name)-click shows the link's target") }
+            if tab?.window?.tabbedWindows?.contains(window) != true { failures.append("links: \(name)-click tab beside its source") }
+            if (tab?.window.map { $0.tabGroup?.selectedWindow === $0 } ?? false) != !option {
+                failures.append("links: \(name)-click tab \(option ? "behind" : "in front")")
+            }
+            if reader.currentPath != sourcePath { failures.append("links: the source tab stays where it was (\(name))") }
+            window.tabGroup?.selectedWindow = window
+        }
+        report["linksInNewTabs"] = result
+        views().filter { $0 !== windowController }.forEach { $0.close() }
+        try? await Task.sleep(for: .milliseconds(400))
+        if views().count != before { failures.append("links: the extra views close") }
+        window.makeKeyAndOrderFront(nil)
     }
 
     private func checkAlignment() async {
