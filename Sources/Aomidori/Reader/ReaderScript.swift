@@ -98,10 +98,22 @@ enum ReaderScript {
       };
       let parsing = doc.readyState === 'loading';
 
+      // The reader's own elements are known by identity, never by an attribute a book could
+      // write too; book elements lose any `data-aomidori…` attribute the first time they are
+      // seen, so a stash or a mark can only come from this script.
+      const owned = new WeakSet();
+      const seen = new WeakSet();
+      const isOwn = (el) => owned.has(el);
+      function dropForgedMarks(el) {
+        if (seen.has(el) || owned.has(el)) return;
+        seen.add(el);
+        for (const name of el.getAttributeNames()) if (name.startsWith(OWN)) el.removeAttribute(name);
+      }
       const ownElement = (name, role) => {
         const el = doc.createElementNS(XHTML, name);
         el.setAttribute(OWN, role);
         el.id = `aomidori-${role}`;
+        owned.add(el);
         return el;
       };
       const base = ownElement('style', 'base');
@@ -115,7 +127,7 @@ enum ReaderScript {
 
       // MARK: Book styles
 
-      const isBookSheet = (el) => !el.hasAttribute(OWN) && el.namespaceURI !== SVG && (
+      const isBookSheet = (el) => !isOwn(el) && el.namespaceURI !== SVG && (
         el.localName === 'style' ||
         (el.localName === 'link' && /(^|\s)stylesheet(\s|$)/i.test(el.getAttribute('rel') || '')));
 
@@ -147,7 +159,8 @@ enum ReaderScript {
           }
           el.setAttribute(ATTR_STASH, JSON.stringify(saved));
         } else if (enabled && el.hasAttribute(ATTR_STASH)) {
-          const saved = JSON.parse(el.getAttribute(ATTR_STASH));
+          let saved = {};
+          try { saved = JSON.parse(el.getAttribute(ATTR_STASH)); } catch (_) { /* unreadable: nothing to put back */ }
           for (const name in saved) el.setAttribute(name, saved[name]);
           el.removeAttribute(ATTR_STASH);
         }
@@ -181,8 +194,9 @@ enum ReaderScript {
         const enabled = !config.overrideEnabled;
         const fontEnabled = !config.fontFamily;
         const visit = (el) => {
+          dropForgedMarks(el);
           if (isBookSheet(el)) { setSheetEnabled(el, enabled); return; }
-          if (el.hasAttribute(OWN) || el.namespaceURI === SVG) return;
+          if (isOwn(el) || el.namespaceURI === SVG) return;
           if (!KEEP_INLINE.has(el.localName)) setInlineEnabled(el, enabled);
           setInlineFontEnabled(el, fontEnabled);
         };
@@ -233,6 +247,7 @@ enum ReaderScript {
           // drop the old one once it has loaded: no unstyled flash. The line being read is noted
           // now and restored in the load handler, which runs before the new layout is painted.
           const next = user.cloneNode(false);
+          owned.add(next);
           next.setAttribute('href', href);
           const anchor = captureAnchor();
           const swap = () => {
@@ -280,7 +295,7 @@ enum ReaderScript {
         const seen = new Set();
         for (const sheet of doc.styleSheets) {
           const owner = sheet.ownerNode;
-          if (owner && owner.hasAttribute && owner.hasAttribute(OWN)) continue;
+          if (owner && isOwn(owner)) continue;
           if (sheetHandlesColorScheme(sheet, seen)) return true;
         }
         return false;
@@ -512,7 +527,7 @@ enum ReaderScript {
         for (const y of [line, line + 16, line - 16, line + 40]) {
           let el = doc.elementFromPoint(innerWidth / 2, y);
           if (el && el.closest) el = el.closest('svg') ? el.closest('svg') : el;
-          if (!el || el === root || el === doc.body || el.hasAttribute(OWN)) continue;
+          if (!el || el === root || el === doc.body || isOwn(el)) continue;
           const path = elementPath(el);
           if (!path) continue;
           const rect = visualRect(el);

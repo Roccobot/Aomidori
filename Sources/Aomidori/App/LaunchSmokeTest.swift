@@ -82,8 +82,12 @@ final class LaunchSmokeTest {
         for _ in 0..<40 where readerWindows().isEmpty { try? await Task.sleep(for: .milliseconds(100)) }
         try? await Task.sleep(for: .milliseconds(800))
         report["afterOpen"] = windows()
-        let readers = readerWindows()
+        var readers = readerWindows()
         if readers.count != 1 { failures.append("one reader window after opening") }
+        // Watched without being held: once the book is closed, nothing may keep its window or
+        // its page (web view, archive) alive.
+        weak let openedWindow = readers.first
+        weak let openedPage = (readers.first?.windowController as? ReaderWindowController)?.reader
         if EmptyReaderWindowController.all.contains(where: { $0 === empty }) || emptyWindow.isVisible { failures.append("empty window replaced") }
         if let reader = readers.first {
             report["frames"] = ["empty": NSStringFromRect(emptyFrame), "reader": NSStringFromRect(reader.frame)]
@@ -108,11 +112,15 @@ final class LaunchSmokeTest {
             tab?.close()
             try? await Task.sleep(for: .milliseconds(400))
         }
+        readers.removeAll()
 
         // 5. Book closed, then the Dock's reopen event: the empty window again.
         NSDocumentController.shared.documents.forEach { $0.close() }
         try? await Task.sleep(for: .milliseconds(600))
         report["afterClose"] = windows()
+        for _ in 0..<20 where openedWindow != nil || openedPage != nil { try? await Task.sleep(for: .milliseconds(100)) }
+        report["closedBookReleased"] = ["window": openedWindow == nil, "page": openedPage == nil]
+        if openedWindow != nil || openedPage != nil { failures.append("closed book still in memory") }
         do {
             try sendReopenEvent()
         } catch {

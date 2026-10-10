@@ -4,12 +4,27 @@ import AomidoriCore
 import EPUBKit
 import WebKit
 
+/// Stands for any server during a smoke session: it only counts what reaches it.
+@MainActor
+final class OfflineProbe: NSObject, WKURLSchemeHandler {
+    static let scheme = "aomidori-probe"
+    static let shared = OfflineProbe()
+    var requests = 0
+
+    func webView(_ webView: WKWebView, start task: any WKURLSchemeTask) {
+        requests += 1
+        task.didFailWithError(URLError(.cancelled))
+    }
+
+    func webView(_ webView: WKWebView, stop task: any WKURLSchemeTask) {}
+}
+
 /// A scripted reader session for `scripts/smoke-reader.sh`, enabled by the launch argument
 /// `-AomidoriReaderSmoke <folder>`. With the book's first spine item (usually the cover) it
 /// measures the picture at three window sizes and three rendering modes; then it checks the
 /// per-chapter position memory and the chapter-edge toast; then the custom font (AppKit fonts
 /// turned into choices, and choices rendered in a chapter), the book information window, and
-/// last the history of followed links (`⌘←` `⌘→`). Snapshots and `report.json` go in the
+/// the history of followed links (`⌘←` `⌘→`), and last that nothing outside the book loads. Snapshots and `report.json` go in the
 /// folder. Reading state is kept there too (see `AppPaths`), settings are never changed, and
 /// the window frame is put back at the end.
 @MainActor
@@ -143,7 +158,59 @@ final class ReaderSmokeTest {
         // 7. The reader's history: links followed from partway down a chapter, then back and
         // forward to the exact places.
         await checkHistory()
+
+        // 8. Offline: a picture, a sheet and a font outside the book's scheme never load.
+        await checkOffline()
+
+        // 9. A book sheet dressed as one of the reader's own still loses to the override.
+        await checkForgedMarks()
         finish(window: window, originalFrame: originalFrame)
+    }
+
+    /// A book can write `data-aomidori…` attributes too: a sheet carrying the reader's own
+    /// mark and an already-stashed media must still be switched off by *Override Book Style*.
+    private func checkForgedMarks() async {
+        guard let reader else { return }
+        reader.smokeConfigure { $0.overrideEnabled = false }
+        try? await Task.sleep(for: .milliseconds(500))
+        let insert = """
+        const style = document.createElement('style');
+        style.setAttribute('data-aomidori', 'base');
+        style.setAttribute('data-aomidori-media', '-');
+        style.textContent = 'body p { color: rgb(1, 2, 3) !important; }';
+        document.head.appendChild(style);
+        const p = document.createElement('p'); p.id = 'aomidori-smoke-forged'; p.textContent = '·';
+        document.body.appendChild(p);
+        return getComputedStyle(p).color;
+        """
+        let before = try? await reader.webView.callAsyncJavaScript(insert, arguments: [:], in: nil, contentWorld: .defaultClient)
+        reader.smokeConfigure { $0.overrideEnabled = true }
+        try? await Task.sleep(for: .milliseconds(700))
+        let after = try? await reader.webView.callAsyncJavaScript(
+            "return getComputedStyle(document.getElementById('aomidori-smoke-forged')).color",
+            arguments: [:], in: nil, contentWorld: .defaultClient)
+        reader.smokeConfigure(nil)
+        report["forgedSheet"] = "\(before as? String ?? "?") -> \(after as? String ?? "?")"
+        if (after as? String) == "rgb(1, 2, 3)" { failures.append("override: a sheet with a forged reader mark survives") }
+    }
+
+    /// The page asks for a picture, a style sheet and a font from `OfflineProbe`'s scheme, which
+    /// stands for any server: the offline rules must stop all three before they leave the page.
+    private func checkOffline() async {
+        guard let reader else { return }
+        OfflineProbe.shared.requests = 0
+        let probe = "\(OfflineProbe.scheme)://probe"
+        let script = """
+        const img = document.createElement('img'); img.src = probe + '/pixel.png';
+        const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = probe + '/sheet.css';
+        const style = document.createElement('style');
+        style.textContent = "@font-face { font-family: AomidoriProbe; src: url('" + probe + "/font.woff2'); } body { font-family: AomidoriProbe; }";
+        document.head.append(link, style); document.body.append(img);
+        """
+        _ = try? await reader.webView.callAsyncJavaScript(script, arguments: ["probe": probe], in: nil, contentWorld: .defaultClient)
+        try? await Task.sleep(for: .milliseconds(1500))
+        report["offlineProbeRequests"] = OfflineProbe.shared.requests
+        if OfflineProbe.shared.requests != 0 { failures.append("offline: resources outside the book were requested") }
     }
 
     /// A link to another chapter and a link to an anchor in the same chapter, each clicked from
@@ -237,7 +304,10 @@ final class ReaderSmokeTest {
             guard let font = NSFont(name: name, size: 16) else { result[name] = "missing"; continue }
             result[name] = describe(FontChoiceConversion.choice(from: font).choice)
         }
-        if let font = NSFont(name: "HoeflerText-Regular", size: 16) {
+        // Baskerville has small caps: macOS drops a feature the face lacks, so a font made with
+        // one keeps no settings at all. Hoefler Text, used here until 0.60, has none on macOS 27,
+        // and this check failed for that reason alone, not because of the conversion.
+        if let font = NSFont(name: "Baskerville", size: 16) {
             let apple = font.fontDescriptor.addingAttributes([.featureSettings: [[
                 NSFontDescriptor.FeatureKey.typeIdentifier: kLowerCaseType,
                 NSFontDescriptor.FeatureKey.selectorIdentifier: kLowerCaseSmallCapsSelector,

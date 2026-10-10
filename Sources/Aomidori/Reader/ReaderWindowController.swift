@@ -73,10 +73,12 @@ final class ReaderWindowController: NSWindowController, NSWindowDelegate, NSTool
         window.toolbar = toolbar
 
         reader.delegate = self
+        // Only weak captures: the sidebar panes live as long as the window, and a strong
+        // reference to it here would keep every closed book (web view, ZIP) in memory.
         toc.onSelect = { [weak self] entry in
             guard let self else { return }
             reader.go(to: entry)
-            window.makeFirstResponder(reader.webView)
+            self.window?.makeFirstResponder(reader.webView)
         }
         bookmarks.onSelect = { [weak self] bookmark in self?.reader.show(bookmark) }
         bookmarks.onDelete = { [weak self] bookmark in self?.deleteBookmark(bookmark) }

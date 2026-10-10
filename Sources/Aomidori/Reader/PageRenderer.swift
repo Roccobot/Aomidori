@@ -4,8 +4,8 @@ import WebKit
 
 /// One web view showing one document at a time, with the reader's style layers.
 ///
-/// This is the reusable rendering layer: the reader window uses it for books, the future
-/// CSS Playground can drive it with a different `PageResourceProvider`.
+/// This is the reusable rendering layer: the reader window uses it for books, the CSS
+/// Playground drives it with a different `PageResourceProvider`.
 @MainActor
 final class PageRenderer: NSObject {
     let webView: WKWebView
@@ -14,6 +14,9 @@ final class PageRenderer: NSObject {
     private let userContent = WKUserContentController()
     private let messageProxy = ScriptMessageProxy()
     private(set) var configuration: ReaderConfiguration
+    /// Set once the offline rules are in place; a load asked for before waits here.
+    private var rulesReady = false
+    private var pendingLoad: URLRequest?
 
     /// Called with the document's path and position after the reader stops scrolling. The path
     /// says which document it was: a report may arrive after the next one has started loading.
@@ -28,6 +31,9 @@ final class PageRenderer: NSObject {
 
         let webConfiguration = WKWebViewConfiguration()
         webConfiguration.setURLSchemeHandler(PageSchemeHandler(host: host, provider: provider), forURLScheme: PageSchemeHandler.scheme)
+        if ReaderSmokeTest.isActive {
+            webConfiguration.setURLSchemeHandler(OfflineProbe.shared, forURLScheme: OfflineProbe.scheme)
+        }
         // Nothing is written to disk; every window starts clean.
         webConfiguration.websiteDataStore = .nonPersistent()
         // Book scripts never run. The reader's own script lives in an isolated world and still does.
@@ -48,6 +54,20 @@ final class PageRenderer: NSObject {
         messageProxy.renderer = self
         userContent.add(messageProxy, contentWorld: .defaultClient, name: ReaderScript.messageHandlerName)
         installScript()
+        OfflineRules.whenReady { [weak self] rules in
+            guard let self else { return }
+            if let rules { userContent.add(rules) }
+            rulesReady = true
+            if let request = pendingLoad {
+                pendingLoad = nil
+                webView.load(request)
+            }
+        }
+    }
+
+    /// Every load goes through here, so no page is shown before the offline rules apply.
+    private func load(_ request: URLRequest) {
+        if rulesReady { webView.load(request) } else { pendingLoad = request }
     }
 
     /// The URL of a container-relative path, with an optional fragment.
@@ -67,13 +87,13 @@ final class PageRenderer: NSObject {
     }
 
     func load(path: String, fragment: String? = nil) {
-        webView.load(URLRequest(url: url(forPath: path, fragment: fragment)))
+        load(URLRequest(url: url(forPath: path, fragment: fragment)))
     }
 
     /// Loads a document again, bypassing WebKit's caches, so the page and its own resources
     /// (the book's CSS, pictures, fonts) are read from the book anew.
     func reload(path: String) {
-        webView.load(URLRequest(url: url(forPath: path), cachePolicy: .reloadIgnoringLocalAndRemoteCacheData))
+        load(URLRequest(url: url(forPath: path), cachePolicy: .reloadIgnoringLocalAndRemoteCacheData))
     }
 
     /// Applies a new configuration to the current document without reloading it, and to every
@@ -137,6 +157,44 @@ final class PageRenderer: NSObject {
             onEdges?(path, ScrollEdges(atTop: atTop, atBottom: atBottom))
         default:
             break
+        }
+    }
+}
+
+/// Keeps every page offline: a book (or a style) may name pictures, sheets or fonts on the web,
+/// and loading them would tell a server when and where the book is read. Only the renderer's
+/// own scheme and inline `data:` and `blob:` resources load; links the reader clicks are not
+/// loads and still open in the browser. Compiled once per launch, shared by every renderer.
+@MainActor
+enum OfflineRules {
+    static let identifier = "AomidoriOffline"
+    /// Content-blocker URL filters have no alternation (`a|b`): one exception per scheme.
+    static let source: String = {
+        let allowed = [PageSchemeHandler.scheme, "data", "blob", "about"].map {
+            #"{"trigger": {"url-filter": "^\#($0):"}, "action": {"type": "ignore-previous-rules"}}"#
+        }
+        return "[" + ([#"{"trigger": {"url-filter": ".*"}, "action": {"type": "block"}}"#] + allowed).joined(separator: ",\n") + "]"
+    }()
+
+    private enum State { case idle, compiling, done(WKContentRuleList?) }
+    private static var state = State.idle
+    private static var waiting: [(WKContentRuleList?) -> Void] = []
+
+    /// Calls `body` with the compiled rules once they exist; with `nil` if compiling failed,
+    /// so a page is never held back forever.
+    static func whenReady(_ body: @escaping (WKContentRuleList?) -> Void) {
+        if case .done(let rules) = state { return body(rules) }
+        waiting.append(body)
+        guard case .idle = state else { return }
+        state = .compiling
+        WKContentRuleListStore.default().compileContentRuleList(forIdentifier: identifier, encodedContentRuleList: source) { rules, error in
+            MainActor.assumeIsolated {
+                if let error { NSLog("Aomidori: offline rules not compiled: \(error)") }
+                state = .done(rules)
+                let callbacks = waiting
+                waiting = []
+                callbacks.forEach { $0(rules) }
+            }
         }
     }
 }
