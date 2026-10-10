@@ -120,7 +120,11 @@
   a:hover{text-decoration:underline}
   :focus-visible{outline:2px solid var(--text-link); outline-offset:2px}
 
-  .foglio{max-width:960px; width:100%; margin:0 auto; padding:24px 24px 0}
+  /* The feature cards' grid, shared with the screenshot's place (see .schermata). */
+  .foglio{
+    max-width:960px; width:100%; margin:0 auto; padding:24px 24px 0;
+    --fatti-larghezza:840px; --fatti-spazio:40px; --glifo:24px; --glifo-spazio:14px;
+  }
   .testa{display:grid; grid-template-columns:minmax(0,1fr); gap:40px; --icona:108px}
   .alto{display:grid; grid-template-columns:auto 1fr; gap:20px 24px; align-items:center}
   /* The artwork is a 1024 canvas with an 824 tile (100 px of margin and shadow on each side):
@@ -129,7 +133,6 @@
   .icona{display:block; width:var(--icona); height:var(--icona); margin-left:calc(var(--icona) * -100 / 1024)}
   h1{font-size:40px; line-height:1.1; letter-spacing:-0.02em; font-weight:600; margin:0}
   .sottotitolo{font-size:18px; color:var(--text-muted); margin:6px 0 0}
-  .sottotitolo .sorgente{font-size:15px; white-space:nowrap}
   .parole{display:flex; flex-direction:column; gap:20px; max-width:38rem; grid-column:1 / -1}
   .claim{font-size:18px; line-height:1.55; color:var(--text-muted); margin:0}
   .blocco-scarica{display:flex; flex-direction:column; gap:10px; align-items:flex-start}
@@ -151,10 +154,12 @@
 
   /* The screenshot slot: hidden until its picture has loaded, so a missing file never shows
      as a broken image. Expected files, one per language and theme (see the script):
-     assets/screenshot-it-light.png, -it-dark, -en-light, -en-dark; 1600 x 1780, a portrait
-     window without the sidebar (the owner's requests, 2026-10-10). In two columns it is as
-     wide as the right column and as tall as the left one, from the icon's tile to the end of
-     the install steps: 428 x 476 px, measured in both languages.
+     assets/screenshot-it-light.png, -it-dark, -en-light, -en-dark; a portrait window without
+     the sidebar (the owner's requests, 2026-10-10). In two columns its place comes from the
+     feature cards below: it starts where the right cards' text starts, and it is as wide as the
+     span from the left cards' text to the right cards' glyphs (402 px); its top is on the
+     icon's tile, its bottom at the end of the install steps. The picture's proportions are
+     measured on that layout, in both languages (see ScreenshotSession.contentSize).
      The shadow is AIV's: a soft shadow on light, and on dark (where black would not show) a
      shadow plus a glow in the accent colour. It is a drop-shadow, which follows the window's
      rounded corners and takes no room: only the picture lines up with the column's edges. */
@@ -167,18 +172,28 @@
   .schermata[hidden]{display:none}
   .schermata img{display:block; width:100%; height:auto; filter:var(--ombra-schermata)}
   @media (min-width:1000px){
-    /* Two equal columns: words on the left, as wide as the column (the opening text included),
-       and the screenshot on the right, its top on the icon's tile (the canvas has 100 px of
-       margin in 1024, as in .icona). */
-    .con-schermata .testa{grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:56px; align-items:start}
+    /* Two columns: words on the left, as wide as the column (the opening text included), and
+       the screenshot on the right, lined up with the feature cards (see above), its top on the
+       icon's tile (the canvas has 100 px of margin in 1024, as in .icona). */
+    .con-schermata .testa{
+      --colonna-fatti:calc((var(--fatti-larghezza) - var(--fatti-spazio)) / 2);
+      --rientro:calc(var(--glifo) + var(--glifo-spazio));
+      --schermata-larghezza:calc(var(--colonna-fatti) + var(--fatti-spazio) - var(--rientro));
+      --schermata-inizio:calc(var(--colonna-fatti) + var(--fatti-spazio) + var(--rientro));
+      grid-template-columns:minmax(0,1fr) var(--schermata-larghezza); gap:56px; align-items:start;
+      max-width:calc(var(--schermata-inizio) + var(--schermata-larghezza));
+    }
     .con-schermata .parole{max-width:none}
+    /* The Italian subtitle is about 1.5 px wider than its column: kept on one line, it runs
+       into the empty gap rather than leaving "macOS" alone on a second line. */
+    .con-schermata .sottotitolo{white-space:nowrap}
     .con-schermata .schermata{margin-top:calc(var(--icona) * 100 / 1024)}
   }
 
-  .fatti{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px 40px; padding:56px 0 0; max-width:840px}
+  .fatti{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px var(--fatti-spazio); padding:56px 0 0; max-width:var(--fatti-larghezza)}
   .fatto{
-    display:flex; gap:14px; align-items:flex-start;
-    --glifo:24px; --titolo-corpo:15px; --titolo-interlinea:1.2;
+    display:flex; gap:var(--glifo-spazio); align-items:flex-start;
+    --titolo-corpo:15px; --titolo-interlinea:1.2;
   }
   .fatto svg{
     flex:none; color:var(--accent);
@@ -214,9 +229,6 @@
     .tecnica{text-align:center; line-height:1.8}
     .installa{align-self:center}
     .solo-mac{text-align:center}
-    /* The source link goes on its own line, without the separating dot. */
-    .sottotitolo .sorgente{display:block; margin-top:2px}
-    .sottotitolo .sorgente [aria-hidden]{display:none}
     .tecnica .sep{display:none}
     .tecnica .pezzo{display:block}
     .fatti{grid-template-columns:1fr; padding-top:40px}
@@ -236,7 +248,7 @@
     </picture>
     <div>
       <h1>Aomidori</h1>
-      <p class="sottotitolo"><span id="sottotitolo">eBook and comic reader for macOS</span> <span class="sorgente"><span aria-hidden="true">&middot;</span> <a id="sorgente" href="https://github.com/Roccobot/Aomidori" target="_blank" rel="noopener noreferrer">source code</a></span></p>
+      <p class="sottotitolo"><span id="sottotitolo">eBook and comic reader for macOS</span></p>
     </div>
     <div class="parole">
       <p class="claim" id="claim">A light, snappy EPUB reader that works like a web page: each chapter scrolls vertically, the arrow keys change chapter, and your CSS always has the last word.</p>
@@ -261,7 +273,7 @@
       </div>
     </div>
   </div>
-  <figure class="schermata" id="schermata" hidden><img id="schermata-img" width="1600" height="1780" alt=""></figure>
+  <figure class="schermata" id="schermata" hidden><img id="schermata-img" width="1600" height="1894" alt=""></figure>
   </div>
 
   <div class="fatti">
@@ -348,7 +360,6 @@
       scarica: 'Scarica Aomidori',
       sistema: 'macOS 27 o successivo, solo Apple Silicon',
       versioni: 'tutte le versioni',
-      sorgente: 'codice sorgente',
       soloMac: 'Aomidori è un\'app per Mac: scaricala da un Mac con Apple Silicon.',
       installaTitolo: 'Come si installa',
       passi: [
@@ -381,7 +392,6 @@
       scarica: 'Download Aomidori',
       sistema: 'macOS 27 or later, Apple Silicon only',
       versioni: 'all versions',
-      sorgente: 'source code',
       soloMac: 'Aomidori is an app for the Mac: download it on a Mac with Apple Silicon.',
       installaTitolo: 'Installing',
       passi: [
@@ -449,7 +459,6 @@
 
     el('sottotitolo').textContent = T.sottotitolo;
     el('claim').textContent = T.claim;
-    el('sorgente').textContent = T.sorgente;
     el('installa-titolo').textContent = T.installaTitolo;
     for (var p = 0; p < T.passi.length; p++) el('passo-' + (p + 1)).textContent = T.passi[p];
     var soloMac = el('solo-mac');
