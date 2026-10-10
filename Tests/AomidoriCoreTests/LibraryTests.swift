@@ -112,4 +112,15 @@ struct ReaderSettingsTests {
         let old = #"{"overrideEnabled":false,"styleHandlesColorScheme":false,"night":false,"nightPaletteCSS":"","scale":1,"fontFaceCSS":""}"#
         #expect(try JSONDecoder().decode(ReaderConfiguration.self, from: Data(old.utf8)).justified == false)
     }
+
+    /// Black-and-white illustrations blend by default; ⌘L turns it off, and the page gets the choice.
+    @Test func illustrationsBlendUnlessTurnedOff() throws {
+        #expect(ReaderConfiguration().blendsInk == true)
+        var off = ReaderConfiguration()
+        off.blendsInk = false
+        #expect(off.json().contains("\"blendsInk\":false"))
+        // A configuration written before 1.10 has no key: blended.
+        let old = #"{"overrideEnabled":false,"styleHandlesColorScheme":false,"night":false,"nightPaletteCSS":"","scale":1,"fontFaceCSS":""}"#
+        #expect(try JSONDecoder().decode(ReaderConfiguration.self, from: Data(old.utf8)).blendsInk == true)
+    }
 }

@@ -37,12 +37,16 @@ public struct ReaderConfiguration: Codable, Equatable, Sendable {
     /// Running text justified (`true`) or flush left (`false`, the default); either way it wins
     /// over the book's and the user style's alignment. Centred and right-aligned text is kept.
     public var justified: Bool
+    /// Black-and-white illustrations blend into the page (`⌘L`, on by default): Multiply in light,
+    /// Divide in dark; pictures in colour, photographs and comics are left as they are.
+    public var blendsInk: Bool
 
     public init(overrideEnabled: Bool = false, styleHref: String? = nil, styleHandlesColorScheme: Bool = false,
                 night: Bool = false, nightPaletteCSS: String = "", scale: Double = 1,
                 fontFamily: String? = nil, fontFaceCSS: String = "", fontWeight: Double? = nil,
                 fontBoldWeight: Double? = nil, fontItalic: Bool = false, fontStretch: Double? = nil,
-                fontFeatureSettings: String = "", fontVariationSettings: String = "", justified: Bool = false) {
+                fontFeatureSettings: String = "", fontVariationSettings: String = "", justified: Bool = false,
+                blendsInk: Bool = true) {
         self.overrideEnabled = overrideEnabled
         self.styleHref = styleHref
         self.styleHandlesColorScheme = styleHandlesColorScheme
@@ -58,6 +62,7 @@ public struct ReaderConfiguration: Codable, Equatable, Sendable {
         self.fontFeatureSettings = fontFeatureSettings
         self.fontVariationSettings = fontVariationSettings
         self.justified = justified
+        self.blendsInk = blendsInk
     }
 
     /// Turns the custom font on with a choice and its `@font-face` rules, or off with `nil`.
@@ -75,6 +80,7 @@ public struct ReaderConfiguration: Codable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case overrideEnabled, styleHref, styleHandlesColorScheme, night, nightPaletteCSS, scale, fontFamily, fontFaceCSS
         case fontWeight, fontBoldWeight, fontItalic, fontStretch, fontFeatureSettings, fontVariationSettings, justified
+        case blendsInk
     }
 
     public init(from decoder: any Decoder) throws {
@@ -94,7 +100,8 @@ public struct ReaderConfiguration: Codable, Equatable, Sendable {
             fontStretch: try container.decodeIfPresent(Double.self, forKey: .fontStretch),
             fontFeatureSettings: try container.decodeIfPresent(String.self, forKey: .fontFeatureSettings) ?? "",
             fontVariationSettings: try container.decodeIfPresent(String.self, forKey: .fontVariationSettings) ?? "",
-            justified: try container.decodeIfPresent(Bool.self, forKey: .justified) ?? false
+            justified: try container.decodeIfPresent(Bool.self, forKey: .justified) ?? false,
+            blendsInk: try container.decodeIfPresent(Bool.self, forKey: .blendsInk) ?? true
         )
     }
 
@@ -117,6 +124,7 @@ public struct ReaderConfiguration: Codable, Equatable, Sendable {
         try container.encode(fontFeatureSettings, forKey: .fontFeatureSettings)
         try container.encode(fontVariationSettings, forKey: .fontVariationSettings)
         try container.encode(justified, forKey: .justified)
+        try container.encode(blendsInk, forKey: .blendsInk)
     }
 
     /// JSON text, which is also a valid JavaScript expression.

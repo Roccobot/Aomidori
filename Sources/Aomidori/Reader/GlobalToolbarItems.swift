@@ -1,19 +1,21 @@
 import AppKit
 
-/// The toolbar items for the app-wide reading settings (Night, Style, Justify, Override), shared
+/// The toolbar items for the app-wide reading settings (Night, Style, Justify, Blend, Override), shared
 /// by the reader window and the empty window so both have the same chrome.
 @MainActor
 final class GlobalToolbarItems {
     static let night = NSToolbarItem.Identifier("Aomidori.night")
     static let style = NSToolbarItem.Identifier("Aomidori.style")
     static let justify = NSToolbarItem.Identifier("Aomidori.justify")
+    static let blendInk = NSToolbarItem.Identifier("Aomidori.blendInk")
     static let override = NSToolbarItem.Identifier("Aomidori.override")
-    static let identifiers = [night, style, justify, override]
+    static let identifiers = [night, style, justify, blendInk, override]
 
     private let environment = ReaderEnvironment.shared
     private let styleMenuUpdater = StyleMenuUpdater()
     private weak var nightItem: NSToolbarItem?
     private weak var justifyItem: NSToolbarItem?
+    private weak var blendInkItem: NSToolbarItem?
     private weak var overrideItem: NSToolbarItem?
 
     /// The item for one of `identifiers`, or nil for any other identifier.
@@ -53,6 +55,15 @@ final class GlobalToolbarItems {
             justifyItem = item
             update()
             return item
+        case Self.blendInk:
+            let item = NSToolbarItem(itemIdentifier: identifier)
+            item.label = L10n.string("toolbar.blendInk")
+            item.toolTip = L10n.string("toolbar.blendInk.help")
+            item.action = #selector(AppDelegate.toggleBlendsInk(_:))
+            item.isBordered = true
+            blendInkItem = item
+            update()
+            return item
         case Self.override:
             let item = NSToolbarItem(itemIdentifier: identifier)
             item.label = L10n.string("toolbar.override")
@@ -67,13 +78,16 @@ final class GlobalToolbarItems {
         }
     }
 
-    /// Images that show the current state of Night, Justify and Override.
+    /// Images that show the current state of Night, Justify, Blend and Override.
     func update() {
         let night = environment.isNight
         nightItem?.image = Self.symbol(night ? "moon.fill" : "sun.max", L10n.string(night ? "a11y.night" : "a11y.day"))
         let justified = environment.justified
         justifyItem?.image = Self.symbol(justified ? "text.justify" : "text.alignleft",
                                          L10n.string(justified ? "a11y.justified" : "a11y.flushLeft"))
+        let blends = environment.blendsInk
+        blendInkItem?.image = Self.symbol(blends ? "circle.lefthalf.filled" : "circle",
+                                          L10n.string(blends ? "a11y.blendInk.on" : "a11y.blendInk.off"))
         let overriding = environment.overrideEnabled
         overrideItem?.image = Self.symbol(overriding ? "paintbrush.pointed.fill" : "paintbrush.pointed",
                                           L10n.string(overriding ? "a11y.styleOverridden" : "a11y.bookStyle"))

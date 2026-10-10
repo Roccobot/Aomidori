@@ -1,5 +1,6 @@
 import Foundation
 import AomidoriCore
+import EPUBKit
 
 /// The page-side half of the rendering layer. It runs in an isolated content world
 /// (`WKContentWorld.defaultClient`) at document start, before the book's markup is parsed,
@@ -18,6 +19,8 @@ import AomidoriCore
 ///    counter-zoomed; see `refreshScale`.
 /// 6. `font` (layer `aomidori`): the app's custom font, when on, for all text: family, and the
 ///    chosen weight (bold text relative to it), width, italic, features and variable axes.
+/// 7. `align` (layer `aomidori`): running text flush left or justified, with its hyphenation.
+/// 8. `ink` (layer `aomidori`): black-and-white illustrations blended into the page (`⌘L`).
 ///
 /// Native code drives it with `Aomidori.apply(configuration)`; see `ReaderConfiguration`.
 enum ReaderScript {
@@ -124,6 +127,7 @@ enum ReaderScript {
       const scale = ownElement('style', 'scale');
       const font = ownElement('style', 'font');
       const align = ownElement('style', 'align');
+      const ink = ownElement('style', 'ink');
       const container = () => doc.head || root;
 
       // MARK: Book styles
@@ -222,6 +226,7 @@ enum ReaderScript {
         root.appendChild(scale);
         root.appendChild(font);
         root.appendChild(align);
+        root.appendChild(ink);
         if (parsing) observer.observe(root, { childList: true, subtree: true });
         mounted = true;
         return true;
@@ -427,6 +432,69 @@ enum ReaderScript {
           ? 'text-align: justify !important; -webkit-hyphens: auto !important; hyphens: auto !important;'
           : 'text-align: left !important; -webkit-hyphens: manual !important; hyphens: manual !important;';
         align.textContent = `@layer aomidori {\n  [${ALIGN_MARK}] { ${rule} }\n}`;
+      }
+
+      // MARK: Illustrations
+
+      // Black-and-white illustrations (line drawings, engravings: mostly white paper) blend into
+      // the page, Rocco's request (1.10): Multiply in light, Divide in dark. The CSS has no
+      // Divide; an inverted picture under color-dodge computes exactly page ÷ picture. Pictures
+      // in colour, photographs (little pure white) and comic pages are left as they are. Each
+      // picture is read once, scaled down, from a canvas: a book's pictures share its origin.
+      const INK_MARK = 'data-aomidori-ink';
+      const INK_SAMPLE = 48;        // pixels on the longer side
+      const INK_CHROMA = 48;        // highest minus lowest channel: above it a pixel has colour (yellowed paper stays below)
+      const INK_COLOURED = 0.02;    // share of pixels with colour that makes a picture coloured
+      const INK_PAPER = 200;        // luminance of paper, yellowed paper included
+      const INK_PAPER_SHARE = 0.4;  // share of paper that tells a drawing from a photograph
+      const isComicPage = location.pathname.endsWith('/\#(ComicArchive.documentPath)');
+      const inkChecked = new WeakSet();
+
+      function isInk(img) {
+        const ratio = Math.min(1, INK_SAMPLE / Math.max(img.naturalWidth, img.naturalHeight));
+        const width = Math.max(1, Math.round(img.naturalWidth * ratio));
+        const height = Math.max(1, Math.round(img.naturalHeight * ratio));
+        const canvas = doc.createElementNS(XHTML, 'canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        if (!context) return false;
+        let data;
+        try {
+          context.drawImage(img, 0, 0, width, height);
+          data = context.getImageData(0, 0, width, height).data;
+        } catch (_) { return false; }
+        let coloured = 0, paper = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          // Transparent areas show the page already: they count as paper.
+          if (data[i + 3] < 128) { paper++; continue; }
+          const r = data[i], g = data[i + 1], b = data[i + 2];
+          if (Math.max(r, g, b) - Math.min(r, g, b) > INK_CHROMA) coloured++;
+          else if (0.2126 * r + 0.7152 * g + 0.0722 * b >= INK_PAPER) paper++;
+        }
+        const count = width * height;
+        return coloured <= count * INK_COLOURED && paper >= count * INK_PAPER_SHARE;
+      }
+
+      function checkInk(img) {
+        if (isComicPage || inkChecked.has(img) || !img.complete || !img.naturalWidth) return;
+        inkChecked.add(img);
+        // A mark the book wrote goes first, so the one set here is this script's.
+        dropForgedMarks(img);
+        if (isInk(img)) img.setAttribute(INK_MARK, '');
+      }
+      const checkAllInk = () => { for (const img of doc.images) checkInk(img); };
+      // Pictures finish loading in their own time; `load` does not bubble, capture sees it.
+      doc.addEventListener('load', (event) => {
+        if (event.target && event.target.localName === 'img') checkInk(event.target);
+      }, true);
+
+      function refreshInk() {
+        const rule = config.night
+          ? 'filter: invert(1) !important; mix-blend-mode: color-dodge !important;'
+          : 'mix-blend-mode: multiply !important;';
+        const css = config.blendsInk ? `@layer aomidori {\n  img[${INK_MARK}] { ${rule} }\n}` : '';
+        if (ink.textContent !== css) ink.textContent = css;
       }
 
       // MARK: Image pages
@@ -655,16 +723,19 @@ enum ReaderScript {
         parent.appendChild(scale);
         parent.appendChild(font);
         parent.appendChild(align);
+        parent.appendChild(ink);
         refreshPalette();
         refreshScale();
         refreshFont();
         refreshAlign();
+        checkAllInk();
+        refreshInk();
         sizeObserver.observe(root);
         if (doc.body) sizeObserver.observe(doc.body);
         reportEdges();
       }, { once: true });
 
-      addEventListener('load', () => { refreshPalette(); refreshFont(); refreshAlign(); reportEdges(); }, { once: true });
+      addEventListener('load', () => { refreshPalette(); refreshFont(); refreshAlign(); checkAllInk(); reportEdges(); }, { once: true });
 
       window.Aomidori = Object.freeze({
         apply(next) {
@@ -677,6 +748,7 @@ enum ReaderScript {
           refreshScale();
           refreshFont();
           refreshAlign();
+          refreshInk();
           if (anchor) restoreAnchor(anchor);
         },
         fraction,

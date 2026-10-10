@@ -50,7 +50,7 @@ public enum ShortcutCommand: String, CaseIterable, Sendable {
     // Go
     case previousChapter, nextChapter, back, forward, backAlternate, forwardAlternate, addBookmark
     // Style
-    case override, justify, previousStyle, nextStyle, styleList, reload, playground
+    case override, justify, blendInk, previousStyle, nextStyle, styleList, reload, playground
     case customFont, defineFont
     // Window
     case minimize
@@ -112,6 +112,8 @@ public enum Shortcuts {
         .override: KeyShortcut("."),
         // Flush left (the default) ↔ justified, over any CSS; Rocco's choice, 0.70.
         .justify: KeyShortcut("j"),
+        // Black-and-white illustrations blended into the page, on ↔ off; Rocco's choice, 1.10.
+        .blendInk: KeyShortcut("l"),
         .previousStyle: KeyShortcut("'"),
         .nextStyle: KeyShortcut("\u{00EC}"),
         .styleList: KeyShortcut("1"),

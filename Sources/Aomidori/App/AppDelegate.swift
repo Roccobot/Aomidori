@@ -116,6 +116,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     @objc func toggleNight(_ sender: Any?) { environment.toggleNight() }
     @objc func toggleStyleOverride(_ sender: Any?) { environment.toggleOverride() }
     @objc func toggleJustified(_ sender: Any?) { environment.toggleJustified() }
+    @objc func toggleBlendsInk(_ sender: Any?) { environment.toggleBlendsInk() }
     @objc func previousStyle(_ sender: Any?) { environment.cycleStyle(by: -1) }
     @objc func nextStyle(_ sender: Any?) { environment.cycleStyle(by: 1) }
 
@@ -208,6 +209,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             menuItem.state = environment.overrideEnabled ? .on : .off
         case #selector(toggleJustified(_:)):
             menuItem.state = environment.justified ? .on : .off
+        case #selector(toggleBlendsInk(_:)):
+            menuItem.state = environment.blendsInk ? .on : .off
         case #selector(toggleCustomFont(_:)):
             menuItem.state = environment.customFontEnabled ? .on : .off
             menuItem.title = environment.customFontChoice.map {

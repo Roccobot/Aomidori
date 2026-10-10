@@ -147,6 +147,7 @@ enum MainMenu {
         menu.delegate = updater
         menu.addItem(item(L10n.string("menu.style.override"), #selector(AppDelegate.toggleStyleOverride(_:)), .override))
         menu.addItem(item(L10n.string("menu.style.justify"), #selector(AppDelegate.toggleJustified(_:)), .justify))
+        menu.addItem(item(L10n.string("menu.style.blendInk"), #selector(AppDelegate.toggleBlendsInk(_:)), .blendInk))
         menu.addItem(.separator())
         menu.addItem(item(L10n.string("menu.style.previous"), #selector(AppDelegate.previousStyle(_:)), .previousStyle))
         menu.addItem(item(L10n.string("menu.style.next"), #selector(AppDelegate.nextStyle(_:)), .nextStyle))

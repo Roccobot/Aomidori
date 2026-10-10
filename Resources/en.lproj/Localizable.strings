@@ -211,3 +211,10 @@
 
 /* Context menu (1.01) */
 "menu.context.openLinkInNewTab" = "Open Link in New Tab";
+
+/* Blending illustrations (1.10) */
+"menu.style.blendInk" = "Blend Black-and-White Illustrations";
+"toolbar.blendInk" = "Blend";
+"toolbar.blendInk.help" = "Blend black-and-white illustrations into the page, or leave them as they are (⌘L)";
+"a11y.blendInk.on" = "Illustrations blended into the page";
+"a11y.blendInk.off" = "Illustrations as they are";

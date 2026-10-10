@@ -19,6 +19,7 @@ final class ReaderEnvironment {
         static let selectedStyle = "AomidoriSelectedStyle"
         static let overrideEnabled = "AomidoriOverrideEnabled"
         static let justified = "AomidoriJustified"
+        static let blendsInk = "AomidoriBlendsInk"
         static let textScale = "AomidoriTextScale"
         /// The light/dark override since 0.53 (`AppearanceChoice`): `true` dark, `false` light,
         /// absent to follow macOS.
@@ -143,6 +144,14 @@ final class ReaderEnvironment {
 
     func toggleJustified() {
         defaults.set(!justified, forKey: Key.justified)
+        notify()
+    }
+
+    /// Black-and-white illustrations blended into the page (on by default), in every window.
+    var blendsInk: Bool { defaults.object(forKey: Key.blendsInk) as? Bool ?? true }
+
+    func toggleBlendsInk() {
+        defaults.set(!blendsInk, forKey: Key.blendsInk)
         notify()
     }
 
@@ -318,7 +327,8 @@ final class ReaderEnvironment {
             night: isNight,
             nightPaletteCSS: nightPaletteCSS,
             scale: textScale,
-            justified: justified
+            justified: justified,
+            blendsInk: blendsInk
         )
         configuration.setCustomFont(choice, faceCSS: choice.map { fontFaceCSS(for: $0.family) } ?? "")
         return configuration

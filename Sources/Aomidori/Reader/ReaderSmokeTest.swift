@@ -182,7 +182,69 @@ final class ReaderSmokeTest {
         // 13. The context menu, after a right click on a link of the book and on a picture:
         // WebKit's new-window and download items go, the link's becomes "Open Link in New Tab".
         await checkContextMenu()
+
+        // 14. Black-and-white illustrations: a line drawing blends (Multiply in light, inverted
+        // under color-dodge, which is Divide, in dark); a picture in colour and a grey photograph
+        // stay as they are; ⌘L's setting off leaves every picture alone.
+        await checkInk()
         finish(window: window, originalFrame: originalFrame)
+    }
+
+    private func checkInk() async {
+        guard let reader else { return }
+        let insert = """
+        const make = (paint) => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 160; canvas.height = 100;
+          const context = canvas.getContext('2d');
+          paint(context);
+          const img = document.createElement('img');
+          img.src = canvas.toDataURL('image/png');
+          return img;
+        };
+        const pictures = {
+          drawing: make((c) => { c.fillStyle = '#fff'; c.fillRect(0, 0, 160, 100); c.strokeStyle = '#000'; c.lineWidth = 4; c.strokeRect(20, 15, 120, 70); c.beginPath(); c.moveTo(20, 15); c.lineTo(140, 85); c.stroke(); }),
+          colour: make((c) => { c.fillStyle = '#d33'; c.fillRect(0, 0, 80, 100); c.fillStyle = '#3a3'; c.fillRect(80, 0, 80, 100); }),
+          photo: make((c) => { const g = c.createLinearGradient(0, 0, 160, 0); g.addColorStop(0, '#111'); g.addColorStop(1, '#aaa'); c.fillStyle = g; c.fillRect(0, 0, 160, 100); }),
+        };
+        for (const [id, img] of Object.entries(pictures)) { img.id = 'aomidori-smoke-' + id; document.body.insertBefore(img, document.body.firstChild); }
+        window.scrollTo(0, 0);
+        """
+        _ = try? await reader.webView.callAsyncJavaScript(insert, arguments: [:], in: nil, contentWorld: .defaultClient)
+        try? await Task.sleep(for: .milliseconds(800))
+        let read = """
+        return ['drawing', 'colour', 'photo'].map(id => {
+          const img = document.getElementById('aomidori-smoke-' + id);
+          const style = getComputedStyle(img);
+          return `${id}:${img.hasAttribute('data-aomidori-ink') ? 'ink' : '-'}:${style.mixBlendMode}:${style.filter}`;
+        }).join(' ');
+        """
+        func state() async -> String {
+            (try? await reader.webView.callAsyncJavaScript(read, arguments: [:], in: nil, contentWorld: .defaultClient) as? String) ?? "nil"
+        }
+        // Dark first: an unchanged configuration is not applied again.
+        reader.smokeConfigure { $0.night = true; $0.blendsInk = true }
+        try? await Task.sleep(for: .milliseconds(500))
+        let dark = await state()
+        await snapshot("ink-dark")
+        reader.smokeConfigure { $0.night = false; $0.blendsInk = true }
+        try? await Task.sleep(for: .milliseconds(500))
+        let light = await state()
+        await snapshot("ink-light")
+        reader.smokeConfigure { $0.night = false; $0.blendsInk = false }
+        try? await Task.sleep(for: .milliseconds(500))
+        let off = await state()
+        reader.smokeConfigure(nil)
+        report["ink"] = ["light": light, "dark": dark, "off": off]
+        if light != "drawing:ink:multiply:none colour:-:normal:none photo:-:normal:none" {
+            failures.append("ink: in light, only the line drawing multiplies")
+        }
+        if dark != "drawing:ink:color-dodge:invert(1) colour:-:normal:none photo:-:normal:none" {
+            failures.append("ink: in dark, only the line drawing divides")
+        }
+        if off != "drawing:ink:normal:none colour:-:normal:none photo:-:normal:none" {
+            failures.append("ink: with the setting off, every picture as it is")
+        }
     }
 
     private func checkContextMenu() async {
