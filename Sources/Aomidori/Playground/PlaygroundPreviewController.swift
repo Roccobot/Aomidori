@@ -35,6 +35,7 @@ final class PlaygroundPreviewController: NSViewController, WKNavigationDelegate 
     private(set) var source: Source = .sample
     private var renderer: PageRenderer
     private(set) var spineIndex: Int?
+    private var crashRecovery = CrashRecovery()
     /// Called after a document is shown (chapter changes included).
     var onNavigate: (() -> Void)?
     /// Called after a document has finished loading.
@@ -172,6 +173,8 @@ final class PlaygroundPreviewController: NSViewController, WKNavigationDelegate 
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        let path = spineIndex.flatMap { book?.spine[$0].path } ?? SampleTextProvider.documentPath
+        guard crashRecovery.shouldReload(path) else { return }
         if let spineIndex { showSpineItem(at: spineIndex) } else { load() }
     }
 }

@@ -81,8 +81,7 @@ public final class BookStateStore: @unchecked Sendable {
 
     public init(fileURL: URL) {
         self.fileURL = fileURL
-        let data = try? Data(contentsOf: fileURL)
-        states = data.flatMap { try? Self.decoder.decode([String: BookState].self, from: $0) } ?? [:]
+        states = StateFile.decode([String: BookState].self, from: fileURL, decoder: Self.decoder) ?? [:]
     }
 
     public func state(forBook key: String) -> BookState {
@@ -109,8 +108,14 @@ public final class BookStateStore: @unchecked Sendable {
             return states
         }
         guard let snapshot else { return }
-        try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try Self.encoder.encode(snapshot).write(to: fileURL, options: .atomic)
+        do {
+            try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Self.encoder.encode(snapshot).write(to: fileURL, options: .atomic)
+        } catch {
+            // Not written: the next save tries again instead of dropping these changes.
+            lock.withLock { isDirty = true }
+            throw error
+        }
     }
 
     private static let encoder: JSONEncoder = {

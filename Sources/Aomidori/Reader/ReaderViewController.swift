@@ -22,6 +22,7 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
     private let renderer: PageRenderer
     private let environment = ReaderEnvironment.shared
     private(set) var currentSpineIndex: Int?
+    private var crashRecovery = CrashRecovery()
     /// Where the document being loaded should land; `nil` for navigations the page started
     /// itself (links), which land where the chapter was left unless they carry a fragment.
     private var pendingLanding: Landing?
@@ -510,8 +511,8 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-        // Recover from a crashed web process where the reader was.
-        if let index = currentSpineIndex {
+        // Recover from a crashed web process where the reader was, a limited number of times.
+        if let index = currentSpineIndex, crashRecovery.shouldReload(book.spine[index].path) {
             showSpineItem(at: index, landing: .remembered)
         }
     }

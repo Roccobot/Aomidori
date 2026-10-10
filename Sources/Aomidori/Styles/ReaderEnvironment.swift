@@ -301,15 +301,24 @@ final class ReaderEnvironment {
         stateSaveTask = Task { [positions, books] in
             try? await Task.sleep(for: .seconds(1.5))
             guard !Task.isCancelled else { return }
-            try? positions.save()
-            try? books.save()
+            Self.save(positions, books)
         }
     }
 
     func saveStateNow() {
         stateSaveTask?.cancel()
-        try? positions.save()
-        try? books.save()
+        Self.save(positions, books)
+    }
+
+    /// A failed write is logged; the stores keep the changes and the next save retries them.
+    private nonisolated static func save(_ positions: ReadingPositionStore, _ books: BookStateStore) {
+        for (name, save) in [("positions", positions.save), ("bookmarks", books.save)] {
+            do {
+                try save()
+            } catch {
+                NSLog("Aomidori: cannot save %@: %@", name, error.localizedDescription)
+            }
+        }
     }
 
     private func notify() {
