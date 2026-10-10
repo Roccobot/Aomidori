@@ -21,10 +21,10 @@ Download: <https://roccobot.github.io/Aomidori/> (the latest release, from `publ
   The keys (`←` `→`, history, the edge of a chapter) and the scroll act on the half in focus.
 
 - Settings (`⌘;`, also `⌘,`), two tabs. Features: "Open links in new tabs" (off by default)
-  and, under it, "Open each link next to its source tab" (on). With the first off, `⇧`-click
-  opens a link of the book in a new tab in front and `⌥`-click in a new tab behind; with it on,
-  every click opens a new tab (`⌥` still behind), next to its source or at the end of the tab
-  bar. Each tab is a view of its own of the book, with its place and history; bookmarks are
+  and "Open each link next to its source tab" (on). With the first off, `⇧`-click opens a link
+  of the book in a new tab in front and `⌥`-click in a new tab behind; with it on, every click
+  opens a new tab (`⌥` still behind). Every new tab goes next to its source, or at the end of
+  the tab bar with the second off, whichever way it was opened: the two are independent. Each tab is a view of its own of the book, with its place and history; bookmarks are
   shared, and the book's saved place is the one last moved. Web links always go to the browser.
   The keys are read by the page as well as from WebKit, which reports them only for clicks made
   with the mouse. Updates: Sparkle's automatic check, and Check Now.
@@ -101,7 +101,7 @@ Download: <https://roccobot.github.io/Aomidori/> (the latest release, from `publ
   Typography features (small caps, old-style figures, ligatures, stylistic sets…). With a
   chosen face, bold text is 300 heavier (at most 900: Light → Semibold, Regular → Bold), and
   an italic face makes italic text upright, as emphasis does in italic typesetting.
-- Light and dark follow macOS; one click (or `⇧⌘N`, or `T` while reading) shows the other, and choosing the system's
+- Light and dark follow macOS; one click (or `⇧⌘N`, or `T` in any window but while typing) shows the other, and choosing the system's
   own appearance follows macOS again. Styles with `prefers-color-scheme` rules follow it
   natively; for CSS without them, Night applies only the colors of the default style's dark rules.
 - Minimal mode: no toolbar, title or window buttons, only text.
@@ -330,7 +330,7 @@ Menu names are given in English; in Italian they are Archivio, Vista, Vai, Stile
 | Split view: another tab, or another view of the book, alongside | `⌘S` (and toolbar); in its list, `1`…`9`, `0`, `Return`, `Esc` | View |
 | Larger / smaller text | `+` / `-`, `⌘+` / `⌘-` | View |
 | Text at 100% of the style | `0`, `⌘0` | View |
-| Light ↔ dark (back to following macOS when it matches) | `⇧⌘N`, `T` while reading (and toolbar) | View |
+| Light ↔ dark (back to following macOS when it matches) | `⇧⌘N`, `T` in any window, not while typing (and toolbar) | View |
 | Sidebar on/off | `⌘\` (and toolbar) | View |
 | Sidebar: Chapters, Bookmarks, Search | `⌥⌘1`, `⌥⌘2`, `⌥⌘5` | View |
 | Find in book | `⌘F` | Edit |

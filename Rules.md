@@ -123,8 +123,10 @@ lì. L'elenco completo è nel `README.md`: qui non si ricopia.
   app Mac.
 - **I link in schede nuove** (sue richieste a Techne, nella 0.90): con l'opzione *Apri i link in
   nuove schede* spenta, che è il predefinito, `⇧`-clic apre il link in una scheda nuova davanti
-  e `⌥`-clic dietro; accesa, ogni clic apre una scheda nuova (`⌥` sempre dietro), accanto a
-  quella d'origine o in fondo se *Apri ogni link accanto alla scheda di origine* è spenta. Ogni
+  e `⌥`-clic dietro; accesa, ogni clic apre una scheda nuova (`⌥` sempre dietro). Ogni scheda
+  nuova va accanto a quella d'origine, o in fondo se *Apri ogni link accanto alla scheda di
+  origine* è spenta, comunque sia stata aperta: le due opzioni sono indipendenti (sua
+  correzione, nella 1.02: anche col `⇧`-clic e col `⌥`-clic un link apre una scheda). Ogni
   scheda è una vista sua del libro, con posto e cronologia propri; i segnalibri sono in comune.
   I link verso il web vanno sempre nel browser. ⚠️ I tasti si leggono anche dalla pagina:
   WebKit li riporta solo per i clic fatti col mouse, quindi senza la pagina un clic simulato
@@ -149,10 +151,11 @@ lì. L'elenco completo è nel `README.md`: qui non si ricopia.
   restano i capitoli.
 - `⌘G` / `⇧⌘G`: risultato di ricerca successivo e precedente, anche in altri capitoli; senza
   una ricerca, `⌘G` apre la ricerca.
-- Chiaro e scuro seguono l'aspetto di macOS. `⇧⌘N`, il sole nella barra e `T` da solo nel
-  lettore passano all'altro aspetto, per l'app e per il testo insieme; quando la scelta coincide
-  con quello di sistema, si torna a seguire macOS. `T` non vale in un campo di testo, nel campo
-  di ricerca e nell'editor della Playground.
+- Chiaro e scuro seguono l'aspetto di macOS. `⇧⌘N`, il sole nella barra e `T` da solo passano
+  all'altro aspetto, per l'app e per il testo insieme; quando la scelta coincide con quello di
+  sistema, si torna a seguire macOS. `T` vale in ogni finestra, anche in quella vuota (sua
+  richiesta, nella 1.02: prima valeva solo col libro aperto), e non vale in un campo di testo, nel
+  campo di ricerca e nell'editor della Playground.
 - `⌘R` ricarica capitolo, immagini, font e stile, e lascia il lettore nel punto in cui era.
 - **Il testo corrente è a bandiera a sinistra**, sopra qualunque CSS, del libro e degli stili
   suoi (`ReadingRoccobot.css` giustifica, e resta intatto: lo scavalca lo strato del lettore);
