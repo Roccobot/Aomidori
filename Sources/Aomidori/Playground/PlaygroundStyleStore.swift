@@ -1,3 +1,4 @@
+import AomidoriCore
 import Foundation
 import EPUBKit
 
@@ -8,7 +9,7 @@ import EPUBKit
 /// which the style list never shows hidden.
 final class PlaygroundStyleStore: @unchecked Sendable {
     static let shared = PlaygroundStyleStore()
-    static let filePrefix = ".playground-"
+    static let filePrefix = PagePath.playgroundPrefix
 
     private let lock = NSLock()
     private var sheets: [String: Data] = [:]

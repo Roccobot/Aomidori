@@ -1,3 +1,4 @@
+import AomidoriCore
 import EPUBKit
 import Foundation
 import WebKit
@@ -21,8 +22,7 @@ extension EPUBPublication: PageResourceProvider {}
 @MainActor
 final class PageSchemeHandler: NSObject, WKURLSchemeHandler {
     nonisolated static let scheme = "aomidori"
-    nonisolated static let userPrefix = ".aomidori/"
-    nonisolated private static let userFolders: Set<String> = ["Styles", "Fonts"]
+    nonisolated static let userPrefix = PagePath.userPrefix
 
     let host: String
     private let provider: any PageResourceProvider
@@ -64,22 +64,21 @@ final class PageSchemeHandler: NSObject, WKURLSchemeHandler {
     }
 
     nonisolated private static func load(_ path: String, from provider: any PageResourceProvider) throws -> EPUBResource {
-        guard path.hasPrefix(userPrefix) else { return try provider.resource(at: path) }
-        let components = path.dropFirst(userPrefix.count).split(separator: "/").map(String.init)
-        if components.count == 2, components[0] == "SystemFonts" {
-            guard let url = SystemFontFiles.shared.url(forToken: components[1]) else { throw EPUBError.missingResource(path: path) }
+        switch PagePath(path) {
+        case .book(let path):
+            return try provider.resource(at: path)
+        case .systemFont(let token):
+            guard let url = SystemFontFiles.shared.url(forToken: token) else { throw EPUBError.missingResource(path: path) }
             return EPUBResource(data: try Data(contentsOf: url), mediaType: MediaType.forPath(url.path))
-        }
-        if components.count == 2, components[0] == "Styles", components[1].hasPrefix(PlaygroundStyleStore.filePrefix) {
-            guard let resource = PlaygroundStyleStore.shared.resource(for: components[1]) else { throw EPUBError.missingResource(path: path) }
+        case .playgroundBuffer(let name):
+            guard let resource = PlaygroundStyleStore.shared.resource(for: name) else { throw EPUBError.missingResource(path: path) }
             return resource
-        }
-        guard components.count >= 2, userFolders.contains(components[0]),
-              !components.contains(where: { $0 == ".." || $0 == "." }) else {
+        case .userFile(let components):
+            let url = components.reduce(AppPaths.support) { $0.appendingPathComponent($1) }
+            return EPUBResource(data: try Data(contentsOf: url), mediaType: MediaType.forPath(path))
+        case nil:
             throw EPUBError.missingResource(path: path)
         }
-        let url = components.reduce(AppPaths.support) { $0.appendingPathComponent($1) }
-        return EPUBResource(data: try Data(contentsOf: url), mediaType: MediaType.forPath(path))
     }
 
     nonisolated private static func response(for url: URL, status: Int, resource: EPUBResource?) -> HTTPURLResponse {

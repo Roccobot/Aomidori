@@ -4,7 +4,9 @@ const { webkit } = require('playwright-core');
 const fs = require('fs');
 const path = require('path');
 const swift = fs.readFileSync(path.join(__dirname, '../../Sources/Aomidori/Reader/ReaderScript.swift'), 'utf8');
-const script = swift.match(/#"""\n([\s\S]*?)\n\s*"""#/)[1];
+// The script names its message handler through Swift interpolation: the value comes from there too.
+const handlerName = swift.match(/messageHandlerName = "([^"]+)"/)[1];
+const script = swift.match(/#"""\n([\s\S]*?)\n\s*"""#/)[1].replaceAll('\\#(messageHandlerName)', handlerName);
 const fixture = (name) => path.join(__dirname, 'fixtures', name);
 let userCSS = 'body { font-family: "UserFam", serif; color: rgb(1, 2, 3); } .keep { font-family: monospace; }';
 const assert = (cond, msg) => { console.log((cond ? 'PASS ' : 'FAIL ') + msg); if (!cond) process.exitCode = 1; };
@@ -159,7 +161,7 @@ const assert = (cond, msg) => { console.log((cond ? 'PASS ' : 'FAIL ') + msg); i
       if (!fs.existsSync(f)) return route.fulfill({ status: 404, body: '' });
       route.fulfill({ body: fs.readFileSync(f), contentType: f.endsWith('.jpg') ? 'image/jpeg' : f.endsWith('.css') ? 'text/css' : 'application/xhtml+xml' });
     });
-    await p.addInitScript(() => { window.__messages = []; window.webkit = { messageHandlers: { aomidori: { postMessage: (m) => window.__messages.push(m) } } }; });
+    await p.addInitScript((name) => { window.__messages = []; window.webkit = { messageHandlers: { [name]: { postMessage: (m) => window.__messages.push(m) } } }; }, handlerName);
     await p.addInitScript(script + `\nAomidori.apply(${JSON.stringify(base)});`);
     const edges = () => p.evaluate(() => window.__messages.filter(m => m.type === 'edges').map(m => `${m.atTop} ${m.atBottom}`));
     await p.goto('http://book/c.html');

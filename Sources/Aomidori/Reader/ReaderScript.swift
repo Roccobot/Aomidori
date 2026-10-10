@@ -576,7 +576,7 @@ enum ReaderScript {
 
       let reportTimer = 0;
       const post = (message) => {
-        try { webkit.messageHandlers.aomidori.postMessage(message); } catch (_) { /* not attached */ }
+        try { webkit.messageHandlers['\#(messageHandlerName)'].postMessage(message); } catch (_) { /* not attached */ }
       };
       const reportPosition = () => post(Object.assign({ type: 'position', href: location.href }, position()));
       addEventListener('scroll', () => {
