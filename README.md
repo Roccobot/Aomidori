@@ -6,7 +6,14 @@ and later), in the spirit of Murasaki: each chapter is one web page that scrolls
 
 Download: <https://roccobot.github.io/Aomidori/> (the latest release, from `publish/`).
 
-## Features (v0.90)
+## Features (v1.00)
+
+- Split view (`⌘S`, the View menu or the toolbar): this tab on the left with the sidebar,
+  another on the right. The only other tab goes straight in; with several, a list numbered
+  `1`…`9`, `0` chooses (a digit, `Return` or a click opens, `Esc` cancels), another view of
+  the same book preselected, else the tab to the right; with none, a second view of the book
+  at the same place, closed on exit. On exit the tab goes back to its place in the tab bar.
+  The keys (`←` `→`, history, the edge of a chapter) and the scroll act on the half in focus.
 
 - Settings (`⌘;`, also `⌘,`), two tabs. Features: "Open links in new tabs" (off by default)
   and, under it, "Open each link next to its source tab" (on). With the first off, `⇧`-click
@@ -303,8 +310,8 @@ appcast item), then `gh release create vX.XX` with the ZIP, and only then the co
 Shortcuts are designed for the Italian keyboard layout (AppKit's automatic remapping is off).
 They are defined in one table, `Shortcuts.table` in AomidoriCore; a test fails if two commands
 share a shortcut in the same window. `⌘T` opens a new tab, as in Safari and Finder. `⌘Y`
-switches the custom font (it was `⌘S` up to 0.52); `⌘S` is Save in the CSS Playground and is
-kept free in the reader for a future split view.
+switches the custom font (it was `⌘S` up to 0.52); `⌘S` is the split view in the reader and
+Save in the CSS Playground (the reader window takes the key before the menu bar).
 Menu names are given in English; in Italian they are Archivio, Vista, Vai, Stile.
 
 | Action | Shortcut | Menu |
@@ -315,6 +322,7 @@ Menu names are given in English; in Italian they are Archivio, Vista, Vai, Stile
 | Back / forward (links followed, exact place) | `⌘←` / `⌘→` (also `⌘[` / `⌘]`; not while typing) | Go |
 | A link in a new tab, in front / behind | `⇧`-click / `⌥`-click (every click, with the setting on) | (click) |
 | Settings | `⌘;` (also `⌘,`) | Aomidori |
+| Split view: another tab, or another view of the book, alongside | `⌘S` (and toolbar); in its list, `1`…`9`, `0`, `Return`, `Esc` | View |
 | Larger / smaller text | `+` / `-`, `⌘+` / `⌘-` | View |
 | Text at 100% of the style | `0`, `⌘0` | View |
 | Light ↔ dark (back to following macOS when it matches) | `⇧⌘N`, `T` while reading (and toolbar) | View |
@@ -429,13 +437,11 @@ full height) and the CSS on the right; below the editor, the styles folder's fil
 
 ## Next phases
 
-1. **Settings window** (`⌘;`, also `⌘,`): links in new tabs, `⇧`-click and `⌥`-click; then the
-   **split view** on `⌘S`. Started in the `wip-settings-split` branch.
-2. **Covers in the Finder and Quick Look**, on request (a setting), after a prototype.
-3. **More sidebar panes**, slots and shortcuts already reserved: Thumbnails (`⌥⌘3`, the
+1. **Covers in the Finder and Quick Look**, on request (a setting), after a prototype.
+2. **More sidebar panes**, slots and shortcuts already reserved: Thumbnails (`⌥⌘3`, the
    book's pages in miniature), Images (`⌥⌘4`, every picture in the book), Notes (`⌥⌘6`,
    footnotes and endnotes from `epub:type` / `role` markup). Bookmark renaming and notes.
-4. Per-book style memory, trackpad swipe between chapters.
+3. Per-book style memory, trackpad swipe between chapters.
 
 Murasaki (closed source) is a reference for the toolbar, sidebar panes and Inspector; no assets
 or code are taken from it.

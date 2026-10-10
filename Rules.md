@@ -127,8 +127,17 @@ lì. L'elenco completo è nel `README.md`: qui non si ricopia.
 - `⇧⌘T` apre la scelta del font personalizzato; il pannello font di sistema si apre dal suo
   pulsante e dal menu Stile.
 - `⌘Y` passa dal font del libro o dello stile al font personalizzato e viceversa (in tutte le
-  finestre; fino alla 0.52 era `⌘S`). `⌘S` resta libero nel lettore, per la vista divisa
-  (Split) che verrà; nella Playground `⌘S` resta Salva, perché lì un file si scrive davvero.
+  finestre; fino alla 0.52 era `⌘S`). `⌘S` è la vista divisa nel lettore (dalla 1.00); nella
+  Playground `⌘S` resta Salva, perché lì un file si scrive davvero. ⚠️ Nel menu `⌘S` compare
+  due volte: la finestra del lettore lo prende prima della barra dei menu.
+- **La vista divisa** (sue richieste a Techne, nella 1.00): la scheda attiva a sinistra con la
+  barra laterale, a destra l'unica altra scheda, oppure con due o più una lista numerata da 1 a
+  0 che preseleziona un'altra vista dello stesso libro, se no la scheda a destra della corrente;
+  un numero, Invio o un clic apre, Esc annulla. Senza altre schede, una seconda vista del libro
+  allo stesso punto, che si chiude all'uscita. Uscendo la scheda torna al suo posto, e i tasti
+  agiscono sulla metà col fuoco. ⚠️ Per AppKit una scheda non selezionata non è *visibile*: il
+  posto si ritrova dal gruppo di schede, non da `isVisible` (sbagliato al primo giro, fermato
+  dalla prova del lettore).
 - `⌘←` / `⌘→` vanno indietro e avanti nella cronologia dei link seguiti (note, capitoli,
   ancore), alla posizione esatta; `⌘[` / `⌘]` restano come alias. Spenti mentre si scrive in
   un campo di testo o nell'editor della Playground, dove muovono il cursore. `←` / `→` da soli
