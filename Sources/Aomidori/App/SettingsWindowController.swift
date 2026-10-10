@@ -65,8 +65,8 @@ private final class FeaturesSettingsViewController: NSViewController {
         note.font = .preferredFont(forTextStyle: .caption1)
         note.textColor = .secondaryLabelColor
 
-        // The second option depends on the first: indented under it.
-        view = SettingsPage.make([(newTabs, 0, 8), (nextToSource, 20, 14), (note, 0, 0)])
+        // Two options of their own: the second holds for ⇧/⌥-click tabs too (Rocco, 1.02).
+        view = SettingsPage.make([(newTabs, 0, 8), (nextToSource, 0, 14), (note, 0, 0)])
         preferredContentSize = view.frame.size
         refresh()
     }
@@ -75,7 +75,6 @@ private final class FeaturesSettingsViewController: NSViewController {
         guard isViewLoaded else { return }
         newTabs.state = environment.opensLinksInNewTabs ? .on : .off
         nextToSource.state = environment.opensLinksNextToSource ? .on : .off
-        nextToSource.isEnabled = environment.opensLinksInNewTabs
     }
 
     @objc private func changed(_ sender: NSButton) {

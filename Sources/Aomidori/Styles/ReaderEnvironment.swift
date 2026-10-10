@@ -231,14 +231,14 @@ final class ReaderEnvironment {
         set { defaults.set(newValue, forKey: Key.linksInNewTabs) }
     }
 
-    /// "Open each link next to its source tab" (on by default; it counts only with new tabs).
+    /// "Open each link next to its source tab" (on by default), for every new tab.
     var opensLinksNextToSource: Bool {
         get { defaults.object(forKey: Key.linksNextToSource) as? Bool ?? true }
         set { defaults.set(newValue, forKey: Key.linksNextToSource) }
     }
 
     var linkTabPlacement: LinkOpening.Placement {
-        LinkOpening.placement(newTabsSetting: opensLinksInNewTabs, nextToSourceSetting: opensLinksNextToSource)
+        LinkOpening.placement(nextToSourceSetting: opensLinksNextToSource)
     }
 
     // MARK: Custom font

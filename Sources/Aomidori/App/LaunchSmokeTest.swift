@@ -172,7 +172,7 @@ final class LaunchSmokeTest {
         if Set(items.map(\.keyEquivalent)) != [";", ","] { failures.append("settings: ⌘; and ⌘, in the app menu") }
         if settings.window?.isVisible != true { failures.append("settings: the window did not open") }
         if settings.smokeTabLabels.count != 2 { failures.append("settings: two tabs") }
-        if features != ["newTabs": false, "nextToSource": true, "nextToSourceEnabled": false] {
+        if features != ["newTabs": false, "nextToSource": true, "nextToSourceEnabled": true] {
             failures.append("settings: link options at their defaults")
         }
         if let window = settings.window {

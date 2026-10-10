@@ -193,7 +193,7 @@
 "settings.features" = "Features";
 "settings.features.newTabs" = "Open links in new tabs";
 "settings.features.nextToSource" = "Open each link next to its source tab";
-"settings.features.note" = "Web links always open in your browser. Even with this option off, a click with ⇧ opens the link in a new tab in front, a click with ⌥ in a new tab behind.";
+"settings.features.note" = "Web links always open in your browser. Even with the first option off, a click with ⇧ opens the link in a new tab in front, a click with ⌥ in a new tab behind.";
 "settings.updates" = "Updates";
 "settings.updates.automatic" = "Automatically check for updates";
 "settings.updates.checkNow" = "Check Now";

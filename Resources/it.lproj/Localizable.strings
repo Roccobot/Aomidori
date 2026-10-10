@@ -193,7 +193,7 @@
 "settings.features" = "Funzionalità";
 "settings.features.newTabs" = "Apri i link in nuove schede";
 "settings.features.nextToSource" = "Apri ogni link accanto alla scheda di origine";
-"settings.features.note" = "I link verso il web si aprono sempre nel browser. Anche con l'opzione disattivata, un clic con ⇧ apre il link in una nuova scheda in primo piano, un clic con ⌥ in una nuova scheda dietro.";
+"settings.features.note" = "I link verso il web si aprono sempre nel browser. Anche con la prima opzione disattivata, un clic con ⇧ apre il link in una nuova scheda in primo piano, un clic con ⌥ in una nuova scheda dietro.";
 "settings.updates" = "Aggiornamenti";
 "settings.updates.automatic" = "Controlla automaticamente gli aggiornamenti";
 "settings.updates.checkNow" = "Controlla ora";

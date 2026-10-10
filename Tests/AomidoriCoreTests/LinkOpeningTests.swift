@@ -17,9 +17,9 @@ struct LinkOpeningTests {
         #expect(LinkOpening.decide(newTabsSetting: true, modifiers: [.shift, .option]) == .newTab(inBackground: true))
     }
 
-    @Test func nextToSourceDependsOnNewTabs() {
-        #expect(LinkOpening.placement(newTabsSetting: true, nextToSourceSetting: true) == .nextToSource)
-        #expect(LinkOpening.placement(newTabsSetting: true, nextToSourceSetting: false) == .end)
-        #expect(LinkOpening.placement(newTabsSetting: false, nextToSourceSetting: false) == .nextToSource)
+    /// It holds for every new tab, ⇧/⌥-click ones included: not tied to "Open links in new tabs".
+    @Test func nextToSourceStandsOnItsOwn() {
+        #expect(LinkOpening.placement(nextToSourceSetting: true) == .nextToSource)
+        #expect(LinkOpening.placement(nextToSourceSetting: false) == .end)
     }
 }
