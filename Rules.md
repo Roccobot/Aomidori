@@ -65,7 +65,15 @@ Playground CSS: un comportamento della pagina si cambia lì, una volta.
   il font personalizzato si carica dal file. I font che arrivano solo per nome (le collezioni
   `.ttc`) dipendono da WebKit.
 - Le funzioni della sezione Tipografia del pannello font di macOS che non hanno un equivalente
-  OpenType si perdono; il maiuscoletto dei vecchi font Apple non è verificato.
+  OpenType si perdono. ⚠️ macOS scarta da sé una funzione che il font non ha: un font creato
+  col maiuscoletto da Hoefler Text, Georgia o Optima non porta nessuna impostazione. La prova
+  del maiuscoletto Apple usa Baskerville, che ce l'ha (verificato il 2026-10-10, 0.61).
+- **La pagina non esce mai dal libro**: una lista di regole di WebKit (`OfflineRules` in
+  `PageRenderer.swift`) blocca ogni risorsa che non sia `aomidori:`, `data:`, `blob:` o
+  `about:`, perché un EPUB che carica un'immagine dalla rete sa quando e dove viene letto. Vale
+  anche per gli stili dell'utente: un font va nella cartella `Fonts`, non su un server. ⚠️ Le
+  regole non ammettono l'alternativa `a|b` nei filtri: una regola per schema, o la lista non
+  si compila e non blocca niente (successo nella prima stesura, fermato dalla prova del lettore).
 
 **Tentativi scartati**, da non riproporre:
 - **Readium** e l'**impaginatore di foliate-js**: pesanti e pensati per l'impaginazione, che

@@ -6,7 +6,7 @@ move between chapters, and the reader's own CSS can replace the book's at any mo
 
 Download: <https://roccobot.github.io/Aomidori/> (the latest release, from `publish/`).
 
-## Features (v0.60)
+## Features (v0.61)
 
 - Automatic updates with Sparkle 2 (from 0.52): *Check for Updates…* in the app menu, and a
   daily check once allowed (Sparkle asks on the second launch). See [Updates](#updates).
@@ -381,16 +381,29 @@ full height) and the CSS on the right; below the editor, the styles folder's fil
 - Font panel: size and effects (color, shadow, underline) are not offered, the style and the
   text size own those. Apple features without an OpenType equivalent are ignored.
 - Letter spacing is not part of the custom font.
+- Pages never load anything from the network: pictures, style sheets and fonts that a book (or
+  a user style) names on a server are blocked, so opening a book cannot tell anyone when or
+  where it is read. Fonts for a user style go in the `Fonts` folder.
+- A file inside the archive larger than 256 MB is refused, whatever the archive declares, so a
+  damaged or hostile archive cannot fill the memory.
+- If `Positions.json` or `Books.json` cannot be read (damaged, or written by a later version),
+  it is renamed `<name>.unreadable-<date>` and kept, never overwritten.
 - Playground: an outside CSS file's relative URLs resolve in the styles folder (where it
   would be saved), not next to the original file. HTML and JavaScript are only coloured: the
   preview applies the editor's text as CSS. Colours are not shown as swatches.
 
 ## Next phases
 
-1. **More sidebar panes**, slots and shortcuts already reserved: Thumbnails (`⌥⌘3`, the
+1. **0.62**: the download page in full (contrast, texts in the page, install steps, English,
+   screenshots, favicon) and the release scripts' fixes.
+2. **0.70**: comics (CBZ, then CBR), scrolling vertically like a chapter.
+3. **Settings window** (`⌘;`, also `⌘,`): links in new tabs, `⇧`-click and `⌥`-click; then the
+   **split view** on `⌘S`. Started in the `wip-settings-split` branch.
+4. **Covers in the Finder and Quick Look**, on request (a setting), after a prototype.
+5. **More sidebar panes**, slots and shortcuts already reserved: Thumbnails (`⌥⌘3`, the
    book's pages in miniature), Images (`⌥⌘4`, every picture in the book), Notes (`⌥⌘6`,
    footnotes and endnotes from `epub:type` / `role` markup). Bookmark renaming and notes.
-2. Per-book style memory, trackpad swipe between chapters.
+6. Per-book style memory, trackpad swipe between chapters.
 
 Murasaki (closed source) is a reference for the toolbar, sidebar panes and Inspector; no assets
 or code are taken from it.
