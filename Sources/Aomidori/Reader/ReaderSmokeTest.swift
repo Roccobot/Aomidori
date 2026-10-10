@@ -165,36 +165,46 @@ final class ReaderSmokeTest {
         // 9. A book sheet dressed as one of the reader's own still loses to the override.
         await checkForgedMarks()
 
-        // 10. Running text is flush left over the book's justify; centred text stays centred;
-        // ⌘J's setting makes it justified.
+        // 10. Running text is flush left over the book's justify, without automatic hyphenation;
+        // ⌘J's setting makes it justified and hyphenated, whatever the book says; centred text
+        // keeps its alignment and its hyphenation.
         await checkAlignment()
         finish(window: window, originalFrame: originalFrame)
     }
 
     private func checkAlignment() async {
         guard let reader else { return }
+        let ids = ["aomidori-smoke-justify", "aomidori-smoke-left", "aomidori-smoke-centre"]
         let insert = """
-        for (const [id, align] of [['aomidori-smoke-justify', 'justify'], ['aomidori-smoke-centre', 'center']]) {
+        for (const [id, align, hyphens] of [[ids[0], 'justify', 'auto'], [ids[1], 'left', 'manual'], [ids[2], 'center', 'auto']]) {
           const p = document.createElement('p'); p.id = id; p.textContent = 'Testo di prova.';
-          p.style.textAlign = align; document.body.appendChild(p);
+          p.style.textAlign = align; p.style.webkitHyphens = hyphens; p.style.hyphens = hyphens;
+          document.body.appendChild(p);
         }
         """
-        _ = try? await reader.webView.callAsyncJavaScript(insert, arguments: [:], in: nil, contentWorld: .defaultClient)
+        _ = try? await reader.webView.callAsyncJavaScript(insert, arguments: ["ids": ids], in: nil, contentWorld: .defaultClient)
         let read = """
-        return ['aomidori-smoke-justify', 'aomidori-smoke-centre'].map(id => getComputedStyle(document.getElementById(id)).textAlign).join(' ');
+        return ids.map(id => {
+          const style = getComputedStyle(document.getElementById(id));
+          return `${style.textAlign}/${style.hyphens || style.webkitHyphens}`;
+        }).join(' ');
         """
         // Justified first: an unchanged configuration is not applied again, and the paragraphs
         // just inserted are read only when a change reaches the page.
         reader.smokeConfigure { $0.justified = true }
         try? await Task.sleep(for: .milliseconds(500))
-        let justified = try? await reader.webView.callAsyncJavaScript(read, arguments: [:], in: nil, contentWorld: .defaultClient) as? String
+        let justified = try? await reader.webView.callAsyncJavaScript(read, arguments: ["ids": ids], in: nil, contentWorld: .defaultClient) as? String
         reader.smokeConfigure { $0.justified = false }
         try? await Task.sleep(for: .milliseconds(500))
-        let flush = try? await reader.webView.callAsyncJavaScript(read, arguments: [:], in: nil, contentWorld: .defaultClient) as? String
+        let flush = try? await reader.webView.callAsyncJavaScript(read, arguments: ["ids": ids], in: nil, contentWorld: .defaultClient) as? String
         reader.smokeConfigure(nil)
         report["alignment"] = ["default": flush ?? "nil", "justified": justified ?? "nil"]
-        if flush != "left center" { failures.append("alignment: flush left by default, centred kept") }
-        if justified != "justify center" { failures.append("alignment: justified with the setting, centred kept") }
+        if flush != "left/manual left/manual center/auto" {
+            failures.append("alignment: flush left without hyphenation by default, centred kept")
+        }
+        if justified != "justify/auto justify/auto center/auto" {
+            failures.append("alignment: justified and hyphenated with the setting, centred kept")
+        }
     }
 
     /// A book can write `data-aomidori…` attributes too: a sheet carrying the reader's own

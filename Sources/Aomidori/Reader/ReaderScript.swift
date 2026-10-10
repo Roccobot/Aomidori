@@ -408,6 +408,9 @@ enum ReaderScript {
       // the reader asks for it (⌘J). Which text runs is read from the cascade without this rule:
       // text aligned to the left, to the start or justified; centred and right-aligned text keeps
       // its alignment. Marked on the elements, re-read whenever styles may have changed.
+      // Hyphenation follows the alignment (Rocco's choice, 0.71): off when flush left, where the
+      // lines need not be filled and every hyphen would stand out on the ragged edge (soft hyphens
+      // in the book stay); on when justified, where it keeps the word spacing even.
       const ALIGN_MARK = 'data-aomidori-align';
       const RUNNING = new Set(['left', 'start', 'justify', '-webkit-left', '-webkit-auto']);
 
@@ -420,8 +423,10 @@ enum ReaderScript {
           if (el.namespaceURI === SVG || isOwn(el)) continue;
           if (RUNNING.has(getComputedStyle(el).textAlign)) el.setAttribute(ALIGN_MARK, '');
         }
-        const value = config.justified ? 'justify' : 'left';
-        align.textContent = `@layer aomidori {\n  [${ALIGN_MARK}] { text-align: ${value} !important; }\n}`;
+        const rule = config.justified
+          ? 'text-align: justify !important; -webkit-hyphens: auto !important; hyphens: auto !important;'
+          : 'text-align: left !important; -webkit-hyphens: manual !important; hyphens: manual !important;';
+        align.textContent = `@layer aomidori {\n  [${ALIGN_MARK}] { ${rule} }\n}`;
       }
 
       // MARK: Image pages
