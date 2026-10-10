@@ -610,6 +610,11 @@ enum ReaderScript {
       const post = (message) => {
         try { webkit.messageHandlers['\#(messageHandlerName)'].postMessage(message); } catch (_) { /* not attached */ }
       };
+      // The link under a right click, for the context menu's "Open Link in New Tab" (none: null).
+      addEventListener('contextmenu', (event) => {
+        const link = event.target && event.target.closest ? event.target.closest('a[href]') : null;
+        post({ type: 'contextLink', href: link ? link.href : null });
+      }, true);
       const reportPosition = () => post(Object.assign({ type: 'position', href: location.href }, position()));
       addEventListener('scroll', () => {
         reportEdges();

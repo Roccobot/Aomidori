@@ -8,7 +8,7 @@ import WebKit
 /// Playground drives it with a different `PageResourceProvider`.
 @MainActor
 final class PageRenderer: NSObject {
-    let webView: WKWebView
+    let webView: PageWebView
     /// Unique per renderer, so caches and origins never mix two books.
     let host: String
     private let userContent = WKUserContentController()
@@ -23,6 +23,11 @@ final class PageRenderer: NSObject {
     var onPosition: ((_ path: String, _ position: ChapterPosition) -> Void)?
     /// Called when the document's ability to scroll further up or down changes.
     var onEdges: ((_ path: String, _ edges: ScrollEdges) -> Void)?
+    /// Opens a link of the book in a new tab, from the context menu; without it (the
+    /// Playground), the menu offers no new tab.
+    var onOpenLinkInNewTab: ((_ path: String, _ fragment: String?) -> Void)?
+    /// The link of the book under the last right click, as the page reported it.
+    private var contextLink: URL?
 
     init(provider: any PageResourceProvider, configuration: ReaderConfiguration) {
         let host = UUID().uuidString.lowercased()
@@ -41,7 +46,7 @@ final class PageRenderer: NSObject {
         webConfiguration.mediaTypesRequiringUserActionForPlayback = .all
         webConfiguration.userContentController = userContent
 
-        webView = WKWebView(frame: .zero, configuration: webConfiguration)
+        webView = PageWebView(frame: .zero, configuration: webConfiguration)
         // Pinch never scales the page; text size is the reader's own setting.
         webView.allowsMagnification = false
         webView.allowsBackForwardNavigationGestures = false
@@ -52,6 +57,10 @@ final class PageRenderer: NSObject {
         super.init()
 
         messageProxy.renderer = self
+        webView.contextMenuLinkOpener = { [weak self] in
+            guard let self, let url = contextLink, let path = path(for: url), let open = onOpenLinkInNewTab else { return nil }
+            return { open(path, url.fragment) }
+        }
         userContent.add(messageProxy, contentWorld: .defaultClient, name: ReaderScript.messageHandlerName)
         installScript()
         OfflineRules.whenReady { [weak self] rules in
@@ -173,6 +182,8 @@ final class PageRenderer: NSObject {
             guard let href = message["href"] as? String, let path = path(for: URL(string: href)),
                   let position = Self.chapterPosition(from: message) else { return }
             onPosition?(path, position)
+        case "contextLink":
+            contextLink = (message["href"] as? String).flatMap(URL.init(string:))
         case "edges":
             guard let href = message["href"] as? String, let path = path(for: URL(string: href)),
                   let atTop = message["atTop"] as? Bool, let atBottom = message["atBottom"] as? Bool else { return }
@@ -228,5 +239,50 @@ private final class ScriptMessageProxy: NSObject, WKScriptMessageHandler {
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         renderer?.didReceive(message.body)
+    }
+}
+
+/// The page's web view, with WebKit's context menu fitted to Aomidori (see `PageContextMenu`).
+/// Author: Rocco Casadei, a.k.a. Roccobot
+@MainActor
+final class PageWebView: WKWebView {
+    /// What "Open Link in New Tab" does for the link under the pointer, or nil when it has none
+    /// (not a link of the book, or a page that opens no tabs).
+    var contextMenuLinkOpener: (() -> (() -> Void)?)?
+    private var pendingOpen: (() -> Void)?
+
+    override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
+        super.willOpenMenu(menu, with: event)
+        fit(menu)
+    }
+
+    /// Internal for the reader smoke test, which hands it a menu with WebKit's items.
+    func fit(_ menu: NSMenu) {
+        let open = contextMenuLinkOpener?()
+        for item in menu.items.reversed() {
+            switch PageContextMenu.action(for: item.identifier?.rawValue, canOpenInNewTab: open != nil) {
+            case .keep: break
+            case .remove: menu.removeItem(item)
+            case .openInNewTab:
+                let tab = NSMenuItem(title: L10n.string("menu.context.openLinkInNewTab"), action: #selector(openPendingLink(_:)), keyEquivalent: "")
+                tab.target = self
+                pendingOpen = open
+                menu.insertItem(tab, at: menu.index(of: item))
+                menu.removeItem(item)
+            }
+        }
+        // No separator left at either end or twice in a row.
+        for item in menu.items.reversed() {
+            let index = menu.index(of: item)
+            let previous = index > 0 ? menu.items[index - 1] : nil
+            if item.isSeparatorItem, previous == nil || previous?.isSeparatorItem == true || index == menu.items.count - 1 {
+                menu.removeItem(item)
+            }
+        }
+    }
+
+    @objc private func openPendingLink(_ sender: Any?) {
+        pendingOpen?()
+        pendingOpen = nil
     }
 }

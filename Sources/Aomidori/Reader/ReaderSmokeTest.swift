@@ -178,7 +178,68 @@ final class ReaderSmokeTest {
         // 12. The split view: alone, a second view of the book that closes on exit; with two
         // other tabs, the numbered chooser, the second one chosen, back in its place on exit.
         await checkSplit()
+
+        // 13. The context menu, after a right click on a link of the book and on a picture:
+        // WebKit's new-window and download items go, the link's becomes "Open Link in New Tab".
+        await checkContextMenu()
         finish(window: window, originalFrame: originalFrame)
+    }
+
+    private func checkContextMenu() async {
+        guard let windowController, let reader, let webView = reader.webView as? PageWebView,
+              let document = windowController.document as? NSDocument,
+              let target = reader.book.nextReadableIndex(after: 0) else { return }
+        func views() -> [ReaderWindowController] { document.windowControllers.compactMap { $0 as? ReaderWindowController } }
+        let rightClick = """
+        const element = document.createElement(link ? 'a' : 'span');
+        if (link) element.href = new URL('/' + href, location.href).href;
+        element.textContent = '·';
+        document.body.insertBefore(element, document.body.firstChild);
+        element.dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, cancelable: true, view: window}));
+        element.remove();
+        """
+        func webKitMenu(_ names: [String]) -> NSMenu {
+            let menu = NSMenu()
+            for name in names {
+                if name == "-" { menu.addItem(.separator()); continue }
+                let item = NSMenuItem(title: name, action: nil, keyEquivalent: "")
+                item.identifier = NSUserInterfaceItemIdentifier("WKMenuItemIdentifier" + name)
+                menu.addItem(item)
+            }
+            return menu
+        }
+        var result: [String: Any] = [:]
+        for (name, link, items) in [("link", true, ["OpenLink", "OpenLinkInNewWindow", "DownloadLinkedFile", "-", "CopyLink"]),
+                                    ("picture", false, ["OpenImageInNewWindow", "DownloadImage", "-", "CopyImage"])] {
+            _ = try? await reader.webView.callAsyncJavaScript(rightClick, arguments: ["link": link, "href": reader.book.spine[target].path],
+                                                              in: nil, contentWorld: .defaultClient)
+            try? await Task.sleep(for: .milliseconds(300))
+            let menu = webKitMenu(items)
+            webView.fit(menu)
+            result[name] = menu.items.map { $0.isSeparatorItem ? "-" : $0.title }
+        }
+        let expectedLink = ["OpenLink", L10n.string("menu.context.openLinkInNewTab"), "-", "CopyLink"]
+        if result["link"] as? [String] != expectedLink { failures.append("context menu: on a link of the book, a new tab and no new window or download") }
+        if result["picture"] as? [String] != ["CopyImage"] { failures.append("context menu: on a picture, no new window or download") }
+
+        // The new tab item opens one, at the link's target.
+        let before = views().count
+        _ = try? await reader.webView.callAsyncJavaScript(rightClick, arguments: ["link": true, "href": reader.book.spine[target].path],
+                                                          in: nil, contentWorld: .defaultClient)
+        try? await Task.sleep(for: .milliseconds(300))
+        let menu = webKitMenu(["OpenLinkInNewWindow"])
+        webView.fit(menu)
+        if let item = menu.items.first, let action = item.action { NSApp.sendAction(action, to: item.target, from: item) }
+        try? await Task.sleep(for: .milliseconds(1500))
+        let opened = views().first { $0 !== windowController }
+        result["newTabPath"] = opened?.reader.currentPath ?? ""
+        if views().count != before + 1 || opened?.reader.currentPath != reader.book.spine[target].path {
+            failures.append("context menu: Open Link in New Tab opens the link in a tab")
+        }
+        report["contextMenu"] = result
+        views().filter { $0 !== windowController }.forEach { $0.close() }
+        try? await Task.sleep(for: .milliseconds(400))
+        windowController.window?.makeKeyAndOrderFront(nil)
     }
 
     private func checkSplit() async {

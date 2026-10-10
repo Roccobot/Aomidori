@@ -208,3 +208,6 @@
 "a11y.split.off" = "Single view";
 "split.chooser.heading" = "Which tab goes alongside?";
 "split.chooser.hint" = "Type its number, or select it and press Return. Escape cancels.";
+
+/* Context menu (1.01) */
+"menu.context.openLinkInNewTab" = "Open Link in New Tab";

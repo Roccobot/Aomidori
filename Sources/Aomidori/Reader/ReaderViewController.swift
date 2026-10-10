@@ -68,6 +68,11 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
             guard let self, path == currentPath else { return }
             perform(self.edges.update(edges))
         }
+        // The context menu's "Open Link in New Tab": in front, as a ⇧-click.
+        renderer.onOpenLinkInNewTab = { [weak self] path, fragment in
+            guard let self else { return }
+            delegate?.reader(self, openInNewTab: .link(path: path, fragment: fragment), inBackground: false)
+        }
     }
 
     @available(*, unavailable)

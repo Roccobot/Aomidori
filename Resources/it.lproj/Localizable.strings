@@ -208,3 +208,6 @@
 "a11y.split.off" = "Vista singola";
 "split.chooser.heading" = "Quale scheda affiancare?";
 "split.chooser.hint" = "Digita il numero, oppure scegli e premi Invio. Esc annulla.";
+
+/* Context menu (1.01) */
+"menu.context.openLinkInNewTab" = "Apri il link in una nuova scheda";
