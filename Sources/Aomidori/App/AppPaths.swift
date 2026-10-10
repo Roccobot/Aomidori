@@ -16,6 +16,9 @@ enum AppPaths {
                                     PlaygroundSmokeTest.defaultsKey, ScreenshotSession.defaultsKey]
         .lazy.compactMap { UserDefaults.standard.string(forKey: $0) }.first
         .map { URL(fileURLWithPath: $0, isDirectory: true) }
+        // `scripts/smoke.sh` names a snapshot file: its folder is the session's.
+        ?? UserDefaults.standard.string(forKey: ReaderViewController.snapshotDefaultsKey)
+            .map { URL(fileURLWithPath: $0).deletingLastPathComponent() }
 
     /// User style sheets, listed in the Style menu.
     static let styles = support.appendingPathComponent("Styles", isDirectory: true)

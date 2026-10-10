@@ -489,7 +489,7 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
     /// settings or style change, the page is saved there and as `<file>-<n>.png` (n = 1, 2, …),
     /// with the window chrome as `<file>.window.png`. Used by `scripts/smoke.sh`, because a
     /// command-line process may not capture other apps' windows.
-    static let snapshotDefaultsKey = "AomidoriSnapshotPath"
+    nonisolated static let snapshotDefaultsKey = "AomidoriSnapshotPath"
     private static var snapshotCount = 0
 
     private func writeDiagnosticSnapshot(to url: URL) {
