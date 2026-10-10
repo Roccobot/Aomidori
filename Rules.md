@@ -162,6 +162,13 @@ lì. L'elenco completo è nel `README.md`: qui non si ricopia.
   `⌘J`, la voce del menu Stile e il pulsante nella barra **passano al giustificato e
   ritornano**, per tutte le finestre, e la scelta è ricordata. Centrati e allineati a destra non
   si toccano (sue scelte del 2026-10-10: P1, e *è un commutatore sinistra ↔ giustificato*).
+- **Le illustrazioni in bianco e nero si fondono con la pagina** (sua richiesta, nella 1.10):
+  *Moltiplica* in chiaro, *Dividi* in scuro (ottenuto esatto con l'immagine invertita e
+  `color-dodge`, perché il CSS non ha *Dividi*). Sue scelte: **J1** sempre, con qualunque stile,
+  accesa di fabbrica, con `⌘L`, una voce del menu Stile e un pulsante per spegnerla e
+  riaccenderla; **K1** escluse le foto in bianco e nero, cioè le immagini con poca carta bianca;
+  **L1** esclusi i fumetti. Le soglie sono misurate su *Pinocchio* (81 disegni su 85 si fondono;
+  le quattro tavole a mezzetinta no) e vivono nello script della pagina (`INK_…`).
 - **La sillabazione segue l'allineamento**, sopra qualunque CSS: spenta a bandiera, dove ogni
   trattino sporge dal margine irregolare (restano i trattini morbidi del libro), accesa col
   giustificato, dove serve a tenere uniformi gli spazi (sua scelta A1 del 2026-10-10, nella

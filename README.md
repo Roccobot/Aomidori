@@ -6,7 +6,16 @@ and later), in the spirit of Murasaki: each chapter is one web page that scrolls
 
 Download: <https://roccobot.github.io/Aomidori/> (the latest release, from `publish/`).
 
-## Features (v1.01)
+## Features (v1.10)
+
+- Black-and-white illustrations blend into the page (`⌘L`, the Style menu or the toolbar turn
+  it off and on, on by default): Multiply in light; in dark Divide, computed exactly as the
+  inverted picture under `color-dodge`, since the CSS has no Divide. Each picture is read once,
+  48 pixels on its longer side: it blends when at most 2% of its pixels have colour (a highest
+  minus lowest channel over 48, which yellowed paper stays under) and at least 40% is paper.
+  Pictures in colour, grey photographs and halftone plates (little paper) and comic pages are
+  left as they are. Measured on *Pinocchio*: 81 of its 85 drawings blend, the four full-page
+  halftone plates do not.
 
 - The page's context menu has no items that would do nothing in Aomidori: WebKit's "Open … in
   New Window" (pictures, links, frames, media) and "Download …" go. On a link of the book, "Open
@@ -152,6 +161,7 @@ JavaScript is disabled.
 7. `#aomidori-align`: running text flush left without automatic hyphenation, or justified and
    hyphenated with `⌘J`; the elements are marked from the cascade read without it (left, start
    or justified: centred and right aligned text is not marked).
+8. `#aomidori-ink`: black-and-white illustrations blended into the page (`⌘L`).
 
 The base sheet declares the cascade layer `aomidori` before anything else. `!important` rules
 in the first declared layer beat every other author rule, whatever its specificity or order
@@ -340,6 +350,7 @@ Menu names are given in English; in Italian they are Archivio, Vista, Vai, Stile
 | Full screen | `⌃⌘F` | View |
 | Override book style on/off | `⌘.` (and toolbar) | Style |
 | Flush left / justified | `⌘J` (and toolbar) | Style |
+| Black-and-white illustrations blended into the page, on / off | `⌘L` (and toolbar) | Style |
 | Previous / next style | `⌘'` / `⌘ì` | Style |
 | Style list | `⌘1` | Style |
 | Reload (chapter from the book, style from disk, same place) | `⌘R` | Style |
