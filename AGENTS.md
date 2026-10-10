@@ -228,7 +228,7 @@ Un file più specifico vince **dove parla**, e il suo silenzio non è una deroga
 
 ## 📖 Il nucleo di `Aomidori`
 
-- **Che cos'è**: un lettore EPUB minimale per macOS 27 Golden Gate, solo Apple Silicon, con
+- **Che cos'è**: un lettore EPUB e di fumetti CBZ, minimale, per macOS 27 Golden Gate, solo Apple Silicon, con
   interfaccia Liquid Glass e ispirato a Murasaki, che è chiuso e resta solo un riferimento: niente
   codice né asset presi da lì (`Rules.md` § '📖 Che cos'è Aomidori').
 - **Una vista sola**: ogni capitolo è una pagina che scorre in verticale, `←` `→` cambiano

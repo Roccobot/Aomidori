@@ -12,6 +12,12 @@
 - **Un lettore EPUB minimale, in stile web**: ogni capitolo è una sola pagina che scorre in
   verticale, `←` e `→` cambiano capitolo. Niente pagine, niente scorrimento orizzontale, una sola
   modalità di vista. La leggerezza e la prontezza vengono prima di ogni funzione.
+- **E i fumetti, dalla 0.70**: un CBZ si apre come un libro di un capitolo solo, le tavole una
+  sotto l'altra (sue scelte del 2026-10-10: solo scorrimento verticale, nessun verso di
+  lettura, prima i CBZ e i CBR dopo, con libarchive e non unrar). Il documento che le contiene
+  lo genera `EPUBKit` (`ComicArchive`), e il resto dell'app non sa la differenza. ⚠️ Il tipo
+  dichiarato è `cx.c3.cbz-archive`, quello che usano di fatto le app di fumetti: un tipo nostro
+  non veniva mai assegnato sui Mac dove un'altra app aveva già dichiarato il suo.
 - **Piattaforma**: macOS 27 Golden Gate e successivi, **solo Apple Silicon** (`scripts/bundle.sh`
   si ferma su un'altra architettura), interfaccia Liquid Glass.
 - **Murasaki** (chiuso) è il riferimento per barra degli strumenti, pannelli laterali e
@@ -111,6 +117,11 @@ lì. L'elenco completo è nel `README.md`: qui non si ricopia.
   con quello di sistema, si torna a seguire macOS. `T` non vale in un campo di testo, nel campo
   di ricerca e nell'editor della Playground.
 - `⌘R` ricarica capitolo, immagini, font e stile, e lascia il lettore nel punto in cui era.
+- **Il testo corrente è a bandiera a sinistra**, sopra qualunque CSS, del libro e degli stili
+  suoi (`ReadingRoccobot.css` giustifica, e resta intatto: lo scavalca lo strato del lettore);
+  `⌘J`, la voce del menu Stile e il pulsante nella barra **passano al giustificato e
+  ritornano**, per tutte le finestre, e la scelta è ricordata. Centrati e allineati a destra non
+  si toccano (sue scelte del 2026-10-10: P1, e *è un commutatore sinistra ↔ giustificato*).
 
 ## 🖌️ Icona e decorazione: sono di Graphe
 
@@ -298,12 +309,16 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
   release normale, mai come pre-release o bozza, che `releases/latest` salta.
 - **Le schermate** della pagina sono quattro file in `publish/assets/`, una per lingua e tema:
   `screenshot-it-light.png`, `screenshot-it-dark.png`, `screenshot-en-light.png`,
-  `screenshot-en-dark.png`, di 1600 x 1120 pixel. Le fa `scripts/screenshots.sh` sul Mac, in
+  `screenshot-en-dark.png`, quadrate di 1600 x 1600 pixel, perché entrino nella colonna destra
+  accanto al testo (scelta di Rocco del 2026-10-10). Le fa `scripts/screenshots.sh` sul Mac, in
   primo piano e con il via di Rocco, con un libro di pubblico dominio per lingua (*Le avventure di
   Pinocchio* e *Alice's Adventures in Wonderland* da Project Gutenberg, in
   `~/Developer/aomidori-test/`), al capitolo II, col sommario aperto. `assets/preview.png`
   (1200 x 630) è l'anteprima dei link condivisi: l'icona resa da Icon Composer e la schermata
   inglese chiara, intere. Finché una schermata manca il suo posto resta nascosto.
+- **Come AIV**: la schermata ha un'ombra in chiaro e un bagliore verde in scuro, e si allinea
+  alla colonna del testo con l'immagine, non con l'ombra; il testo d'apertura è largo quanto la
+  colonna sinistra (richieste di Rocco del 2026-10-10).
 - **Testi**: quelli inglesi sono scritti nella pagina, così si legge e si indicizza anche senza
   JavaScript; lo script passa all'italiano per un browser italiano, titolo e descrizione
   compresi. **Niente note di versione** nella pagina, come in AIV (scelta di Rocco del

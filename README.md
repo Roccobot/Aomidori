@@ -1,12 +1,22 @@
 # Aomidori
 
-A minimal, fast EPUB reader for macOS (Apple Silicon, macOS 27 Golden Gate and later),
-in the spirit of Murasaki: each chapter is one web page that scrolls vertically, `←`/`→`
-move between chapters, and the reader's own CSS can replace the book's at any moment.
+A minimal, fast EPUB and comic (CBZ) reader for macOS (Apple Silicon, macOS 27 Golden Gate
+and later), in the spirit of Murasaki: each chapter is one web page that scrolls vertically,
+`←`/`→` move between chapters, and the reader's own CSS can replace the book's at any moment.
 
 Download: <https://roccobot.github.io/Aomidori/> (the latest release, from `publish/`).
 
-## Features (v0.62)
+## Features (v0.70)
+
+- Comics: a CBZ (a ZIP of pictures) opens like a one-chapter book, its pages one below the
+  other as wide as the text column, in the Finder's order (`2` before `10`, folders included,
+  `__MACOSX` and hidden files left out); the sidebar lists the pages, and the title comes from
+  `ComicInfo.xml` when there is one, else from the file name. Double-click in the Finder, drop
+  on the window or `⌘O` (type `cx.c3.cbz-archive`, the identifier comic apps share). CBR comes
+  later. Search finds nothing in pictures.
+- Running text is flush left over any CSS, the book's and the user style's; `⌘J` (Style menu,
+  toolbar) switches to justified and back, for every window, and is remembered. Centred and
+  right-aligned text keeps its alignment.
 
 - Automatic updates with Sparkle 2 (from 0.52): *Check for Updates…* in the app menu, and a
   daily check once allowed (Sparkle asks on the second launch). See [Updates](#updates).
@@ -109,11 +119,15 @@ JavaScript is disabled.
    (`url("../Fonts/X.otf")` finds `~/Library/Application Support/Aomidori/Fonts/X.otf`);
 4. `#aomidori-palette`: Night colors, only when the active CSS has no `prefers-color-scheme`;
 5. `#aomidori-scale`: the text size (below);
-6. `#aomidori-font`: the custom font, when on.
+6. `#aomidori-font`: the custom font, when on;
+7. `#aomidori-align`: running text flush left, or justified with `⌘J`; the elements are
+   marked from the cascade read without it (left, start or justified: centred and right
+   aligned text is not marked).
 
 The base sheet declares the cascade layer `aomidori` before anything else. `!important` rules
 in the first declared layer beat every other author rule, whatever its specificity or order
-(CSS Cascade 5), so the text size and the custom font cannot be undone by a book or a style.
+(CSS Cascade 5), so the text size, the custom font and the alignment cannot be undone by a
+book or a style.
 Only inline `!important` would still win: the script lifts inline `font-family` while the
 custom font is on and puts it back afterwards.
 
@@ -201,7 +215,7 @@ swift build -c release        # build
 scripts/test.sh               # unit tests (Swift Testing; `swift test` plus the flags the
                               # Command Line Tools need to find the Testing framework)
 scripts/bundle.sh             # build/Aomidori.app, ad-hoc signed, arm64 only
-scripts/smoke.sh book.epub    # open a book and save a snapshot of the page to build/smoke.png
+scripts/smoke.sh book.epub    # open a book (or a .cbz) with factory settings, snapshot to build/smoke.png
 scripts/smoke-playground.sh build/pg [book.epub]   # scripted Playground session: snapshots, report.json
 scripts/smoke-reader.sh build/rd book.epub         # cover at 3 window sizes, chapter memory, edge toast
 scripts/smoke-launch.sh build/ln book.epub         # launch with no book: empty window, open, new tab, Dock reopen
@@ -293,6 +307,7 @@ Menu names are given in English; in Italian they are Archivio, Vista, Vai, Stile
 | Minimal mode | `⌃⌘M` | View |
 | Full screen | `⌃⌘F` | View |
 | Override book style on/off | `⌘.` (and toolbar) | Style |
+| Flush left / justified | `⌘J` (and toolbar) | Style |
 | Previous / next style | `⌘'` / `⌘ì` | Style |
 | Style list | `⌘1` | Style |
 | Reload (chapter from the book, style from disk, same place) | `⌘R` | Style |
@@ -395,16 +410,14 @@ full height) and the CSS on the right; below the editor, the styles folder's fil
 
 ## Next phases
 
-1. **0.62**: the download page in full (contrast, texts in the page, install steps, English,
-   screenshots, favicon) and the release scripts' fixes.
-2. **0.70**: comics (CBZ, then CBR), scrolling vertically like a chapter.
-3. **Settings window** (`⌘;`, also `⌘,`): links in new tabs, `⇧`-click and `⌥`-click; then the
+1. **CBR** comics (RAR), with libarchive (BSD licence).
+2. **Settings window** (`⌘;`, also `⌘,`): links in new tabs, `⇧`-click and `⌥`-click; then the
    **split view** on `⌘S`. Started in the `wip-settings-split` branch.
-4. **Covers in the Finder and Quick Look**, on request (a setting), after a prototype.
-5. **More sidebar panes**, slots and shortcuts already reserved: Thumbnails (`⌥⌘3`, the
+3. **Covers in the Finder and Quick Look**, on request (a setting), after a prototype.
+4. **More sidebar panes**, slots and shortcuts already reserved: Thumbnails (`⌥⌘3`, the
    book's pages in miniature), Images (`⌥⌘4`, every picture in the book), Notes (`⌥⌘6`,
    footnotes and endnotes from `epub:type` / `role` markup). Bookmark renaming and notes.
-6. Per-book style memory, trackpad swipe between chapters.
+5. Per-book style memory, trackpad swipe between chapters.
 
 Murasaki (closed source) is a reference for the toolbar, sidebar panes and Inspector; no assets
 or code are taken from it.
