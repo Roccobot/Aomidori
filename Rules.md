@@ -140,11 +140,17 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
 
 - **Prima di ogni sessione** si scrive in chat che cosa si farà, per quanto, e che cosa vedrà o
   sentirà (il processore sotto carico, un libro aggiunto ai recenti, i nomi dei suoi libri recenti
-  nelle schermate di prova), e si aspetta il via. Un via vale per la sessione annunciata.
-- **Il lavoro si raggruppa** in poche sessioni: si scrive e si prova tutto il possibile sul box,
-  e si va sul Mac per compilare, per le prove che solo macOS può fare e per lo ZIP.
+  nelle schermate di prova), e si aspetta il via. Un via vale per la sessione annunciata. Nella
+  stessa domanda si chiede, se serve, di lanciare `caffeinate` (`Roccobot.md` § '☕ Le sessioni
+  locali e `caffeinate`').
+- **Due modi di lavorare.** Una sessione **remota** (Grok Bot, dal box) scrive e prova sul box
+  tutto il possibile e va sul Mac solo per compilare, per le prove che solo macOS può fare e per lo
+  ZIP: il lavoro si raggruppa in poche sessioni. Una sessione **locale** (Claude Code sul Mac)
+  lavora nel clone `~/Developer/Aomidori`, con `tools` e l'hub clonati accanto, e compila e prova
+  quando serve, in background.
 - **Solo in background**: l'app di prova è la copia nella cartella di build, avviata con
-  `open -g -n`, dietro le sue finestre. Una prova in primo piano si chiede a parte.
+  `open -g -n`, dietro le sue finestre. Rocco può usare il Mac mentre si lavora così; lo lascia
+  solo per una prova in primo piano, che si annuncia e si chiede a parte.
 - ⚠️⚠️ **La copia installata in `~/Applications/Aomidori.app` non si tocca mai**: né sostituita,
   né chiusa, né avviata. Gli script di prova chiudono solo l'eseguibile della build.
 - **Le sue impostazioni e la sua cartella stili non si toccano**: le prove tengono posizioni e
@@ -155,7 +161,9 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
   di tastiera e di trackpad con l'app in primo piano le fa lui; una cattura fatta in background può
   mostrare difetti che a schermo non ci sono, quindi un difetto visto solo in una cattura si fa
   confermare a Rocco. Il minimo reale della finestra vuota include la barra degli strumenti, che AppKit
-  aggiunge al contenuto.
+  aggiunge al contenuto. `smoke-playground.sh` salva per un momento `PlaygroundSmoke.css` nella
+  sua cartella stili, contro la regola qui sopra: finché non scrive nella cartella di uscita, non
+  si lancia.
 - Alla fine si dice in chat **a che ora si è lasciato il Mac**.
 
 ## 🧰 Build e prove
@@ -166,24 +174,29 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
 - **Prove unitarie**: `scripts/test.sh`, che sulle Command Line Tools aggiunge i percorsi di Swift
   Testing; altrove `swift test`. `EPUBKit` e `AomidoriCore` si provano anche sul box Linux.
 - **Prove della pagina**: `scripts/js-tests/` (`npm test`), lo script della pagina in WebKit con
-  Playwright, sul box.
-- **Prove sul Mac**: `smoke-launch.sh` (finestra vuota), `smoke-reader.sh` (copertina centrata,
-  posizione per capitolo, avviso di fine capitolo), `smoke-playground.sh` e `check-icon.sh`
+  Playwright, che scarica il suo WebKit. ⚠️ Girano nel mondo principale con JavaScript attivo,
+  non nel mondo isolato dell'app: per un comportamento dello script fa fede `smoke-reader.sh`.
+- **Prove sul Mac**: `smoke-launch.sh` (finestra vuota, libro chiuso liberato dalla memoria),
+  `smoke-reader.sh` (copertina centrata, posizione per capitolo, avviso di fine capitolo,
+  cronologia, pagina che non esce dal libro, marchi falsi del libro), `smoke-playground.sh` e `check-icon.sh`
   (le sei rese dell'icona e il contenuto di `Assets.car`). Un difetto trovato da Rocco torna con la
   prova che lo avrebbe fermato.
 - **Controlli delle regole**: in ogni clone si attivano gli hook con
   `git config core.hooksPath .githooks` (i due file sono quelli dell'hub e passano il lavoro a
   `githook.py` di `roccobot.github.io`, clonato accanto); l'Action `rules-check` rifà gli stessi
-  controlli su GitHub a ogni push. La copia sul Mac di Rocco si aggiorna con un tarball di
-  `git archive` e i commit si fanno dal box, quindi gli hook servono nel clone del box.
-- **Il libro di prova** è *Una descrizione di Terramare*, e non entra nel repo.
+  controlli su GitHub a ogni push. In una sessione remota la copia sul Mac si aggiorna con un
+  tarball di `git archive` e i commit si fanno dal box, quindi gli hook servono nel clone del box;
+  in una sessione locale servono nel clone del Mac.
+- **Il libro di prova** è *Una descrizione di Terramare*, sul Mac in `~/Developer/aomidori-test/`,
+  e non entra nel repo. Per le schermate del sito, che è pubblico, serve un libro di pubblico
+  dominio.
 - ⚠️ Nel repo non entrano libri, font coperti da diritti né percorsi del Mac di Rocco: il repo è
   pubblico.
 
 ## 🚀 Che cosa produce un rilascio
 
-- **Versione**: SlimVer `x.xx`, come in ogni progetto di Rocco (sua decisione del 9 ottobre
-  2026): +0,01 ritocco, +0,1 funzionalità, +1,00 release maggiore. Fino alla `0.5.0` le versioni
+- **Versione**: SlimVer `x.xx`, come in ogni progetto di Rocco (sua decisione del 2026-10-09):
+  +0,01 ritocco, +0,1 funzionalità, +1,00 release maggiore. Fino alla `0.5.0` le versioni
   erano in forma `X.Y.Z`; la numerazione prima dell'1.00 prosegue da `0.51`, che segue la `0.5.0`
   e la supera anche nel confronto numerico. `CFBundleShortVersionString` in
   `Resources/Info.plist` è la fonte unica; `CFBundleVersion` è il numero di build e sale di uno a
@@ -201,7 +214,7 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
 
 ## 🔄 Aggiornamenti automatici
 
-- **Sparkle 2**, voluto da Rocco dalla `0.52` (9 ottobre 2026), dal pacchetto binario ufficiale
+- **Sparkle 2**, voluto da Rocco dalla `0.52` (2026-10-09), dal pacchetto binario ufficiale
   via SwiftPM, solo su macOS. `scripts/bundle.sh` mette `Sparkle.framework` (ridotto ad arm64) in
   `Contents/Frameworks`, dove punta l'rpath `@executable_path/../Frameworks` di `Package.swift`, e
   firma ad hoc dall'interno verso l'esterno: `Downloader.xpc` (con i suoi entitlement),
@@ -210,7 +223,7 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
 - **Comportamento di Sparkle, non nostro**: al secondo avvio Sparkle chiede una volta se cercare
   da solo gli aggiornamenti, poi controlla una volta al giorno (`SUScheduledCheckInterval`).
   `SUEnableAutomaticChecks` resta assente apposta, perché metterlo salterebbe la domanda. La voce
-  *Controlla aggiornamenti...* sta nel menu dell'app, senza scorciatoia, come nelle altre app Mac.
+  *Controlla aggiornamenti...* è nel menu dell'app, senza scorciatoia, come nelle altre app Mac.
 - **L'appcast** è `publish/appcast.xml`, servito su <https://roccobot.github.io/Aomidori/appcast.xml>
   (`SUFeedURL`, e `UpdatePolicy.feedURL` che una prova confronta). Ogni voce punta allo ZIP della
   release su GitHub e alla pagina della release per le note.
@@ -222,8 +235,8 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
   `SUPublicEDKey` della copia installata e se la firma ad hoc del nuovo bundle è valida. La chiave
   vive nel Portachiavi del Mac di Rocco (`generate_keys --account aomidori`) e in una copia di
   riserva (`generate_keys -x`) che custodisce lui. Non entra mai nel repo né in chat, e non resta
-  in un file del box: se ci passa per arrivare a Rocco, si cancella appena lui l'ha. Persa la
-  chiave, nessuna copia installata accetta più aggiornamenti: si rimette a mano una versione con
+  in un file, né sul box né sul Mac: se ci passa per arrivare a Rocco, si cancella appena lui
+  l'ha. Persa la chiave, nessuna copia installata accetta più aggiornamenti: si rimette a mano una versione con
   una chiave nuova.
 - **Quarantena e Gatekeeper**: l'installatore di Sparkle toglie la quarantena dal bundle nuovo
   prima di sostituire il vecchio, quindi un aggiornamento non riapre l'avviso di Gatekeeper.
@@ -231,8 +244,9 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
   aggiornamento vero.
 - **La `0.52` si installa a mano una volta**: le versioni precedenti non hanno Sparkle. Gli
   aggiornamenti funzionano dalla `0.52` in poi, e le note della `0.52` lo dicono.
-- **I passi del rilascio**: i primi due sul Mac, gli altri dal box, dove ci sono `gh` e il clone
-  con la storia (lo ZIP e `publish/appcast.xml` tornano dal Mac nella stessa sessione):
+- **I passi del rilascio**: i primi due sul Mac, gli altri dal clone con la storia e `gh`. In una
+  sessione remota è il box, e lo ZIP e `publish/appcast.xml` tornano dal Mac nella stessa
+  sessione; in una sessione locale è lo stesso Mac:
   1. `scripts/bundle.sh`, poi le prove (§ '🧰 Build e prove').
   2. `scripts/release.sh`: verifica le firme, fa lo ZIP, lo firma con `sign_update` (dal
      Portachiavi, account `aomidori`, o da `ED_KEY_FILE`) e aggiunge la voce a
@@ -249,19 +263,19 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
 ## 🗣️ Commit e note di rilascio in inglese: deroga dichiarata
 
 - Le regole universali vogliono i messaggi di commit in italiano. In questo repo Rocco ha
-  dichiarato una **deroga** (9 ottobre 2026): messaggi di commit e note di rilascio sono in
+  dichiarato una **deroga** (2026-10-09): messaggi di commit e note di rilascio sono in
   **inglese**, perché il repo, il `README.md` e il sito sono pubblici e in inglese. Tutto quello che
   Rocco legge in chat resta in italiano.
 - I messaggi seguono **Conventional Commits** (`feat(reader): ...`, `fix(inspector): ...`,
   `chore: version 0.51 (build 8)`), con un corpo che dice il perché.
-- **Autore** `Rocco Casadei <roccobot@gmail.com>`, e in fondo la riga **`Agent: Techne`**: Techne
-  è l'agente di Grok Bot che sviluppa Aomidori, e la riga dice chi ha scritto il commit, come vuole
-  la regola universale `Agent:`.
+- **Autore** `Rocco Casadei <roccobot@gmail.com>`, e in fondo la riga **`Agent:`** con chi ha
+  scritto il commit, come vuole la regola universale: `Agent: Techne` per l'agente di Grok Bot che
+  ha sviluppato Aomidori fino alla 0.60, `Agent: Claude Code` per Claude Code.
 - Un commit per argomento: icona, menu, finestra, script e versione non si mescolano.
 
 ## ⚖️ Licenza
 
-- **Nessuna licenza, per ora** (decisione di Rocco del 9 ottobre 2026): il codice è pubblico ma
+- **Nessuna licenza, per ora** (decisione di Rocco del 2026-10-09): il codice è pubblico ma
   con tutti i diritti riservati. Un file `LICENSE`, o una licenza nominata nel `README.md` o nel
   sito, entra solo con una sua decisione.
 - `THIRD_PARTY.md` resta: la de-offuscazione dei font portata da foliate-js è sotto licenza MIT,
@@ -293,6 +307,8 @@ L'elenco aggiornato vive nella sezione *Known limits* del `README.md`; qui resta
 che decidono il lavoro:
 
 - La sezione Tipografia del pannello font di macOS va verificata a mano da Rocco.
+- I due angoli neri sulla scheda attiva, visti solo in una cattura della 0.5.0: da confermare a
+  schermo da Rocco prima di cercarne la causa.
 - Le prove di barra spaziatrice, trackpad e scorciatoie con l'app in primo piano sono sue.
 - La distribuzione firmata e notarizzata (Developer ID) non c'è: quando servirà, servirà anche il
   progetto Xcode.

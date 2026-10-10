@@ -252,15 +252,16 @@ Un file più specifico vince **dove parla**, e il suo silenzio non è una deroga
 - **Icona e decorazione della finestra vuota sono di Graphe**: si usano così come sono, e un
   ritocco al disegno si chiede a Graphe (`Rules.md` § '🖌️ Icona e decorazione: sono di Graphe').
 - ⚠️⚠️ **Il Mac di Rocco è il suo computer personale**: prima di ogni sessione si dice che cosa si
-  farà e per quanto, e si aspetta il via; lavoro raggruppato, solo in background, mai la sua copia
-  in `~/Applications`, mai una finestra in primo piano senza chiedere (`Rules.md` § '💻 Il Mac di
+  farà e per quanto, e si aspetta il via; solo in background, mai la sua copia in
+  `~/Applications`, mai una finestra in primo piano senza chiedere; da remoto il lavoro si
+  raggruppa, in locale si lavora nel clone `~/Developer/Aomidori` (`Rules.md` § '💻 Il Mac di
   Rocco').
 - **Build con SwiftPM e gli script**, senza progetto Xcode; Xcode 27 serve per compilare l'icona
   `.icon` con `actool` e per renderla con `ictool` (`Rules.md` § '🧰 Build e prove').
 - **Le prove**: `scripts/test.sh` (o `swift test`), le prove della pagina in
-  `scripts/js-tests/`, e sul Mac `smoke-launch.sh`, `smoke-reader.sh`, `smoke-playground.sh` e
-  `check-icon.sh`. Una funzione toccata si prova sul Mac prima del rilascio (`Rules.md` § '🧰 Build
-  e prove').
+  `scripts/js-tests/`, e sul Mac `smoke-launch.sh`, `smoke-reader.sh` e `check-icon.sh`
+  (`smoke-playground.sh` no, finché scrive nella sua cartella stili). Una funzione toccata si
+  prova sul Mac prima del rilascio (`Rules.md` § '🧰 Build e prove').
 - **Hook e controlli**: `git config core.hooksPath .githooks` in ogni clone; l'Action
   `rules-check` rifà i controlli a ogni push (`Rules.md` § '🧰 Build e prove').
 - **Il rilascio**: lo ZIP della build provata, `Aomidori-x.xx.zip`, fatto e firmato da
@@ -268,16 +269,17 @@ Un file più specifico vince **dove parla**, e il suo silenzio non è una deroga
   commit di versione è l'ultimo (`Rules.md` § '🚀 Che cosa produce un rilascio').
 - **Aggiornamenti con Sparkle 2** dalla `0.52`: appcast in `publish/appcast.xml`, ZIP firmato
   EdDSA da `scripts/release.sh`, release su GitHub prima del push dell'appcast. ⚠️⚠️ La chiave
-  privata sta solo nel Portachiavi di Rocco e nella sua copia di riserva: mai nel repo né in
-  chat, e mai lasciata sul box (`Rules.md` § '🔄 Aggiornamenti automatici').
+  privata vive solo nel Portachiavi di Rocco e nella sua copia di riserva: mai nel repo né in
+  chat, e mai lasciata in un file (`Rules.md` § '🔄 Aggiornamenti automatici').
 - **Versione**: SlimVer `x.xx` come ovunque, senza eccezioni: prima dell'1.00 la numerazione
   riparte da `0.51`, che segue la `0.5.0`. `CFBundleShortVersionString` in `Resources/Info.plist`
   è la fonte unica, e `CFBundleVersion` sale di uno a ogni versione pubblicata (`Rules.md`
   § '🚀 Che cosa produce un rilascio').
 - **Deroga dichiarata sulla lingua**: messaggi di commit (Conventional Commits) e note di
   rilascio sono in **inglese**, come il resto del repo pubblico; la chat con Rocco resta in
-  italiano. Ogni commit porta la riga `Agent: Techne` (`Rules.md` § '🗣️ Commit e note di rilascio
-  in inglese: deroga dichiarata').
+  italiano. Ogni commit porta la riga `Agent:` con chi l'ha scritto (`Agent: Techne`,
+  `Agent: Claude Code`) (`Rules.md` § '🗣️ Commit e note di rilascio in inglese: deroga
+  dichiarata').
 - **Nessuna licenza, per ora**: tutti i diritti riservati, e niente file `LICENSE` senza una sua
   decisione; `THIRD_PARTY.md` con la nota MIT di foliate-js resta (`Rules.md` § '⚖️ Licenza').
 - **Il sito** è <https://roccobot.github.io/Aomidori/>, servito da `publish/` con
