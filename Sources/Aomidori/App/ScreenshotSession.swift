@@ -12,10 +12,11 @@ enum ScreenshotSession {
     nonisolated static let defaultsKey = "AomidoriScreenshot"
     static let themeKey = "AomidoriScreenshotTheme"
     static let spineKey = "AomidoriScreenshotSpine"
-    /// 800 x 890 points, 1600 x 1780 pixels on a Retina screen: the download page shows it in a
-    /// 428 px column, where it is 476 px tall, as tall as the left column from the icon's tile to
-    /// the end of the install steps (measured in both languages).
-    static let contentSize = NSSize(width: 800, height: 890)
+    /// 800 x 947 points, 1600 x 1894 pixels on a Retina screen: the download page shows it
+    /// 402 px wide and 475.85 px tall, against the 476.05 px of the left column from the icon's
+    /// tile to the end of the install steps (measured in both languages). AppKit rounds a window
+    /// to whole points, so 947.5 is not available.
+    static let contentSize = NSSize(width: 800, height: 947)
 
     static var isActive: Bool { UserDefaults.standard.string(forKey: defaultsKey) != nil }
 
