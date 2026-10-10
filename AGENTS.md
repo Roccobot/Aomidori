@@ -261,9 +261,9 @@ Un file più specifico vince **dove parla**, e il suo silenzio non è una deroga
 - **Build con SwiftPM e gli script**, senza progetto Xcode; Xcode 27 serve per compilare l'icona
   `.icon` con `actool` e per renderla con `ictool` (`Rules.md` § '🧰 Build e prove').
 - **Le prove**: `scripts/test.sh` (o `swift test`), le prove della pagina in
-  `scripts/js-tests/`, e sul Mac `smoke-launch.sh`, `smoke-reader.sh` e `check-icon.sh`
-  (`smoke-playground.sh` no, finché scrive nella sua cartella stili). Una funzione toccata si
-  prova sul Mac prima del rilascio (`Rules.md` § '🧰 Build e prove').
+  `scripts/js-tests/`, e sul Mac `smoke-launch.sh`, `smoke-reader.sh`, `smoke-playground.sh` e
+  `check-icon.sh`, che usano cartella e impostazioni proprie. Una funzione toccata si prova sul
+  Mac prima del rilascio (`Rules.md` § '🧰 Build e prove').
 - **Hook e controlli**: `git config core.hooksPath .githooks` in ogni clone; l'Action
   `rules-check` rifà i controlli a ogni push (`Rules.md` § '🧰 Build e prove').
 - **Il rilascio**: lo ZIP della build provata, `Aomidori-x.xx.zip`, fatto e firmato da

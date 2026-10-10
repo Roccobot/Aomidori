@@ -6,7 +6,7 @@ move between chapters, and the reader's own CSS can replace the book's at any mo
 
 Download: <https://roccobot.github.io/Aomidori/> (the latest release, from `publish/`).
 
-## Features (v0.61)
+## Features (v0.62)
 
 - Automatic updates with Sparkle 2 (from 0.52): *Check for Updates…* in the app menu, and a
   daily check once allowed (Sparkle asks on the second launch). See [Updates](#updates).
@@ -206,6 +206,7 @@ scripts/smoke-playground.sh build/pg [book.epub]   # scripted Playground session
 scripts/smoke-reader.sh build/rd book.epub         # cover at 3 window sizes, chapter memory, edge toast
 scripts/smoke-launch.sh build/ln book.epub         # launch with no book: empty window, open, new tab, Dock reopen
 scripts/check-icon.sh build/icon                   # icon in its six appearances (ictool), Assets.car contents
+scripts/screenshots.sh build/shots it.epub en.epub # the download page's four screenshots (front, Screen Recording)
 scripts/release.sh                                 # release ZIP, EdDSA-signed, added to publish/appcast.xml
 python3 scripts/test_appcast.py                    # tests of the appcast helper (any OS)
 ```
@@ -363,7 +364,7 @@ full height) and the CSS on the right; below the editor, the styles folder's fil
 - Single-picture pages are recognised by their markup (one picture and no other text, or an
   `epub:type="cover"` / `cover-page` marker); the manifest's cover properties are not consulted.
 - The contents page for *End of book* is the EPUB 3 navigation document if it is in the reading
-  order, else a spine item named `toc`, `contents`, `indice` or `sommario`.
+  order, else a spine item named `toc`, `contents`, `content`, `indice` or `sommario`.
 - The text size zooms margins and fixed widths together with the text (the measure in em is
   kept); pictures do not grow.
 - With the override off, the book's CSS is used as is: a book without margins touches the

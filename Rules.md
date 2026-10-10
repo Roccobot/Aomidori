@@ -153,17 +153,21 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
   solo per una prova in primo piano, che si annuncia e si chiede a parte.
 - ⚠️⚠️ **La copia installata in `~/Applications/Aomidori.app` non si tocca mai**: né sostituita,
   né chiusa, né avviata. Gli script di prova chiudono solo l'eseguibile della build.
-- **Le sue impostazioni e la sua cartella stili non si toccano**: le prove tengono posizioni e
-  stato nella cartella di uscita.
+- **Le sue impostazioni e la sua cartella stili non si toccano**, e dalla 0.62 lo garantisce il
+  codice: ogni sessione scriptata (prove e schermate) usa una cartella di supporto sua, `Support`
+  dentro la cartella di uscita, e impostazioni sue, azzerate all'avvio (`AppPaths.smokeFolder`,
+  `ReaderEnvironment.sessionSuite`). La copia di prova ha lo stesso identificativo della sua app,
+  quindi senza questo leggerebbe e scriverebbe le sue preferenze.
 - **Lo ZIP si fa e si riporta nella stessa sessione** della prova, così il file pubblicato è
   quello provato.
 - **⚠️ Trappole**: macOS non lascia premere tasti a un agente al posto di Rocco, quindi le prove
   di tastiera e di trackpad con l'app in primo piano le fa lui; una cattura fatta in background può
   mostrare difetti che a schermo non ci sono, quindi un difetto visto solo in una cattura si fa
   confermare a Rocco. Il minimo reale della finestra vuota include la barra degli strumenti, che AppKit
-  aggiunge al contenuto. `smoke-playground.sh` salva per un momento `PlaygroundSmoke.css` nella
-  sua cartella stili, contro la regola qui sopra: finché non scrive nella cartella di uscita, non
-  si lancia.
+  aggiunge al contenuto. Una cattura di finestra (`screencapture -l`) chiede il permesso di
+  Registrazione schermo per Claude, dato da Rocco il 2026-10-10; e una finestra catturata quando
+  non è attiva ha i pulsanti grigi e i testi spenti, quindi `scripts/screenshots.sh` la porta
+  davanti con `open` e controlla la misura di ogni cattura.
 - Alla fine si dice in chat **a che ora si è lasciato il Mac**.
 
 ## 🧰 Build e prove
@@ -178,9 +182,10 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
   non nel mondo isolato dell'app: per un comportamento dello script fa fede `smoke-reader.sh`.
 - **Prove sul Mac**: `smoke-launch.sh` (finestra vuota, libro chiuso liberato dalla memoria),
   `smoke-reader.sh` (copertina centrata, posizione per capitolo, avviso di fine capitolo,
-  cronologia, pagina che non esce dal libro, marchi falsi del libro), `smoke-playground.sh` e `check-icon.sh`
-  (le sei rese dell'icona e il contenuto di `Assets.car`). Un difetto trovato da Rocco torna con la
-  prova che lo avrebbe fermato.
+  cronologia anche coi link `target="_blank"`, pagina che non esce dal libro, marchi falsi del
+  libro), `smoke-playground.sh` (di nuovo utilizzabile dalla 0.62, perché salva nella sua
+  cartella di supporto) e `check-icon.sh` (le sei rese dell'icona e il contenuto di
+  `Assets.car`). Un difetto trovato da Rocco torna con la prova che lo avrebbe fermato.
 - **Controlli delle regole**: in ogni clone si attivano gli hook con
   `git config core.hooksPath .githooks` (i due file sono quelli dell'hub e passano il lavoro a
   `githook.py` di `roccobot.github.io`, clonato accanto); l'Action `rules-check` rifà gli stessi
@@ -251,8 +256,10 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
   2. `scripts/release.sh`: verifica le firme, fa lo ZIP, lo firma con `sign_update` (dal
      Portachiavi, account `aomidori`, o da `ED_KEY_FILE`) e aggiunge la voce a
      `publish/appcast.xml` con `scripts/appcast.py`: `sparkle:version` (`CFBundleVersion`),
-     `shortVersionString`, `length`, `edSignature` e `minimumSystemVersion` `27.0`. Rifiuta una
-     chiave che non è quella di `SUPublicEDKey` e una build già presente nell'appcast.
+     `shortVersionString`, `length`, `edSignature` e `minimumSystemVersion` `27.0`. Rifiuta un
+     tag che esiste già su GitHub, un `ED_KEY_FILE` dentro il repo e non ignorato, una firma che
+     non si verifica con `SUPublicEDKey` (`scripts/verify-signature.swift`, con CryptoKit,
+     qualunque chiave l'abbia fatta), e una build non più alta di quelle dell'appcast.
   3. `gh release create vx.xx` con lo ZIP: prima la release, così lo ZIP esiste già quando le copie
      installate vedono la voce.
   4. Commit di `publish/appcast.xml` (`chore(appcast): ...`) e push su `main`: GitHub Pages lo
@@ -291,8 +298,16 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
   release normale, mai come pre-release o bozza, che `releases/latest` salta.
 - **Le schermate** della pagina sono quattro file in `publish/assets/`, una per lingua e tema:
   `screenshot-it-light.png`, `screenshot-it-dark.png`, `screenshot-en-light.png`,
-  `screenshot-en-dark.png` (larghe circa 1600 px). Finché un file manca il suo posto resta nascosto
-  e la pagina ha una colonna sola; aggiungerli basta, senza toccare il codice.
+  `screenshot-en-dark.png`, di 1600 x 1120 pixel. Le fa `scripts/screenshots.sh` sul Mac, in
+  primo piano e con il via di Rocco, con un libro di pubblico dominio per lingua (*Le avventure di
+  Pinocchio* e *Alice's Adventures in Wonderland* da Project Gutenberg, in
+  `~/Developer/aomidori-test/`), al capitolo II, col sommario aperto. `assets/preview.png`
+  (1200 x 630) è l'anteprima dei link condivisi: l'icona resa da Icon Composer e la schermata
+  inglese chiara, intere. Finché una schermata manca il suo posto resta nascosto.
+- **Testi**: quelli inglesi sono scritti nella pagina, così si legge e si indicizza anche senza
+  JavaScript; lo script passa all'italiano per un browser italiano, titolo e descrizione
+  compresi. **Niente note di versione** nella pagina, come in AIV (scelta di Rocco del
+  2026-10-10). La favicon è il glifo dell'icona nel suo colore istituzionale `#43B59E`.
 - Nella pagina valgono le regole universali del web: mai `innerHTML`, testi con `textContent`.
 
 ## 🌿 Branch e tag
