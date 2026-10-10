@@ -31,6 +31,7 @@
 "menu.go.forward" = "Forward";
 "menu.style" = "Style";
 "menu.style.override" = "Override Book Style";
+"menu.style.justify" = "Justified Text";
 "menu.style.previous" = "Previous Style";
 "menu.style.next" = "Next Style";
 "menu.style.list" = "Style List…";
@@ -54,6 +55,10 @@
 "a11y.night" = "Night";
 "a11y.styleOverridden" = "Style overridden";
 "a11y.bookStyle" = "Book style";
+"toolbar.justify" = "Justify";
+"toolbar.justify.help" = "Switch between flush left and justified text (⌘J)";
+"a11y.justified" = "Justified";
+"a11y.flushLeft" = "Flush left";
 "toc.title" = "Table of Contents";
 "toc.empty" = "This book has no table of contents.";
 "picker.title" = "Styles";

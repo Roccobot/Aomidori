@@ -31,6 +31,7 @@
 "menu.go.forward" = "Avanti";
 "menu.style" = "Stile";
 "menu.style.override" = "Sovrascrivi stile del libro";
+"menu.style.justify" = "Testo giustificato";
 "menu.style.previous" = "Stile precedente";
 "menu.style.next" = "Stile successivo";
 "menu.style.list" = "Elenco stili…";
@@ -54,6 +55,10 @@
 "a11y.night" = "Notte";
 "a11y.styleOverridden" = "Stile sovrascritto";
 "a11y.bookStyle" = "Stile del libro";
+"toolbar.justify" = "Giustifica";
+"toolbar.justify.help" = "Passa da bandiera a sinistra a giustificato, e viceversa (⌘J)";
+"a11y.justified" = "Giustificato";
+"a11y.flushLeft" = "Bandiera a sinistra";
 "toc.title" = "Indice";
 "toc.empty" = "Questo libro non ha un indice.";
 "picker.title" = "Stili";

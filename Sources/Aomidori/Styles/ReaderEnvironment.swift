@@ -16,6 +16,7 @@ final class ReaderEnvironment {
         static let defaultStyle = "AomidoriDefaultStyle"
         static let selectedStyle = "AomidoriSelectedStyle"
         static let overrideEnabled = "AomidoriOverrideEnabled"
+        static let justified = "AomidoriJustified"
         static let textScale = "AomidoriTextScale"
         /// The light/dark override since 0.53 (`AppearanceChoice`): `true` dark, `false` light,
         /// absent to follow macOS.
@@ -129,6 +130,14 @@ final class ReaderEnvironment {
 
     func toggleOverride() {
         defaults.set(!overrideEnabled, forKey: Key.overrideEnabled)
+        notify()
+    }
+
+    /// Running text justified instead of flush left (the default), in every window.
+    var justified: Bool { defaults.bool(forKey: Key.justified) }
+
+    func toggleJustified() {
+        defaults.set(!justified, forKey: Key.justified)
         notify()
     }
 
@@ -285,7 +294,8 @@ final class ReaderEnvironment {
             styleHandlesColorScheme: style.map(handlesColorScheme) ?? false,
             night: isNight,
             nightPaletteCSS: nightPaletteCSS,
-            scale: textScale
+            scale: textScale,
+            justified: justified
         )
         configuration.setCustomFont(choice, faceCSS: choice.map { fontFaceCSS(for: $0.family) } ?? "")
         return configuration

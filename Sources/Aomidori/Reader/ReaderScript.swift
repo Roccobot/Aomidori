@@ -94,7 +94,7 @@ enum ReaderScript {
       let mounted = false;
       let config = {
         overrideEnabled: false, styleHref: null, styleHandlesColorScheme: false, night: false,
-        nightPaletteCSS: '', scale: 1, fontFamily: null, fontFaceCSS: '',
+        nightPaletteCSS: '', scale: 1, fontFamily: null, fontFaceCSS: '', justified: false,
       };
       let parsing = doc.readyState === 'loading';
 
@@ -123,6 +123,7 @@ enum ReaderScript {
       const palette = ownElement('style', 'palette');
       const scale = ownElement('style', 'scale');
       const font = ownElement('style', 'font');
+      const align = ownElement('style', 'align');
       const container = () => doc.head || root;
 
       // MARK: Book styles
@@ -220,6 +221,7 @@ enum ReaderScript {
         root.appendChild(palette);
         root.appendChild(scale);
         root.appendChild(font);
+        root.appendChild(align);
         if (parsing) observer.observe(root, { childList: true, subtree: true });
         mounted = true;
         return true;
@@ -257,6 +259,7 @@ enum ReaderScript {
             user = next;
             refreshPalette();
             refreshFont();
+            refreshAlign();
             restoreAnchor(anchor);
           };
           next.addEventListener('load', swap, { once: true });
@@ -265,7 +268,7 @@ enum ReaderScript {
           user.after(next);
         } else {
           user.setAttribute('href', href);
-          user.addEventListener('load', refreshFont, { once: true });
+          user.addEventListener('load', () => { refreshFont(); refreshAlign(); }, { once: true });
           if (!user.isConnected) container().insertBefore(user, palette.parentNode === container() ? palette : null);
         }
       }
@@ -397,6 +400,28 @@ enum ReaderScript {
         }
         const css = sheet([familyRule, ...emphasisRules]);
         if (font.textContent !== css) font.textContent = css;
+      }
+
+      // MARK: Alignment
+
+      // Running text is flush left, whatever the book or the user style says, or justified when
+      // the reader asks for it (⌘J). Which text runs is read from the cascade without this rule:
+      // text aligned to the left, to the start or justified; centred and right-aligned text keeps
+      // its alignment. Marked on the elements, re-read whenever styles may have changed.
+      const ALIGN_MARK = 'data-aomidori-align';
+      const RUNNING = new Set(['left', 'start', 'justify', '-webkit-left', '-webkit-auto']);
+
+      function refreshAlign() {
+        if (!doc.body) return;
+        if (align.textContent !== '') align.textContent = '';
+        for (const el of doc.querySelectorAll(`[${ALIGN_MARK}]`)) el.removeAttribute(ALIGN_MARK);
+        const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_ELEMENT);
+        for (let el = doc.body; el; el = walker.nextNode()) {
+          if (el.namespaceURI === SVG || isOwn(el)) continue;
+          if (RUNNING.has(getComputedStyle(el).textAlign)) el.setAttribute(ALIGN_MARK, '');
+        }
+        const value = config.justified ? 'justify' : 'left';
+        align.textContent = `@layer aomidori {\n  [${ALIGN_MARK}] { text-align: ${value} !important; }\n}`;
       }
 
       // MARK: Image pages
@@ -617,15 +642,17 @@ enum ReaderScript {
         parent.appendChild(palette);
         parent.appendChild(scale);
         parent.appendChild(font);
+        parent.appendChild(align);
         refreshPalette();
         refreshScale();
         refreshFont();
+        refreshAlign();
         sizeObserver.observe(root);
         if (doc.body) sizeObserver.observe(doc.body);
         reportEdges();
       }, { once: true });
 
-      addEventListener('load', () => { refreshPalette(); refreshFont(); reportEdges(); }, { once: true });
+      addEventListener('load', () => { refreshPalette(); refreshFont(); refreshAlign(); reportEdges(); }, { once: true });
 
       window.Aomidori = Object.freeze({
         apply(next) {
@@ -637,6 +664,7 @@ enum ReaderScript {
           refreshPalette();
           refreshScale();
           refreshFont();
+          refreshAlign();
           if (anchor) restoreAnchor(anchor);
         },
         fraction,

@@ -101,4 +101,15 @@ struct ReaderSettingsTests {
         let decoded = try JSONDecoder().decode(ReaderConfiguration.self, from: Data(configuration.json().utf8))
         #expect(decoded == configuration)
     }
+
+    /// Flush left by default; ⌘J switches to justified and back, and the page gets the choice.
+    @Test func alignmentIsFlushLeftUnlessJustified() throws {
+        #expect(ReaderConfiguration().justified == false)
+        var justified = ReaderConfiguration()
+        justified.justified = true
+        #expect(justified.json().contains("\"justified\":true"))
+        // A configuration written before 0.70 has no key: flush left.
+        let old = #"{"overrideEnabled":false,"styleHandlesColorScheme":false,"night":false,"nightPaletteCSS":"","scale":1,"fontFaceCSS":""}"#
+        #expect(try JSONDecoder().decode(ReaderConfiguration.self, from: Data(old.utf8)).justified == false)
+    }
 }

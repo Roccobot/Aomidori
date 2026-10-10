@@ -1,17 +1,19 @@
 import AppKit
 
-/// The toolbar items for the app-wide reading settings (Night, Style, Override), shared by the
-/// reader window and the empty window so both have the same chrome.
+/// The toolbar items for the app-wide reading settings (Night, Style, Justify, Override), shared
+/// by the reader window and the empty window so both have the same chrome.
 @MainActor
 final class GlobalToolbarItems {
     static let night = NSToolbarItem.Identifier("Aomidori.night")
     static let style = NSToolbarItem.Identifier("Aomidori.style")
+    static let justify = NSToolbarItem.Identifier("Aomidori.justify")
     static let override = NSToolbarItem.Identifier("Aomidori.override")
-    static let identifiers = [night, style, override]
+    static let identifiers = [night, style, justify, override]
 
     private let environment = ReaderEnvironment.shared
     private let styleMenuUpdater = StyleMenuUpdater()
     private weak var nightItem: NSToolbarItem?
+    private weak var justifyItem: NSToolbarItem?
     private weak var overrideItem: NSToolbarItem?
 
     /// The item for one of `identifiers`, or nil for any other identifier.
@@ -42,6 +44,15 @@ final class GlobalToolbarItems {
             StyleMenu.refresh(menu)
             item.menu = menu
             return item
+        case Self.justify:
+            let item = NSToolbarItem(itemIdentifier: identifier)
+            item.label = L10n.string("toolbar.justify")
+            item.toolTip = L10n.string("toolbar.justify.help")
+            item.action = #selector(AppDelegate.toggleJustified(_:))
+            item.isBordered = true
+            justifyItem = item
+            update()
+            return item
         case Self.override:
             let item = NSToolbarItem(itemIdentifier: identifier)
             item.label = L10n.string("toolbar.override")
@@ -56,10 +67,13 @@ final class GlobalToolbarItems {
         }
     }
 
-    /// Images that show the current state of Night and Override.
+    /// Images that show the current state of Night, Justify and Override.
     func update() {
         let night = environment.isNight
         nightItem?.image = Self.symbol(night ? "moon.fill" : "sun.max", L10n.string(night ? "a11y.night" : "a11y.day"))
+        let justified = environment.justified
+        justifyItem?.image = Self.symbol(justified ? "text.justify" : "text.alignleft",
+                                         L10n.string(justified ? "a11y.justified" : "a11y.flushLeft"))
         let overriding = environment.overrideEnabled
         overrideItem?.image = Self.symbol(overriding ? "paintbrush.pointed.fill" : "paintbrush.pointed",
                                           L10n.string(overriding ? "a11y.styleOverridden" : "a11y.bookStyle"))
