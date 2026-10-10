@@ -109,15 +109,67 @@ h1 {
   grid-column: 1;
   grid-row: 1;
 }
-/* The F of Roboto Bold starts 0.0625em right of its box (measured on the loaded font with
-   canvas measureText, 62.5px at 1000px): the margin puts its ink on the left edge of the lines
-   below (the user's request, 2026-10-06: *togli il rientro eccessivo*). */
+/* The title starts with the project's icon, which tells the two DFs apart (the user's request,
+   2026-10-10, with a mockup measured at 60px: the icon's square 67px wide, 24.5px from it to the
+   ink of the F, centred on the capitals, its left edge 1.5px left of the lines below). */
 .intro-title-row h1 {
   grid-column: 1;
   grid-row: 2;
-  margin: 0 0 0 -0.0625em;
+  display: flex;
+  align-items: center;
+  margin: 0;
   min-width: 0;
   white-space: nowrap;
+}
+/* --df-icon-inset is the transparent margin of the icon file on each side, as a fraction of its
+   side: the visible square is 1.1167em whatever the file, and the margins below are counted from
+   it. The three values are the mockup's, measured at DPR 2 on the page with Roboto loaded:
+   0.025em left of the box of the lines below; 0.3542em to the box of the F, whose ink starts
+   0.0625em further on (49 device pixels from the square, as in the mockup); 0.025em up, from
+   the centre of the line to the centre of the capitals. ⚠️ Chromium paints the image on whole
+   device pixels, so a quarter of a CSS pixel does not show: the square starts 2 device pixels
+   left of the text instead of the mockup's 3, and its centre is half a device pixel under the
+   capitals' instead of one. */
+.df-icon {
+  /* Aomidori's icon keeps the transparent margin of Apple's grid, 100 of 1024 per side. */
+  --df-icon-inset: 0.09765625;
+  --df-icon-square: 1.1167em;
+  --df-icon-size: calc(var(--df-icon-square) / (1 - 2 * var(--df-icon-inset)));
+  --df-icon-margin: calc(var(--df-icon-size) * var(--df-icon-inset));
+  flex: none;
+  width: var(--df-icon-size);
+  height: var(--df-icon-size);
+  /* Above and below, the icon takes the height of the title's line (1.08em) and no more: the
+     eyebrow and the summary stay where they were, as in the mockup. */
+  margin: calc((1.08em - var(--df-icon-size)) / 2) calc(0.3542em - var(--df-icon-margin))
+    calc((1.08em - var(--df-icon-size)) / 2) calc(-0.025em - var(--df-icon-margin));
+  transform: translateY(-0.025em);
+}
+.df-icon-dark {
+  display: none;
+}
+/* A black shadow around the icon (the user's request, 2026-10-10): gradual and marked on the
+   dark theme, where the icon's dark square would sink into the page, lighter and discreet on
+   the light one. drop-shadow follows the icon's own outline, transparent margin excluded. */
+.df-icon-light {
+  filter: drop-shadow(0 0.02em 0.08em rgb(0 0 0 / 0.2));
+}
+.df-icon-dark {
+  filter: drop-shadow(0 0 0.05em rgb(0 0 0 / 0.9)) drop-shadow(0 0 0.3em rgb(0 0 0 / 0.9));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .df-icon-light {
+    display: none;
+  }
+  :root:not([data-theme]) .df-icon-dark {
+    display: block;
+  }
+}
+[data-theme="dark"] .df-icon-light {
+  display: none;
+}
+[data-theme="dark"] .df-icon-dark {
+  display: block;
 }
 .cloud-account {
   grid-column: 2;

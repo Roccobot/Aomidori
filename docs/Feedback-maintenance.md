@@ -78,8 +78,16 @@ miglioria al sistema fatta in uno dei due progetti va riportata a mano nell'altr
   (`**Mac**: ...`). `modifica` apre una modale con il suo campo,
   `Annulla` e `OK`: solo `OK` scrive la bozza. Il riquadro `I tuoi dispositivi` non c'è più, e
   nemmeno il titolo `Prove sui dispositivi` con la riga delle risposte: dopo la striscia cloud
-  viene il primo riquadro delle prove. Il titolo `Feedback Aomidori` riprende il margine interno della
-  F (0,0625 em, misurato su Roboto Bold), così la F comincia dove cominciano le righe sotto.
+  viene il primo riquadro delle prove.
+  ⚠️ **Il titolo `Feedback Aomidori` comincia con l'icona dell'app, dal 2026-10-10** (sua richiesta,
+  col mockup: distingue i due DF a colpo d'occhio). Le due icone del sito, `assets/icon.svg` e
+  `assets/icon-dark.svg`, una per tema, si usano così come sono, e il tema le scambia come il resto
+  della pagina, tasto `T` compreso. Misure del mockup, in em del titolo: squircle di 1,1167 em, 1,5
+  px a sinistra delle righe sotto, 24,5 px dall'inchiostro della F, centrata sulle maiuscole, e la
+  riga del titolo resta alta com'era. Il file ha il margine trasparente della griglia Apple (100 su
+  1024 per lato), e `--df-icon-inset` lo toglie dal conto. Intorno all'icona un'ombra nera,
+  graduale e marcata nel tema scuro, leggera e discreta nel chiaro. Lo presidia
+  `scripts/feedback-interactive-check.py`.
   - ⚠️ **Su mobile, dalla sera del 2026-10-06** (sua richiesta): testo dei dispositivi al 70%;
     icone da 20px al 22,5% dell'inchiostro attenuato, che sullo sfondo chiaro dà circa
     `#d4d8d2`; il bordo destro del **disegno** sulla verticale del lato destro della pillola di

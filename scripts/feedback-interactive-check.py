@@ -1050,9 +1050,26 @@ def check(path):
             expect(page.locator('.intro-actions a')).to_have_text('Scarica e installa Aomidori ' + data['version'])
             assert page.evaluate("document.querySelector('.feedback-primary').firstElementChild.firstElementChild.firstElementChild.classList.contains('test')")
             assert page.locator('text=Prove sui dispositivi').count() == 0 and page.locator('#answered').count() == 0
-            # The title's F starts where the lines below start: its side bearing is taken back.
-            bearing = page.evaluate("""async()=>{await document.fonts.ready;const h=document.querySelector('h1');const c=getComputedStyle(h);const x=document.createElement('canvas').getContext('2d');x.font=c.fontWeight+' '+c.fontSize+' '+c.fontFamily;return h.getBoundingClientRect().left-x.measureText('F').actualBoundingBoxLeft-document.querySelector('.intro-summary').getBoundingClientRect().left}""")
-            assert abs(bearing) < 1, bearing
+            # The title starts with the icon of the theme in use, as in his mockup of 2026-10-10:
+            # a square 1.1167em wide, 1.5px left of the lines below, 24.5px from the ink of the F,
+            # centred on the capitals, and the title's line no taller than without it.
+            title = page.evaluate("""async()=>{await document.fonts.ready;const h=document.querySelector('h1');const c=getComputedStyle(h);const size=parseFloat(c.fontSize);
+                const img=[...h.querySelectorAll('img')].find(i=>getComputedStyle(i).display!=='none');const inset=parseFloat(getComputedStyle(img).getPropertyValue('--df-icon-inset'))||0;
+                const b=img.getBoundingClientRect();const pad=b.width*inset;const square={left:b.left+pad,right:b.right-pad,top:b.top+pad,bottom:b.bottom-pad};
+                const x=document.createElement('canvas').getContext('2d');x.font=c.fontWeight+' '+c.fontSize+' '+c.fontFamily;const m=x.measureText('F');
+                const text=[...h.childNodes].find(n=>n.nodeType===3);const r=document.createRange();r.selectNodeContents(text);const t=r.getBoundingClientRect();
+                const capCentre=t.top+m.fontBoundingBoxAscent-m.actualBoundingBoxAscent/2;
+                return {size,theme:img.className,width:(square.right-square.left)/size,left:square.left-document.querySelector('.intro-summary').getBoundingClientRect().left,
+                    gap:t.left+m.actualBoundingBoxLeft*-1-square.right,centre:(square.top+square.bottom)/2-capCentre,height:h.getBoundingClientRect().height/size}}""")
+            assert 'df-icon-light' in title['theme'], title
+            assert abs(title['width'] - 1.1167) < 0.01, title
+            assert -2.25 <= title['left'] <= -0.75, title
+            assert abs(title['gap'] - 24.5) <= 1, title
+            assert abs(title['centre']) <= 1.5, title
+            assert abs(title['height'] - 1.08) < 0.01, title
+            page.evaluate("document.documentElement.setAttribute('data-theme', 'dark')")
+            assert page.evaluate("[...document.querySelectorAll('h1 img')].filter(i=>getComputedStyle(i).display!=='none').map(i=>i.className).join()") == 'df-icon df-icon-dark'
+            page.evaluate("document.documentElement.setAttribute('data-theme', 'light')")
             # Altro keeps its own colours when it has text: the response colours are the tests'.
             page.locator('.extra .rich-editor').fill('Testo in Altro')
             expect(page.locator('#extra-section')).not_to_have_class(re.compile(r'\bhas-response\b'))
