@@ -154,7 +154,7 @@ before the reload.
 must win over the CSS whatever it says:
 
 - multiplying the root font size (v0.1) is defeated by any px size or `min()`/`clamp()` cap,
-  as in `ReadingRoccobot.css` (`min(1.6em, 26px)`);
+  as in `ReadingRoccobot.css` (`min(1.6em, 22px)`);
 - rewriting each element's computed `font-size` inline from JavaScript misses pseudo-elements
   (drop caps, `::before`), leaves px line heights and margins behind, and must be redone after
   every style change or new node;

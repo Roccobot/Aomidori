@@ -38,9 +38,9 @@ body {
   color: #1F1A17;
   font-family: "MiSans", "MiSans VF", system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-size: 1.6em;
-  /* Tetto per i monitor esterni: fino a 26px resta 1.6em, oltre si ferma.
+  /* Tetto per i monitor esterni: fino a 22px resta 1.6em, oltre si ferma.
      I lettori che non conoscono min() usano la riga sopra. */
-  font-size: min(1.6em, 26px);
+  font-size: min(1.6em, 22px);
   max-width: 34em;
   box-sizing: border-box;
   margin: 0 auto;
@@ -60,8 +60,9 @@ p {
   font-size: 100%;
   font-weight: inherit;
   line-height: inherit;
-  -webkit-hyphens: auto;
-  hyphens: auto;
+  /* Niente sillabazione automatica: restano solo i trattini morbidi del libro. */
+  -webkit-hyphens: manual;
+  hyphens: manual;
   orphans: 2;
   widows: 2;
 }
