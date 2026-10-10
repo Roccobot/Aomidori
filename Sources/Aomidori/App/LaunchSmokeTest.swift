@@ -53,6 +53,7 @@ final class LaunchSmokeTest {
         report["emptyLayout"] = content.smokeLayout
         checkEmptyLayout(content.smokeLayout, name: "launch size")
         checkAppearance()
+        await checkPlainT(in: emptyWindow)
         snapshot(emptyWindow, name: "empty.png")
         content.smokeHighlight(true)
         content.display()
@@ -204,6 +205,25 @@ final class LaunchSmokeTest {
 
     /// 0.53 follows macOS: the 0.5x Night/Day key is gone, and with no override set in this
     /// session the reading appearance is the system's.
+    /// `T` alone swaps light and dark in the empty window too, and a second press swaps back.
+    /// The key goes through the event queue, where the app's key monitor sees it.
+    private func checkPlainT(in window: NSWindow) async {
+        let environment = ReaderEnvironment.shared
+        func pressT() async {
+            guard let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                               windowNumber: window.windowNumber, context: nil, characters: "t",
+                                               charactersIgnoringModifiers: "t", isARepeat: false, keyCode: 17) else { return }
+            NSApp.postEvent(event, atStart: false)
+            try? await Task.sleep(for: .milliseconds(400))
+        }
+        let before = environment.isNight
+        await pressT()
+        let swapped = environment.isNight
+        await pressT()
+        report["plainTInEmptyWindow"] = ["before": before, "afterOne": swapped, "afterTwo": environment.isNight]
+        if swapped == before || environment.isNight != before { failures.append("T swaps light and dark in the empty window") }
+    }
+
     private func checkAppearance() {
         let system = NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
         let legacy = UserDefaults.standard.object(forKey: "AomidoriNight")

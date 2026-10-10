@@ -74,14 +74,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool { true }
 
     /// Routes keys (and scrolling, for the chapter-edge toast) to the active reader window before
-    /// the menu bar and the web view see them.
+    /// the menu bar and the web view see them; then the keys that work in every window.
     private func installKeyMonitor() {
-        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged, .leftMouseDown, .rightMouseDown, .scrollWheel]) { event in
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged, .leftMouseDown, .rightMouseDown, .scrollWheel]) { [weak self] event in
             let consumed = MainActor.assumeIsolated {
-                (NSApp.keyWindow?.windowController as? ReaderWindowController)?.handle(event) ?? false
+                if (NSApp.keyWindow?.windowController as? ReaderWindowController)?.handle(event) == true { return true }
+                return self?.handleEverywhere(event, in: NSApp.keyWindow ?? event.window) ?? false
             }
             return consumed ? nil : event
         }
+    }
+
+    /// `T` alone swaps light and dark in every window, the empty one included (Rocco, 1.02),
+    /// except while typing: a text field, the search field, the Playground's editor (all text
+    /// views). A reader window has handled it already when its page has the focus.
+    private func handleEverywhere(_ event: NSEvent, in window: NSWindow?) -> Bool {
+        guard event.type == .keyDown, let window, !(window.firstResponder is NSText) else { return false }
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask).subtracting([.capsLock, .numericPad, .function])
+        guard flags.isEmpty, Shortcuts.readingCommand(characters: event.charactersIgnoringModifiers ?? "") == .night else { return false }
+        // Held down, T would flicker between light and dark: once per press.
+        if !event.isARepeat { toggleNight(nil) }
+        return true
     }
 
     // MARK: Updates
