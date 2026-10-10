@@ -119,7 +119,7 @@ lì. L'elenco completo è nel `README.md`: qui non si ricopia.
   lui. Valgono le regole universali sulla grafica: niente ritagli, niente pixel spostati, niente
   colori cambiati nei file.
 - Un ritocco al disegno si chiede a Graphe; qui si cambia solo come il disegno entra nell'app
-  (`AppIcon.icon/icon.json`, i colori dell'interfaccia attorno).
+  (`Resources/Icon/AppIcon.icon/icon.json`, i colori dell'interfaccia attorno).
 - La cornice tratteggiata della zona di rilascio si disegna nel codice, a ogni dimensione, con
   la regola di Graphe (`DashedFrame`): perimetro reale del rettangolo arrotondato, numero di
   trattini intero attorno a trattino 10 + spazio 12 con linea da 2 pt, trattino e spazio

@@ -5,6 +5,8 @@
 > **nucleo universale**, copiato da `rules/Core.md` di `Roccobot/tools` e da modificare solo là,
 > e il **nucleo del repo**, cioè le sue regole in una riga col rimando a `Rules.md`, che ne dà il
 > testo completo e il perché.
+> ⚠️ **`Rules.md` non si carica da sé, su nessuna piattaforma** (dal 2026-10-10): si legge per
+> intero prima di lavorare su una cosa di cui parla, e le righe qui sotto dicono in quale sezione.
 
 <!-- core:begin (generated from rules/Core.md: edit there, never here) -->
 
