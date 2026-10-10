@@ -50,6 +50,9 @@ public final class ZIPContainer: ResourceContainer, @unchecked Sendable {
         entry(for: path) != nil
     }
 
+    /// Every file of the archive, by its stored path, in no particular order.
+    public var paths: [String] { Array(entries.keys) }
+
     public func storedPath(for path: String) -> String? {
         entry(for: path)?.path
     }

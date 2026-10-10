@@ -1,7 +1,8 @@
+import AomidoriCore
 import AppKit
 import EPUBKit
 
-/// An open EPUB file. Read-only: the reader never writes to the book.
+/// An open EPUB or comic (CBZ) file. Read-only: the reader never writes to the book.
 @objc(BookDocument)
 final class BookDocument: NSDocument {
     private var publication: EPUBPublication?
@@ -12,7 +13,9 @@ final class BookDocument: NSDocument {
     override nonisolated func read(from url: URL, ofType typeName: String) throws {
         let publication: EPUBPublication
         do {
-            publication = try EPUBPublication(contentsOf: url)
+            publication = BookFormat(url: url) == .comic
+                ? try EPUBPublication(comicAt: url)
+                : try EPUBPublication(contentsOf: url)
         } catch let error as EPUBError {
             throw error.userFacingError
         }

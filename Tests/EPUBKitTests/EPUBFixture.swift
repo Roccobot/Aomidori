@@ -24,9 +24,9 @@ struct EPUBFixture {
     }
 
     /// Writes the archive to a fresh temporary file and returns its URL.
-    func write() throws -> URL {
+    func write(extension fileExtension: String = "epub") throws -> URL {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("aomidori-test-\(UUID().uuidString).epub")
+            .appendingPathComponent("aomidori-test-\(UUID().uuidString).\(fileExtension)")
         let archive = try Archive(url: url, accessMode: .create)
         for (path, data) in files {
             try archive.addEntry(with: path, type: .file, uncompressedSize: Int64(data.count),

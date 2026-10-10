@@ -5,7 +5,7 @@ import Foundation
 /// (or on a volume that is not mounted: they come back when it is).
 public struct RecentBook: Equatable, Sendable {
     public let url: URL
-    /// The file name without the `.epub` extension.
+    /// The file name without the `.epub` or `.cbz` extension.
     public let title: String
 }
 
@@ -21,12 +21,12 @@ public enum RecentBooks {
         return books
     }
 
-    /// "Una descrizione di Terramare.epub" → "Una descrizione di Terramare". Other extensions
-    /// are part of the name.
+    /// "Una descrizione di Terramare.epub" → "Una descrizione di Terramare", and the same for a
+    /// comic (`.cbz`). Other extensions are part of the name.
     public static func title(of url: URL) -> String {
         let name = url.lastPathComponent
-        guard url.pathExtension.lowercased() == "epub", name.count > 5 else { return name }
-        return String(name.dropLast(5))
+        guard let format = BookFormat(url: url), name.count > format.fileExtension.count + 1 else { return name }
+        return String(name.dropLast(format.fileExtension.count + 1))
     }
 }
 

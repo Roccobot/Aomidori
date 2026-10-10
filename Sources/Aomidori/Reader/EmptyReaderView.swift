@@ -198,12 +198,13 @@ final class EmptyReaderView: NSView, NSTableViewDataSource, NSTableViewDelegate 
 
     // MARK: Dropping books
 
-    /// The EPUB files on a pasteboard: by type, or by extension when the type is unknown.
+    /// The EPUB and comic (CBZ) files on a pasteboard: by extension, or by type for an EPUB
+    /// whose name does not say it.
     static func epubURLs(on pasteboard: NSPasteboard) -> [URL] {
         let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
         let epub = UTType("org.idpf.epub-container")
         return urls.filter { url in
-            if url.pathExtension.lowercased() == "epub" { return true }
+            if BookFormat(url: url) != nil { return true }
             guard let epub, let type = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType else { return false }
             return type.conforms(to: epub)
         }
