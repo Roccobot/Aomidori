@@ -12,8 +12,9 @@ enum ScreenshotSession {
     nonisolated static let defaultsKey = "AomidoriScreenshot"
     static let themeKey = "AomidoriScreenshotTheme"
     static let spineKey = "AomidoriScreenshotSpine"
-    /// 800 x 560 points: 1600 pixels wide on a Retina screen, as the page expects.
-    static let contentSize = NSSize(width: 800, height: 560)
+    /// 800 x 800 points: a square of 1600 pixels on a Retina screen, which fits the download
+    /// page's right column.
+    static let contentSize = NSSize(width: 800, height: 800)
 
     static var isActive: Bool { UserDefaults.standard.string(forKey: defaultsKey) != nil }
 

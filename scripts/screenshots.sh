@@ -44,8 +44,8 @@ for lang in it en; do
     screencapture -l "$(cat "$out/window.txt")" -o -x "$shot"
     pkill -f "^$BIN" 2>/dev/null || true
     size="$(sips -g pixelWidth -g pixelHeight "$shot" | awk '/pixel/ {print $2}' | paste -sd x -)"
-    if [[ "$size" != "1600x1120" ]]; then
-      echo "$shot is $size, not 1600x1120" >&2
+    if [[ "$size" != "1600x1600" ]]; then
+      echo "$shot is $size, not 1600x1600" >&2
       exit 1
     fi
     echo "$shot"
