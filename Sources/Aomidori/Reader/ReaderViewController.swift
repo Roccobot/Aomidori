@@ -370,7 +370,19 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
         let url = navigationAction.request.url
         if let path = renderer.path(for: url) {
-            let isMainFrame = navigationAction.targetFrame?.isMainFrame != false
+            // A link asking for a new window (`target="_blank"`) has no target frame and, with no
+            // windows to open, would go nowhere: it is followed here, like any link in the book.
+            if navigationAction.targetFrame == nil {
+                if navigationAction.navigationType == .linkActivated, let current = currentPath {
+                    let departure = await renderer.takeLinkDeparture()
+                    let position = await renderer.currentPosition()
+                    history.departed(from: ReadingPlace(path: current, position: departure ?? position ?? ChapterPosition(fraction: currentFraction)))
+                    if current != path, let position { record(position, path: current) }
+                    renderer.load(path: path, fragment: url?.fragment)
+                }
+                return .cancel
+            }
+            let isMainFrame = navigationAction.targetFrame?.isMainFrame == true
             // A link in the book (a note, a chapter, an anchor in this chapter): where it was
             // followed from goes in the history.
             let followsLink = isMainFrame && navigationAction.navigationType == .linkActivated
@@ -386,13 +398,7 @@ final class ReaderViewController: NSViewController, WKNavigationDelegate {
             }
             return .allow
         }
-        if url?.scheme == "about" { return .allow }
-        // Links that leave the book open in the default browser or mail client.
-        if navigationAction.navigationType == .linkActivated, let url,
-           ["http", "https", "mailto"].contains(url.scheme?.lowercased() ?? "") {
-            NSWorkspace.shared.open(url)
-        }
-        return .cancel
+        return PageRenderer.policy(forNavigationOutsideTheBook: navigationAction)
     }
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {

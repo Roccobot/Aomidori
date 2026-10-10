@@ -154,13 +154,8 @@ final class PlaygroundPreviewController: NSViewController, WKNavigationDelegate 
     // MARK: WKNavigationDelegate
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
-        let url = navigationAction.request.url
-        if renderer.path(for: url) != nil || url?.scheme == "about" { return .allow }
-        if navigationAction.navigationType == .linkActivated, let url,
-           ["http", "https", "mailto"].contains(url.scheme?.lowercased() ?? "") {
-            NSWorkspace.shared.open(url)
-        }
-        return .cancel
+        if renderer.path(for: navigationAction.request.url) != nil { return .allow }
+        return PageRenderer.policy(forNavigationOutsideTheBook: navigationAction)
     }
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {

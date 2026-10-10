@@ -86,6 +86,18 @@ final class PageRenderer: NSObject {
         return String(url.path(percentEncoded: false).drop { $0 == "/" })
     }
 
+    /// What happens to a navigation that does not stay in the book: `about:` pages load, a link
+    /// the reader clicked to the web or to mail opens in the default application, the rest is
+    /// dropped. Shared by the reader and the Playground.
+    static func policy(forNavigationOutsideTheBook action: WKNavigationAction) -> WKNavigationActionPolicy {
+        guard let url = action.request.url else { return .cancel }
+        if url.scheme == "about" { return .allow }
+        if action.navigationType == .linkActivated, ["http", "https", "mailto"].contains(url.scheme?.lowercased() ?? "") {
+            NSWorkspace.shared.open(url)
+        }
+        return .cancel
+    }
+
     func load(path: String, fragment: String? = nil) {
         load(URLRequest(url: url(forPath: path, fragment: fragment)))
     }

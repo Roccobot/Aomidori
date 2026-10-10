@@ -226,7 +226,7 @@ final class ReaderSmokeTest {
         reader.showSpineItem(at: from, landing: .top)
         await waitForLoad()
 
-        func click(href: String, addingTargetAtEnd: Bool) async {
+        func click(href: String, addingTargetAtEnd: Bool, newWindow: Bool = false) async {
             let script = """
             if (addTarget) {
               const target = document.createElement('p'); target.id = 'aomidori-smoke-target'; target.textContent = '·';
@@ -234,12 +234,13 @@ final class ReaderSmokeTest {
             }
             const a = document.createElement('a');
             a.href = href.startsWith('#') ? href : new URL('/' + href, location.href).href;
+            if (newWindow) a.target = '_blank';
             a.textContent = '·';
             document.body.insertBefore(a, document.body.firstChild);
             a.click();
             return a.href;
             """
-            _ = try? await reader.webView.callAsyncJavaScript(script, arguments: ["href": href, "addTarget": addingTargetAtEnd],
+            _ = try? await reader.webView.callAsyncJavaScript(script, arguments: ["href": href, "addTarget": addingTargetAtEnd, "newWindow": newWindow],
                                                               in: nil, contentWorld: .defaultClient)
         }
 
@@ -279,6 +280,18 @@ final class ReaderSmokeTest {
         if let anchorFrom, let anchorBack, abs(anchorFrom.fraction - anchorBack.fraction) > 0.02 {
             failures.append("history: back from an anchor in the same chapter")
         }
+
+        // A link that asks for a new window (`target="_blank"`) opens here, and Back returns.
+        reader.showSpineItem(at: from, landing: .top)
+        await waitForLoad()
+        await click(href: book.spine[to].path, addingTargetAtEnd: false, newWindow: true)
+        await waitForLoad()
+        try? await Task.sleep(for: .milliseconds(400))
+        result["newWindowLinkLandsIn"] = reader.currentPath ?? "nil"
+        if reader.currentPath != book.spine[to].path { failures.append("history: a target=_blank link opens in the reader") }
+        reader.goBack()
+        await waitForLoad()
+        if reader.currentPath != book.spine[from].path { failures.append("history: back from a target=_blank link") }
         report["history"] = result
     }
 
