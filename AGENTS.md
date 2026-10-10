@@ -228,7 +228,7 @@ Un file più specifico vince **dove parla**, e il suo silenzio non è una deroga
 
 ## 📖 Il nucleo di `Aomidori`
 
-- **Che cos'è**: un lettore EPUB e di fumetti CBZ, minimale, per macOS 27 Golden Gate, solo Apple Silicon, con
+- **Che cos'è**: un lettore EPUB e di fumetti CBZ e CBR, minimale, per macOS 27 Golden Gate, solo Apple Silicon, con
   interfaccia Liquid Glass e ispirato a Murasaki, che è chiuso e resta solo un riferimento: niente
   codice né asset presi da lì (`Rules.md` § '📖 Che cos'è Aomidori').
 - **Una vista sola**: ogni capitolo è una pagina che scorre in verticale, `←` `→` cambiano
@@ -241,7 +241,7 @@ Un file più specifico vince **dove parla**, e il suo silenzio non è una deroga
   una sua richiesta esplicita, e un CSS consegnato a lui si chiama sempre `ReadingRoccobot.css`
   (`Rules.md` § '🎯 Le decisioni di prodotto di Rocco').
 - **Il motore è nostro**: Swift e AppKit, `NSDocument`, un `WKWebView` per finestra servito da un
-  `WKURLSchemeHandler`, ZIPFoundation e `XMLDocument`. Niente Readium, niente impaginatore di
+  `WKURLSchemeHandler`, ZIPFoundation, la libarchive di macOS per i RAR e `XMLDocument`. Niente Readium, niente impaginatore di
   foliate-js (`Rules.md` § '🏛️ Com'è fatto, e che cosa è stato scartato').
 - **Lo strato iniettato nella pagina è uno solo**, condiviso da lettore e Playground CSS; la
   dimensione del testo è uno `zoom` sul `body` dentro il livello di cascata `aomidori`, che vince su

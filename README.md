@@ -1,19 +1,26 @@
 # Aomidori
 
-A minimal, fast EPUB and comic (CBZ) reader for macOS (Apple Silicon, macOS 27 Golden Gate
+A minimal, fast EPUB and comic (CBZ, CBR) reader for macOS (Apple Silicon, macOS 27 Golden Gate
 and later), in the spirit of Murasaki: each chapter is one web page that scrolls vertically,
 `←`/`→` move between chapters, and the reader's own CSS can replace the book's at any moment.
 
 Download: <https://roccobot.github.io/Aomidori/> (the latest release, from `publish/`).
 
-## Features (v0.71)
+## Features (v0.80)
 
-- Comics: a CBZ (a ZIP of pictures) opens like a one-chapter book, its pages one below the
-  other as wide as the text column, in the Finder's order (`2` before `10`, folders included,
-  `__MACOSX` and hidden files left out); the sidebar lists the pages, and the title comes from
-  `ComicInfo.xml` when there is one, else from the file name. Double-click in the Finder, drop
-  on the window or `⌘O` (type `cx.c3.cbz-archive`, the identifier comic apps share). CBR comes
-  later. Search finds nothing in pictures.
+- Comics: a CBZ (a ZIP of pictures) or a CBR (a RAR) opens like a one-chapter book, its pages
+  one below the other as wide as the text column, in the Finder's order (`2` before `10`,
+  folders included, `__MACOSX` and hidden files left out); the sidebar lists the pages, and the
+  title comes from `ComicInfo.xml` when there is one, else from the file name. Double-click in
+  the Finder, drop on the window or `⌘O` (types `cx.c3.cbz-archive` and `cx.c3.cbr-archive`,
+  the identifiers comic apps share). Search finds nothing in pictures.
+- Whatever the extension, a ZIP is read with ZIPFoundation, a file at a time; anything else
+  (RAR, RAR5, 7z) with macOS's own libarchive (`Sources/CArchive`, nothing bundled). A RAR,
+  above all a solid one, cannot give one file without decompressing what comes before it, so
+  its pictures and `ComicInfo.xml` are written once to a private temporary folder, named after
+  the process, and removed when the comic closes; at the first CBR the folders of processes
+  that are gone (a force-quit) are removed too. A password-protected archive is refused with
+  its own message.
 - Running text is flush left over any CSS, the book's and the user style's; `⌘J` (Style menu,
   toolbar) switches to justified and back, for every window, and is remembered. Hyphenation
   follows: off when flush left (soft hyphens in the book stay), on when justified. Centred and
@@ -216,7 +223,7 @@ swift build -c release        # build
 scripts/test.sh               # unit tests (Swift Testing; `swift test` plus the flags the
                               # Command Line Tools need to find the Testing framework)
 scripts/bundle.sh             # build/Aomidori.app, ad-hoc signed, arm64 only
-scripts/smoke.sh book.epub    # open a book (or a .cbz) with factory settings, snapshot to build/smoke.png
+scripts/smoke.sh book.epub    # open a book (or a .cbz, .cbr) with factory settings, snapshot to build/smoke.png
 scripts/smoke-playground.sh build/pg [book.epub]   # scripted Playground session: snapshots, report.json
 scripts/smoke-reader.sh build/rd book.epub         # cover at 3 window sizes, chapter memory, edge toast
 scripts/smoke-launch.sh build/ln book.epub         # launch with no book: empty window, open, new tab, Dock reopen
@@ -411,14 +418,13 @@ full height) and the CSS on the right; below the editor, the styles folder's fil
 
 ## Next phases
 
-1. **CBR** comics (RAR), with libarchive (BSD licence).
-2. **Settings window** (`⌘;`, also `⌘,`): links in new tabs, `⇧`-click and `⌥`-click; then the
+1. **Settings window** (`⌘;`, also `⌘,`): links in new tabs, `⇧`-click and `⌥`-click; then the
    **split view** on `⌘S`. Started in the `wip-settings-split` branch.
-3. **Covers in the Finder and Quick Look**, on request (a setting), after a prototype.
-4. **More sidebar panes**, slots and shortcuts already reserved: Thumbnails (`⌥⌘3`, the
+2. **Covers in the Finder and Quick Look**, on request (a setting), after a prototype.
+3. **More sidebar panes**, slots and shortcuts already reserved: Thumbnails (`⌥⌘3`, the
    book's pages in miniature), Images (`⌥⌘4`, every picture in the book), Notes (`⌥⌘6`,
    footnotes and endnotes from `epub:type` / `role` markup). Bookmark renaming and notes.
-5. Per-book style memory, trackpad swipe between chapters.
+4. Per-book style memory, trackpad swipe between chapters.
 
 Murasaki (closed source) is a reference for the toolbar, sidebar panes and Inspector; no assets
 or code are taken from it.

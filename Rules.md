@@ -12,12 +12,25 @@
 - **Un lettore EPUB minimale, in stile web**: ogni capitolo è una sola pagina che scorre in
   verticale, `←` e `→` cambiano capitolo. Niente pagine, niente scorrimento orizzontale, una sola
   modalità di vista. La leggerezza e la prontezza vengono prima di ogni funzione.
-- **E i fumetti, dalla 0.70**: un CBZ si apre come un libro di un capitolo solo, le tavole una
-  sotto l'altra (sue scelte del 2026-10-10: solo scorrimento verticale, nessun verso di
-  lettura, prima i CBZ e i CBR dopo, con libarchive e non unrar). Il documento che le contiene
-  lo genera `EPUBKit` (`ComicArchive`), e il resto dell'app non sa la differenza. ⚠️ Il tipo
-  dichiarato è `cx.c3.cbz-archive`, quello che usano di fatto le app di fumetti: un tipo nostro
-  non veniva mai assegnato sui Mac dove un'altra app aveva già dichiarato il suo.
+- **E i fumetti**: il CBZ dalla 0.70, il CBR dalla 0.80. Si aprono come un libro di un capitolo
+  solo, le tavole una sotto l'altra (sue scelte del 2026-10-10: solo scorrimento verticale,
+  nessun verso di lettura, prima i CBZ e i CBR dopo, con libarchive e non unrar). Il documento
+  che le contiene lo genera `EPUBKit` (`ComicArchive`), e il resto dell'app non sa la
+  differenza. ⚠️ I tipi dichiarati sono `cx.c3.cbz-archive` e `cx.c3.cbr-archive`, quelli che
+  usano di fatto le app di fumetti: un tipo nostro non veniva mai assegnato sui Mac dove
+  un'altra app aveva già dichiarato il suo.
+- **Chi legge l'archivio lo decide l'archivio, non l'estensione**: uno ZIP va a ZIPFoundation,
+  un file alla volta e senza estrarre niente; tutto il resto (RAR, RAR5, 7z) alla libarchive di
+  macOS, collegata dal modulo di sistema `CArchive` (l'SDK ha la libreria ma non `archive.h`,
+  quindi `CArchive.h` dichiara le sole funzioni usate). Niente di libarchive entra nell'app.
+  ⚠️ Un RAR, soprattutto se solido, non dà un file senza decomprimere quelli che vengono prima:
+  per questo le tavole si scrivono una volta in una cartella temporanea che porta il numero del
+  processo (`Aomidori-<processo>-<casuale>`), cancellata alla chiusura del fumetto; al primo
+  CBR di una sessione si cancellano anche quelle dei processi che non ci sono più. È l'unica
+  eccezione al *senza estrarre niente*, e vale solo per gli archivi che non sono ZIP.
+- **Le prove del CBR** usano tre archivi delle prove di libarchive (`Tests/EPUBKitTests/Fixtures`,
+  nota in `THIRD_PARTY.md`), perché sul Mac niente scrive RAR; la prova a mano usa un CBR di
+  Rocco, fuori dal repo (sua scelta D3 del 2026-10-10).
 - **Piattaforma**: macOS 27 Golden Gate e successivi, **solo Apple Silicon** (`scripts/bundle.sh`
   si ferma su un'altra architettura), interfaccia Liquid Glass.
 - **Murasaki** (chiuso) è il riferimento per barra degli strumenti, pannelli laterali e
