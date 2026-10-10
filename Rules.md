@@ -315,16 +315,21 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
   release normale, mai come pre-release o bozza, che `releases/latest` salta.
 - **Le schermate** della pagina sono quattro file in `publish/assets/`, una per lingua e tema:
   `screenshot-it-light.png`, `screenshot-it-dark.png`, `screenshot-en-light.png`,
-  `screenshot-en-dark.png`, quadrate di 1600 x 1600 pixel, perché entrino nella colonna destra
-  accanto al testo (scelta di Rocco del 2026-10-10). Le fa `scripts/screenshots.sh` sul Mac, in
-  primo piano e con il via di Rocco, con un libro di pubblico dominio per lingua (*Le avventure di
-  Pinocchio* e *Alice's Adventures in Wonderland* da Project Gutenberg, in
-  `~/Developer/aomidori-test/`), al capitolo II, col sommario aperto. `assets/preview.png`
+  `screenshot-en-dark.png`, verticali di 1600 x 1780 pixel e **senza barra laterale**. Le fa
+  `scripts/screenshots.sh` sul Mac, in primo piano e con il via di Rocco, con un libro di
+  pubblico dominio per lingua (*Le avventure di Pinocchio* e *Alice's Adventures in Wonderland*
+  da Project Gutenberg, in `~/Developer/aomidori-test/`), al capitolo II. `assets/preview.png`
   (1200 x 630) è l'anteprima dei link condivisi: l'icona resa da Icon Composer e la schermata
   inglese chiara, intere. Finché una schermata manca il suo posto resta nascosto.
+- **Dove cade la schermata** (richieste di Rocco del 2026-10-10, dopo un primo giro quadrato che
+  aveva capito male): due colonne uguali nella larghezza normale del sito; la schermata è larga
+  quanto la colonna destra, il bordo alto è sul riquadro dell'icona e il bordo basso alla fine
+  dei passi d'installazione, prima della spaziatura delle schede. La proporzione viene da lì:
+  428 x 476 px, misurata in italiano e in inglese col font della pagina. ⚠️ Un testo che allunga
+  o accorcia la colonna sinistra (il claim, i passi) cambia la misura: si rimisura e si rifanno
+  le schermate (`ScreenshotSession.contentSize`).
 - **Come AIV**: la schermata ha un'ombra in chiaro e un bagliore verde in scuro, e si allinea
-  alla colonna del testo con l'immagine, non con l'ombra; il testo d'apertura è largo quanto la
-  colonna sinistra (richieste di Rocco del 2026-10-10).
+  con l'immagine, non con l'ombra.
 - **Testi**: quelli inglesi sono scritti nella pagina, così si legge e si indicizza anche senza
   JavaScript; lo script passa all'italiano per un browser italiano, titolo e descrizione
   compresi. **Niente note di versione** nella pagina, come in AIV (scelta di Rocco del
