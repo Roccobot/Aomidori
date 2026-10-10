@@ -9,6 +9,11 @@ public struct ManifestItem: Equatable, Sendable {
     public let properties: Set<String>
 }
 
+extension Sequence where Element == ManifestItem {
+    /// The EPUB 3 navigation document (the item with the `nav` property).
+    var navigationDocument: ManifestItem? { first { $0.properties.contains("nav") } }
+}
+
 /// A reading-order entry.
 public struct SpineItem: Equatable, Sendable {
     public let idref: String
@@ -108,9 +113,9 @@ public struct EPUBBook: Sendable {
 
     /// The spine item that is the book's table of contents, if it has one in the reading order:
     /// the EPUB 3 navigation document, or else an item named like a contents page
-    /// (`toc`, `contents`, `indice`, `sommario`).
+    /// (`toc`, `contents`, `content`, `indice`, `sommario`).
     public var tableOfContentsIndex: Int? {
-        if let nav = manifest.first(where: { $0.properties.contains("nav") }), let index = spineIndex(forPath: nav.path) {
+        if let nav = manifest.navigationDocument, let index = spineIndex(forPath: nav.path) {
             return index
         }
         let names: Set<String> = ["toc", "contents", "content", "indice", "sommario"]

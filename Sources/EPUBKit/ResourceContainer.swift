@@ -7,6 +7,8 @@ public protocol ResourceContainer: Sendable {
     func data(at path: String) throws -> Data
     /// Whether a file exists at `path`.
     func contains(_ path: String) -> Bool
+    /// The path as the container stores it, when `path` names a file with another letter case.
+    func storedPath(for path: String) -> String?
 }
 
 /// A lazy, thread-safe reader over a ZIP archive: the central directory is indexed once,
@@ -46,6 +48,10 @@ public final class ZIPContainer: ResourceContainer, @unchecked Sendable {
 
     public func contains(_ path: String) -> Bool {
         entry(for: path) != nil
+    }
+
+    public func storedPath(for path: String) -> String? {
+        entry(for: path)?.path
     }
 
     public func data(at path: String) throws -> Data {

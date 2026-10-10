@@ -41,6 +41,8 @@ struct FontObfuscationTests {
         #expect(publication.isObfuscated("OEBPS/Fonts/Serif.otf"))
         #expect(try publication.resource(at: "OEBPS/Fonts/Serif.otf").data == Self.font)
         #expect(try publication.resource(at: "OEBPS/Styles/book.css").data == Data("p { margin: 0 }".utf8))
+        // A book's CSS may name the font with another letter case: it is still restored.
+        #expect(try publication.resource(at: "oebps/fonts/SERIF.otf").data == Self.font)
     }
     #endif
 

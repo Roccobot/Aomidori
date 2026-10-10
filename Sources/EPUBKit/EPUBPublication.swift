@@ -31,7 +31,9 @@ public final class EPUBPublication: Sendable {
     }
 
     /// The bytes and MIME type of the resource at a container-relative path, de-obfuscated if needed.
-    public func resource(at path: String) throws -> EPUBResource {
+    public func resource(at requested: String) throws -> EPUBResource {
+        // Obfuscation and media types are keyed by the stored name, whatever case the book used.
+        let path = container.storedPath(for: requested) ?? requested
         var data = try container.data(at: path)
         if let deobfuscator = obfuscatedResources[path] {
             data = deobfuscator.apply(to: data)

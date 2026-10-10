@@ -127,7 +127,7 @@ public enum EPUBParser {
     static func tableOfContents(manifest: [ManifestItem], manifestByID: [String: ManifestItem],
                                 spineElement: XMLElement?, in container: some ResourceContainer) -> [TOCEntry] {
         // EPUB 3 navigation document first, EPUB 2 NCX as fallback. A broken TOC never blocks reading.
-        if let nav = manifest.first(where: { $0.properties.contains("nav") }),
+        if let nav = manifest.navigationDocument,
            let document = try? xml(at: nav.path, in: container) {
             let entries = navigationEntries(document, documentPath: nav.path)
             if !entries.isEmpty { return entries }
