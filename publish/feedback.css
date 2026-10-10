@@ -1357,7 +1357,10 @@ button.devices-edit:disabled {
     position: sticky;
     top: 18px;
     align-self: start;
-    max-height: calc(100vh - 36px);
+    /* Until the page holds it at the top, Altro starts lower down: feedback-ui.js sets
+       --altro-max so that its end stays 18px above the window's bottom edge, where the wheel can
+       bring the last attachment (his screenshot of 2026-10-10: it ended under the edge). */
+    max-height: var(--altro-max, calc(100vh - 36px));
     overflow: auto;
     margin: 18px 0;
     z-index: 1;

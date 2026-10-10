@@ -965,6 +965,30 @@ function controls(disabled) {
   }).observe(altro, { childList: true, subtree: true });
   wide.addEventListener("change", fit);
   fit();
+  // Altro ends inside the window (the user's note, 2026-10-10, with a screenshot): it is sticky,
+  // so until the page brings it to its top it starts lower down, and at 100vh minus 36px tall its
+  // end was under the window's bottom edge. The wheel scrolled Altro to that hidden end and then
+  // stopped, so the last attachment's Rinomina and Elimina could not be reached. Its height is
+  // capped at what lies between its top and the window's bottom edge, minus its sticky gap.
+  let reachFrame = 0;
+  const reach = () => {
+    reachFrame = 0;
+    if (!wide.matches) {
+      altro.style.removeProperty("--altro-max");
+      return;
+    }
+    const gap = parseFloat(getComputedStyle(altro).top) || 0;
+    const top = Math.max(altro.getBoundingClientRect().top, gap);
+    altro.style.setProperty("--altro-max", Math.max(0, window.innerHeight - top - gap) + "px");
+  };
+  const reachSoon = () => {
+    if (!reachFrame) reachFrame = requestAnimationFrame(reach);
+  };
+  window.addEventListener("scroll", reachSoon, { passive: true });
+  window.addEventListener("resize", reachSoon);
+  wide.addEventListener("change", reach);
+  new ResizeObserver(reachSoon).observe(document.body);
+  reach();
 })();
 
 // --- Desktop: at the end of the page Prossimi passi ends where Altro does ---
@@ -976,20 +1000,33 @@ function controls(disabled) {
   const altro = document.querySelector("#extra-section");
   const wide = window.matchMedia("(min-width: 1100px)");
   if (!columns || !altro) return;
+  // Altro's height follows its position until it is held at the top (--altro-max, above), so the
+  // height that counts here is the one it has there: its content, up to the window minus its gaps.
+  const heldHeight = () => {
+    const top = parseFloat(getComputedStyle(altro).top) || 0;
+    const content = altro.scrollHeight + altro.offsetHeight - altro.clientHeight;
+    return Math.min(content, window.innerHeight - 2 * top);
+  };
+  let lastHeld = -1;
   function align() {
     const last = columns.lastElementChild;
     if (!wide.matches || !last || last === altro) {
       columns.style.removeProperty("--df-tail");
       return;
     }
+    lastHeld = heldHeight();
     columns.style.setProperty("--df-tail", "0px");
     const top = parseFloat(getComputedStyle(altro).top) || 0;
     const below = document.documentElement.scrollHeight - (last.getBoundingClientRect().bottom + window.scrollY);
-    const wanted = window.innerHeight - (top + altro.offsetHeight);
+    const wanted = window.innerHeight - (top + lastHeld);
     columns.style.setProperty("--df-tail", Math.max(0, Math.round(wanted - below)) + "px");
   }
+  // While the page scrolls near its top Altro changes height at every frame: the tail is measured
+  // again only when the height it will have at the top changes.
+  new ResizeObserver(() => {
+    if (heldHeight() !== lastHeld) align();
+  }).observe(altro);
   const observer = new ResizeObserver(align);
-  observer.observe(altro);
   observer.observe(columns);
   window.addEventListener("resize", align);
   wide.addEventListener("change", align);

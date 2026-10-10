@@ -121,6 +121,54 @@ def check_attachment_buttons(path):
     print('Allegati: Rinomina ed Elimina dentro il loro riquadro da 390 a 1920px verificati.')
 
 
+def check_altro_reaches_last_attachment(path):
+    """On a desktop the wheel over Altro brings the last attachment, buttons included, into view,
+    and the page does not move (his screenshot of 2026-10-10: with the page at the top, Altro's end
+    was under the bottom edge of the window, so Rinomina and Elimina could not be reached)."""
+    from playwright.sync_api import sync_playwright
+    browser_path = shutil.which('chromium') or shutil.which('google-chrome')
+    if not browser_path:
+        raise AssertionError('Chromium non disponibile: scorrimento di Altro non verificato.')
+    pixel = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')
+    measure = """() => { const altro = document.querySelector('#extra-section');
+        const figures = altro.querySelectorAll('.image-list figure');
+        const last = figures[figures.length - 1].getBoundingClientRect();
+        const box = altro.getBoundingClientRect();
+        return { last: last.bottom, altro: box.bottom, window: innerHeight, page: scrollY }; }"""
+    with tempfile.TemporaryDirectory() as temporary:
+        files = []
+        for name in ['barra.png', 'clipboard.png', 'terzo.png']:
+            file = Path(temporary) / name
+            file.write_bytes(pixel)
+            files.append(str(file))
+        with sync_playwright() as pw:
+            engine = pw.chromium.launch(executable_path=browser_path, args=['--no-sandbox'])
+            for width, height in [(1280, 800), (1440, 900), (1920, 1080)]:
+                page = engine.new_page(viewport={'width': width, 'height': height})
+                page.goto(Path(path).resolve().as_uri())
+                page.locator('#extra-section input.images').set_input_files(files)
+                page.wait_for_function("document.querySelectorAll('#extra-section .image-list figure').length >= 3")
+                # At the top of the page, and halfway down, where Altro is held at the top.
+                for start in [0, 400]:
+                    page.evaluate(f'window.scrollTo(0, {start})')
+                    page.evaluate('new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))')
+                    page.evaluate("document.querySelector('#extra-section').scrollTop = 0")
+                    before = page.evaluate(measure)
+                    box = page.locator('#extra-section').bounding_box()
+                    page.mouse.move(box['x'] + box['width'] / 2, (box['y'] + min(box['y'] + box['height'], height)) / 2)
+                    for _ in range(12):
+                        page.mouse.wheel(0, 400)
+                        page.wait_for_timeout(60)
+                    page.wait_for_timeout(300)
+                    after = page.evaluate(measure)
+                    where = f'{width}x{height}, pagina a {start}px'
+                    assert after['page'] == before['page'], f'{where}: la rotella sopra Altro scorre la pagina ({after}).'
+                    assert after['altro'] <= after['window'] + 0.5, f'{where}: la fine di Altro è sotto la finestra ({after}).'
+                    assert after['last'] <= after['altro'] + 0.5, f'{where}: l\'ultimo allegato resta sotto la fine di Altro ({after}).'
+                page.close()
+            engine.close()
+    print('Altro: la rotella porta all\'ultimo allegato senza muovere la pagina, verificato a tre misure.')
+
 def check_questions_and_labels(path):
     """The blocks after the tests (the user's rule of 2026-10-08), on a page built from a
     synthetic source with the real generator and template: the questions come after the tests and
@@ -294,6 +342,7 @@ def check(path):
         assert question.get('title') and question.get('paragraphs'), 'Domanda incompleta.'
     check_questions_and_labels(path)
     check_attachment_buttons(path)
+    check_altro_reaches_last_attachment(path)
     if not data['items']:
         check_without_tests(path)
         return

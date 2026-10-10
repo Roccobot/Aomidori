@@ -210,6 +210,13 @@ miglioria al sistema fatta in uno dei due progetti va riportata a mano nell'altr
   pannello alto quanto lo schermo teneva la sua fine sotto la tastiera, e misurato con quattro
   allegati scorreva di 213 px mentre loro erano circa 700 px più in basso. Il pannello scorre quando
   ha qualcosa da scorrere, e resta fermo quando non ce l'ha. Su mobile la riga di stato del salvataggio è a 12 px, centrata e al 70%. Al tocco Android non disegna nessun riquadro (`-webkit-tap-highlight-color`).
+  ⚠️⚠️ **Su desktop la fine di Altro è sempre dentro la finestra** (dal 2026-10-10, sua nota con uno
+  screenshot: con la pagina in cima non arrivava a `Rinomina` ed `Elimina` dell'ultimo allegato).
+  Finché la pagina non lo porta a 18 px dal bordo, Altro comincia più in basso, e alto quanto la
+  finestra meno 36 px finiva sotto il suo bordo: la rotella lo portava fino a una fine invisibile e
+  poi si fermava. `feedback-ui.js` ne limita l'altezza (`--altro-max`) allo spazio fra la sua cima e
+  il fondo della finestra meno 18 px, e `--df-tail` usa l'altezza che Altro ha quando è fermo in
+  cima. Lo presidia `scripts/feedback-interactive-check.py`.
   Il titolo `Altro` è in grigio (`--muted`), non nel colore del testo. ⚠️ **Altro non prende i
   colori di una risposta** (`has-response`, sfondo e bordo grigio-azzurri) quando contiene testo:
   li aveva dal 2026-10-02 e lui l'ha visto diventare blu (2026-10-06); restano alle prove. Non usare un riquadro `position: fixed` staccato dal flusso come unica
