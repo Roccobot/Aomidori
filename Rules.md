@@ -343,6 +343,10 @@ agenti lavorano (sua richiesta: *avvisami quando lo fai, perché devo lasciarti 
   spaziatura delle schede: 476 px, misurati in italiano e in inglese col font della pagina.
   ⚠️ Un testo che allunga o accorcia la colonna sinistra (il claim, i passi) cambia la misura:
   si rimisura e si rifanno le schermate (`ScreenshotSession.contentSize`).
+- **Rifatte le schermate, `VERSIONE_SCHERMATE` sale di uno** in `publish/index.html`: i file
+  tengono il nome, e senza la versione nell'indirizzo un browser può mostrare una schermata
+  vecchia dalla cache accanto a una nuova, di misura diversa (segnalazione di Rocco del
+  2026-10-10, dopo tre misure in un'ora).
 - **Niente link al codice sorgente** nella pagina (sua richiesta del 2026-10-10: il codice
   potrebbe non restare aperto).
 - **Come AIV**: la schermata ha un'ombra in chiaro e un bagliore verde in scuro, e si allinea

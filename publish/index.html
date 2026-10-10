@@ -510,11 +510,15 @@
 
   // The screenshot for the language and theme in force: assets/screenshot-<it|en>-<light|dark>.png.
   // The slot stays hidden until the file has loaded, and a file that failed is not asked again.
+  // The screenshots keep their names when they are taken again, so a browser could show an old
+  // one from its cache next to a new one: their version goes in the address, and goes up by one
+  // whenever scripts/screenshots.sh runs.
+  var VERSIONE_SCHERMATE = 4;
   var schermataMancante = {};
   function mostraSchermata(T) {
     var figura = el('schermata');
     var img = el('schermata-img');
-    var src = 'assets/screenshot-' + stato.lingua + '-' + temaInVigore() + '.png';
+    var src = 'assets/screenshot-' + stato.lingua + '-' + temaInVigore() + '.png?v=' + VERSIONE_SCHERMATE;
     img.alt = T.schermata;
     if (schermataMancante[src]) { nascondiSchermata(); return; }
     if (img.getAttribute('src') === src) return;

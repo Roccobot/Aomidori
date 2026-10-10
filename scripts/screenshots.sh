@@ -9,6 +9,8 @@
 # `screencapture -l` into publish/assets/screenshot-<it|en>-<light|dark>.png. The books must be
 # in the public domain: the page is public. Needs Screen Recording for the calling app, and the
 # Mac awake and unlocked (caffeinate). The installed copy in ~/Applications is left alone.
+# Afterwards, raise VERSIONE_SCHERMATE in publish/index.html by one, or browsers may keep
+# showing the old pictures from their cache.
 # Author: Rocco Casadei, a.k.a. Roccobot
 set -euo pipefail
 
