@@ -53,6 +53,7 @@ extension EPUBError {
         case .missingPackage(let path): reason = L10n.format("error.missingPackage", path)
         case .malformedXML(let path): reason = L10n.format("error.malformedXML", path)
         case .missingResource(let path): reason = L10n.format("error.missingResource", path)
+        case .oversizedResource(let path): reason = L10n.format("error.oversizedResource", path)
         case .emptySpine: reason = L10n.string("error.emptySpine")
         case .drmProtected: reason = L10n.string("error.drmProtected")
         }

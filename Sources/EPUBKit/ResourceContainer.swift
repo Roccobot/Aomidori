@@ -18,8 +18,14 @@ public final class ZIPContainer: ResourceContainer, @unchecked Sendable {
     private let entries: [String: Entry]
     private let foldedPaths: [String: String]
     private let lock = NSLock()
+    private let maximumEntrySize: Int
 
-    public init(url: URL) throws {
+    /// No file of a book or comic is this large; a larger one is an archive built to fill the
+    /// memory ("zip bomb"), whatever size its directory declares.
+    public static let defaultMaximumEntrySize = 256 << 20
+
+    public init(url: URL, maximumEntrySize: Int = ZIPContainer.defaultMaximumEntrySize) throws {
+        self.maximumEntrySize = maximumEntrySize
         let archive: Archive
         do {
             archive = try Archive(url: url, accessMode: .read)
@@ -44,10 +50,17 @@ public final class ZIPContainer: ResourceContainer, @unchecked Sendable {
 
     public func data(at path: String) throws -> Data {
         guard let entry = entry(for: path) else { throw EPUBError.missingResource(path: path) }
+        // The declared size comes from the archive itself: it only sizes the first allocation,
+        // and the limit is checked on the bytes actually inflated.
+        guard entry.uncompressedSize <= UInt64(maximumEntrySize) else { throw EPUBError.oversizedResource(path: path) }
+        let limit = maximumEntrySize
         return try lock.withLock {
             var data = Data()
-            data.reserveCapacity(Int(clamping: entry.uncompressedSize))
-            _ = try archive.extract(entry, skipCRC32: false) { data.append($0) }
+            data.reserveCapacity(min(Int(clamping: entry.uncompressedSize), 16 << 20))
+            _ = try archive.extract(entry, skipCRC32: false) { chunk in
+                guard data.count + chunk.count <= limit else { throw EPUBError.oversizedResource(path: path) }
+                data.append(chunk)
+            }
             return data
         }
     }

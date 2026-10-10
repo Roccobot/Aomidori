@@ -78,6 +78,7 @@
 "error.missingPackage" = "Manca il documento del pacchetto '%@'.";
 "error.malformedXML" = "Il file '%@' contiene XML non valido.";
 "error.missingResource" = "Manca il file '%@'.";
+"error.oversizedResource" = "Il file '%@' è troppo grande per un libro: l'archivio sembra danneggiato.";
 "error.emptySpine" = "Il libro non contiene capitoli leggibili.";
 "error.drmProtected" = "Il libro è protetto da DRM e Aomidori non può aprirlo.";
 "menu.view.sidebar" = "Mostra/nascondi barra laterale";

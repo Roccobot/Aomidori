@@ -12,6 +12,8 @@ public enum EPUBError: Error, Equatable, Sendable {
     case malformedXML(path: String)
     /// A resource referenced by the publication is not in the archive.
     case missingResource(path: String)
+    /// A file of the archive inflates past `ZIPContainer.defaultMaximumEntrySize`.
+    case oversizedResource(path: String)
     /// The spine lists no readable content document.
     case emptySpine
     /// Content documents are encrypted with an unsupported (DRM) scheme.

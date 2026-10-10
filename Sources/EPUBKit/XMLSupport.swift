@@ -45,36 +45,61 @@ extension XMLElement {
 }
 
 enum XMLParsing {
-    /// Parses XML without ever loading external entities or DTDs. XHTML files often rely on
-    /// HTML named entities (`&nbsp;`) declared only in the XHTML DTD: those are rewritten as
-    /// numeric references first, because some parsers silently drop unknown entities.
+    /// Parses a book's XML without ever loading external entities or DTDs, and without its
+    /// document type declaration: an internal subset can declare entities that expand
+    /// exponentially, and an EPUB never needs one. With the DTD gone, named references are
+    /// resolved here in one pass: the XHTML DTD's HTML entities become numeric references,
+    /// XML's own five stay, and any other name is kept as literal text instead of failing
+    /// the whole document.
     static func document(from data: Data, path: String) throws -> XMLDocument {
-        let options: XMLNode.Options = [.nodeLoadExternalEntitiesNever]
-        if let text = String(data: data, encoding: .utf8), text.contains("&") {
-            if let document = try? XMLDocument(xmlString: replacingHTMLEntities(in: text), options: options) {
-                return document
-            }
-        } else if let document = try? XMLDocument(data: data, options: options) {
-            return document
+        guard let text = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .utf16) else {
+            throw EPUBError.malformedXML(path: path)
         }
-        throw EPUBError.malformedXML(path: path)
+        let prepared = resolvingEntities(in: removingDoctype(from: text))
+        guard let document = try? XMLDocument(xmlString: prepared, options: [.nodeLoadExternalEntitiesNever]) else {
+            throw EPUBError.malformedXML(path: path)
+        }
+        return document
     }
 
-    private static func replacingHTMLEntities(in text: String) -> String {
-        var result = text
-        for (name, codePoint) in htmlEntities {
-            result = result.replacingOccurrences(of: "&\(name);", with: "&#\(codePoint);")
+    /// The `<!DOCTYPE ...>` declaration, with its internal subset in brackets if there is one.
+    private static let doctype = try! NSRegularExpression(
+        pattern: #"<!DOCTYPE\b(?:[^\[>"']|"[^"]*"|'[^']*')*(?:\[[\s\S]*?\]\s*)?>"#,
+        options: [.caseInsensitive])
+
+    static func removingDoctype(from text: String) -> String {
+        guard text.range(of: "<!DOCTYPE", options: [.caseInsensitive]) != nil else { return text }
+        let range = NSRange(text.startIndex..., in: text)
+        return doctype.stringByReplacingMatches(in: text, range: range, withTemplate: "")
+    }
+
+    private static let xmlEntities: Set<String> = ["amp", "lt", "gt", "quot", "apos"]
+
+    static func resolvingEntities(in text: String) -> String {
+        guard text.contains("&") else { return text }
+        var result = ""
+        result.reserveCapacity(text.utf8.count)
+        var rest = text[...]
+        while let ampersand = rest.firstIndex(of: "&") {
+            result += rest[..<ampersand]
+            let afterAmpersand = rest.index(after: ampersand)
+            let name = rest[afterAmpersand...].prefix { $0.isASCII && ($0.isLetter || $0.isNumber) }
+            let semicolon = name.endIndex
+            guard !name.isEmpty, semicolon < rest.endIndex, rest[semicolon] == ";",
+                  name.first!.isLetter, !xmlEntities.contains(String(name)) else {
+                // Numeric references, XML's own entities and stray ampersands go through as written.
+                result += "&"
+                rest = rest[afterAmpersand...]
+                continue
+            }
+            if let codePoint = htmlEntities[String(name)] {
+                result += "&#\(codePoint);"
+            } else {
+                result += "&amp;\(name);"
+            }
+            rest = rest[rest.index(after: semicolon)...]
         }
+        result += rest
         return result
     }
-
-    // The entities that actually show up in navigation documents; XML's own five are untouched.
-    private static let htmlEntities: [(String, Int)] = [
-        ("nbsp", 160), ("shy", 173), ("ndash", 8211), ("mdash", 8212), ("hellip", 8230),
-        ("lsquo", 8216), ("rsquo", 8217), ("ldquo", 8220), ("rdquo", 8221), ("laquo", 171), ("raquo", 187),
-        ("copy", 169), ("reg", 174), ("trade", 8482), ("middot", 183), ("bull", 8226), ("deg", 176),
-        ("agrave", 224), ("egrave", 232), ("eacute", 233), ("igrave", 236), ("ograve", 242), ("ugrave", 249),
-        ("Agrave", 192), ("Egrave", 200), ("Eacute", 201), ("Igrave", 204), ("Ograve", 210), ("Ugrave", 217),
-        ("thinsp", 8201), ("ensp", 8194), ("emsp", 8195), ("zwnj", 8204), ("zwj", 8205),
-    ]
 }
