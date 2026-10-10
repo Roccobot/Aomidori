@@ -180,7 +180,7 @@
 
 /* Empty window */
 "empty.title" = "Aomidori";
-"empty.message" = "Open an EPUB or drag it here";
+"empty.message" = "Open a document or drag it here";
 "empty.open" = "Open…";
 "empty.open.help" = "Choose an EPUB book to read (⌘O)";
 "empty.recents" = "Recent Files";
