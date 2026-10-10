@@ -60,9 +60,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         if LaunchSmokeTest.isActive { launchSmokeTest = LaunchSmokeTest() }
         // AppKit does not always ask for the untitled file (a background launch, `open -g`, got
         // no window): once launching is over, the empty window is shown if nothing opened. A book
-        // that arrives later takes its place.
+        // that arrives later takes its place. Panels do not count: macOS restores the font panel
+        // when the app last quit with it open, and it alone would leave the app with no window.
         Task { @MainActor in
-            guard NSDocumentController.shared.documents.isEmpty, !NSApp.windows.contains(where: \.isVisible) else { return }
+            guard NSDocumentController.shared.documents.isEmpty,
+                  !NSApp.windows.contains(where: { $0.isVisible && !($0 is NSPanel) }) else { return }
             _ = applicationOpenUntitledFile(NSApp)
         }
     }
