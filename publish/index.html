@@ -153,12 +153,24 @@
 
   /* The screenshot slot: hidden until its picture has loaded, so a missing file never shows
      as a broken image. Expected files, one per language and theme (see the script):
-     assets/screenshot-it-light.png, -it-dark, -en-light, -en-dark; about 1600 px wide. */
-  .schermata{margin:0; align-self:center}
+     assets/screenshot-it-light.png, -it-dark, -en-light, -en-dark; 1600 x 1600, a square
+     window that fits the right column (the owner's request, 2026-10-10).
+     The shadow is AIV's: a soft shadow on light, and on dark (where black would not show) a
+     shadow plus a glow in the accent colour. It is a drop-shadow, which follows the window's
+     rounded corners and takes no room: only the picture lines up with the column's edges. */
+  :root{--ombra-schermata:drop-shadow(0 12px 30px rgba(0,0,0,0.15))}
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){--ombra-schermata:drop-shadow(0 12px 34px rgba(0,0,0,0.41)) drop-shadow(0 0 26px rgba(95,212,188,0.09))}
+  }
+  [data-theme="dark"]{--ombra-schermata:drop-shadow(0 12px 34px rgba(0,0,0,0.41)) drop-shadow(0 0 26px rgba(95,212,188,0.09))}
+  .schermata{margin:0}
   .schermata[hidden]{display:none}
-  .schermata img{display:block; width:100%; height:auto}
+  .schermata img{display:block; width:100%; height:auto; filter:var(--ombra-schermata)}
   @media (min-width:1000px){
-    .con-schermata .testa{grid-template-columns:minmax(0,38rem) minmax(0,1fr); gap:56px; align-items:center}
+    /* Two columns: words on the left, as wide as the column (the opening text included), and
+       the screenshot on the right, its top on the top of the column. */
+    .con-schermata .testa{grid-template-columns:minmax(0,30rem) minmax(0,1fr); gap:56px; align-items:start}
+    .con-schermata .parole{max-width:none}
   }
 
   .fatti{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px 40px; padding:56px 0 0; max-width:840px}
@@ -247,7 +259,7 @@
       </div>
     </div>
   </div>
-  <figure class="schermata" id="schermata" hidden><img id="schermata-img" width="1600" height="1120" alt=""></figure>
+  <figure class="schermata" id="schermata" hidden><img id="schermata-img" width="1600" height="1600" alt=""></figure>
   </div>
 
   <div class="fatti">
@@ -290,6 +302,11 @@
       <!-- Offline pages: a closed book with a lock. -->
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5.2" y="10.4" width="13.6" height="10" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.8"></rect><path d="M8.4 10.4V7.6a3.6 3.6 0 0 1 7.2 0v2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
       <div class="testi"><div class="titolo" data-t="f7">Your reading stays yours</div><div class="corpo" data-c="f7">Pages never load anything from the network: no book can tell anyone when or where you read it.</div></div>
+    </div>
+    <div class="fatto">
+      <!-- Comics: two stacked panels. -->
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5.2" y="3.2" width="13.6" height="7.6" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.8"></rect><rect x="5.2" y="13.2" width="13.6" height="7.6" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.8"></rect></svg>
+      <div class="testi"><div class="titolo" data-t="f8">Comics too</div><div class="corpo" data-c="f8">CBZ files open like a chapter: the pages one below the other, as wide as the window.</div></div>
     </div>
   </div>
 </main>
@@ -346,7 +363,8 @@
         ['Playground CSS', 'Scrivi uno stile con l\'anteprima dal vivo, e provalo subito nel lettore.'],
         ['Nativo e leggero', 'Swift e AppKit per Apple Silicon, Liquid Glass, schede native, temi chiaro e scuro.'],
         ['Trova, e torna', 'Cerca in tutto il libro, tieni i segnalibri, e dopo una nota torna alla riga esatta in cui leggevi.'],
-        ['La lettura resta tua', 'Le pagine non caricano mai niente dalla rete: nessun libro può far sapere quando o dove lo leggi.']
+        ['La lettura resta tua', 'Le pagine non caricano mai niente dalla rete: nessun libro può far sapere quando o dove lo leggi.'],
+        ['Anche i fumetti', 'I CBZ si aprono come un capitolo: le tavole una sotto l\'altra, larghe quanto la finestra.']
       ],
       altra: 'English', titoloAltra: 'Read this page in English',
       temi: { light: 'Tema chiaro', dark: 'Tema scuro' },
@@ -378,7 +396,8 @@
         ['CSS Playground', 'Write a style with a live preview, and try it in the reader at once.'],
         ['Native and light', 'Swift and AppKit for Apple Silicon, Liquid Glass, native tabs, light and dark themes.'],
         ['Find it, and come back', 'Search the whole book, keep bookmarks, and after a note go back to the exact line you were reading.'],
-        ['Your reading stays yours', 'Pages never load anything from the network: no book can tell anyone when or where you read it.']
+        ['Your reading stays yours', 'Pages never load anything from the network: no book can tell anyone when or where you read it.'],
+        ['Comics too', 'CBZ files open like a chapter: the pages one below the other, as wide as the window.']
       ],
       altra: 'Italiano', titoloAltra: 'Leggi questa pagina in italiano',
       temi: { light: 'Light theme', dark: 'Dark theme' },
