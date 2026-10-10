@@ -50,6 +50,19 @@ class AppcastTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             appcast.add(text, appcast.item(9, "0.52", 1, "a", date=DATE))
 
+    def test_lower_builds_and_repeated_versions_are_refused(self):
+        text = appcast.add(self.empty, appcast.item(10, "0.53", 1, "a", date=DATE))
+        with self.assertRaises(ValueError):  # Sparkle would never offer it
+            appcast.add(text, appcast.item(9, "0.54", 1, "b", date=DATE))
+        with self.assertRaises(ValueError):  # the same version under a new build
+            appcast.add(text, appcast.item(11, "0.53", 1, "b", date=DATE))
+
+    def test_the_first_item_is_found_at_any_indentation(self):
+        flat = self.empty.replace("  </channel>", "<item><sparkle:version>3</sparkle:version>"
+                                  "<sparkle:shortVersionString>0.30</sparkle:shortVersionString></item>\n  </channel>")
+        text = appcast.add(flat, appcast.item(9, "0.52", 1, "a", date=DATE))
+        self.assertEqual(appcast.builds(text), ["9", "3"])
+
     def test_bad_inputs_are_refused(self):
         for args in [("9a", "0.52", 1, "s"), (9, "0.5.2", 1, "s"), (9, "0.52", 0, "s")]:
             with self.assertRaises(ValueError):

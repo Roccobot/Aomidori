@@ -36,7 +36,17 @@ if [[ ! -x "$TOOLS/sign_update" ]]; then
   echo "Sparkle's sign_update not found in .build/artifacts; run scripts/bundle.sh first." >&2
   exit 1
 fi
+if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null 2>&1; then
+  echo "The tag v$VERSION already exists on GitHub: raise the version first." >&2
+  exit 1
+fi
 if [[ -n "${ED_KEY_FILE:-}" ]]; then
+  # A key file inside the clone could be committed with the next `git add`: only an ignored one is accepted.
+  KEY_PATH="$(cd "$(dirname "$ED_KEY_FILE")" && pwd)/$(basename "$ED_KEY_FILE")"
+  if [[ "$KEY_PATH" == "$(pwd)"/* ]] && ! git check-ignore -q "$KEY_PATH"; then
+    echo "ED_KEY_FILE is inside the repository and not ignored: move it out." >&2
+    exit 1
+  fi
   KEY_ARGS=(--ed-key-file "$ED_KEY_FILE")
 else
   KEY_ARGS=(--account "$ACCOUNT")
@@ -58,6 +68,12 @@ if [[ -z "$SIGNATURE" || "$LENGTH" != "$(stat -f %z "$ZIP")" ]]; then
   exit 1
 fi
 "$TOOLS/sign_update" "${KEY_ARGS[@]}" --verify "$ZIP" "$SIGNATURE" >/dev/null
+# The check that matters: the signature verifies with the key installed copies trust, whichever
+# key (Keychain or ED_KEY_FILE) made it.
+if ! swift scripts/verify-signature.swift "$PUBLIC_ED_KEY" "$SIGNATURE" "$ZIP"; then
+  echo "The signature does not verify with SUPublicEDKey: wrong key, nothing added to the appcast." >&2
+  exit 1
+fi
 
 python3 scripts/appcast.py add --appcast publish/appcast.xml --build "$BUILD" --version "$VERSION" \
   --length "$LENGTH" --signature "$SIGNATURE" --min-system "$MIN_SYSTEM"

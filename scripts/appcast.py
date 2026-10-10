@@ -5,8 +5,9 @@
         --length 2745000 --signature BASE64 [--min-system 27.0] [--date "RFC 822 date"]
 
 The item points at the ZIP of the GitHub release `v<version>` and at its release page; the
-signature and length are what Sparkle's `sign_update` prints for that ZIP. A build number that
-is already in the appcast is refused, so a release cannot be listed twice. scripts/release.sh
+signature and length are what Sparkle's `sign_update` prints for that ZIP. A build number at or
+below the highest listed, or a version already listed, is refused, so a release cannot be
+listed twice or offered below an older one. scripts/release.sh
 calls this; the tests are in scripts/test_appcast.py.
 
 Author: Rocco Casadei, a.k.a. Roccobot
@@ -60,15 +61,25 @@ def builds(xml_text):
     return [e.text for e in root.iter(f"{{{SPARKLE_NS}}}version")]
 
 
+def versions(xml_text):
+    root = ET.fromstring(xml_text)
+    return [e.text for e in root.iter(f"{{{SPARKLE_NS}}}shortVersionString")]
+
+
 def add(xml_text, new_item):
-    """The appcast with the item placed before every other item (newest first)."""
-    new_build = ET.fromstring(f'<x xmlns:sparkle="{SPARKLE_NS}">{new_item}</x>') \
-        .find(f".//{{{SPARKLE_NS}}}version").text
-    if new_build in builds(xml_text):
-        raise ValueError(f"build {new_build} is already in the appcast")
-    anchor = xml_text.find("    <item>")
-    if anchor < 0:
-        anchor = xml_text.index("  </channel>")
+    """The appcast with the item placed before every other item (newest first). Sparkle offers
+    the highest build, so a build at or below one already listed, or a version listed under
+    another build, is refused."""
+    parsed = ET.fromstring(f'<x xmlns:sparkle="{SPARKLE_NS}">{new_item}</x>')
+    new_build = parsed.find(f".//{{{SPARKLE_NS}}}version").text
+    new_version = parsed.find(f".//{{{SPARKLE_NS}}}shortVersionString").text
+    listed = [int(b) for b in builds(xml_text)]
+    if listed and int(new_build) <= max(listed):
+        raise ValueError(f"build {new_build} is not above the highest listed build, {max(listed)}")
+    if new_version in versions(xml_text):
+        raise ValueError(f"version {new_version} is already in the appcast")
+    first_item = re.search(r"^[ \t]*<item>", xml_text, flags=re.M)
+    anchor = first_item.start() if first_item else re.search(r"^[ \t]*</channel>", xml_text, flags=re.M).start()
     result = xml_text[:anchor] + new_item + xml_text[anchor:]
     ET.fromstring(result)  # still well formed
     return result
