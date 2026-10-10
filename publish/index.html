@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Aomidori - lettore EPUB per macOS</title>
-<meta name="description" content="Aomidori: un lettore EPUB per macOS leggero e scattante. Ogni capitolo è una pagina che scorre, e il tuo CSS ha l'ultima parola.">
+<title>Aomidori - EPUB reader for macOS</title>
+<meta name="description" content="Aomidori: a light, snappy EPUB reader for macOS. Each chapter is a page that scrolls, and your CSS has the last word.">
 <meta name="author" content="Rocco Casadei, a.k.a. Roccobot">
 <meta name="color-scheme" content="light dark">
 <!--
@@ -18,23 +18,31 @@
   ⚠️ releases/latest skips pre-releases and drafts, so a version published as a pre-release
   never reaches this page: that is the switch between a main release and a test build.
   ⚠️ Never innerHTML: every text goes in with textContent.
+  The English texts are written in the page itself, so it reads (and is indexed) without
+  JavaScript; the script switches them to Italian for an Italian browser, title included.
   The screenshot on the right (below, on narrow screens) is one file per language and theme:
   assets/screenshot-it-light.png, screenshot-it-dark.png, screenshot-en-light.png and
   screenshot-en-dark.png (about 1600 px wide). Until a file exists its slot stays hidden and the
   page keeps one column: adding the four files is the whole change.
   ⚠️ The icon is Graphe's artwork, copied unaltered from Resources/Icon/ (aomidori-v2.svg and
   aomidori-v2-dark.svg): the page picks one per theme, it never redraws it.
-  TODO before publishing: Open Graph image (anteprima.jpg, 1200x630) and og:image tags, as on AIV.
+  The favicon is the glyph of the icon in the brand colour #43B59E (assets/favicon.svg), as AIV's.
 -->
 <link rel="canonical" href="https://roccobot.github.io/Aomidori/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Roccobot">
 <meta property="og:url" content="https://roccobot.github.io/Aomidori/">
-<meta property="og:title" content="Aomidori - lettore EPUB per macOS">
-<meta property="og:description" content="Aomidori: un lettore EPUB per macOS leggero e scattante. Ogni capitolo è una pagina che scorre, e il tuo CSS ha l'ultima parola.">
-<meta property="og:locale" content="it_IT">
-<meta property="og:locale:alternate" content="en_GB">
-<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<meta property="og:title" content="Aomidori - EPUB reader for macOS">
+<meta property="og:description" content="A light, snappy EPUB reader for macOS. Each chapter is a page that scrolls, and your CSS has the last word.">
+<meta property="og:locale" content="en_GB">
+<meta property="og:locale:alternate" content="it_IT">
+<meta property="og:image" content="https://roccobot.github.io/Aomidori/assets/preview.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Aomidori icon beside its name, and the app with a book open.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <style>
   /* Theme tokens: the AIV page's, same names and values, with the accent of Aomidori's empty
      window (#43B59E light, #5FD4BC dark, from Graphe's drop zone). */
@@ -67,6 +75,25 @@
     --outline:var(--light-outline);
     --outline-variant:var(--light-outline-variant);
     --glyph:var(--brand-glyph);
+    /* The download button keeps the brand colour and takes dark ink: light ink on #43B59E is
+       2.4:1, this is 6.6:1 (WCAG AA asks 4.5:1). */
+    --button-ink:#0E2A24;
+    --button-back:var(--brand-accent);
+  }
+  /* Dark: the system's choice without JavaScript, the visitor's with it. */
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --bg:var(--dark-back);
+      --text-body:var(--dark-ink);
+      --text-muted:var(--dark-ink-variant);
+      --text-link:var(--brand-link-dark);
+      --accent:var(--brand-accent-dark);
+      --outline:var(--dark-outline);
+      --outline-variant:var(--dark-outline-variant);
+      --glyph:var(--brand-glyph-dark);
+      --button-back:var(--brand-glyph-dark);
+    }
   }
   [data-theme="dark"]{
     color-scheme:dark;
@@ -78,6 +105,7 @@
     --outline:var(--dark-outline);
     --outline-variant:var(--dark-outline-variant);
     --glyph:var(--brand-glyph-dark);
+    --button-back:var(--brand-glyph-dark);
   }
 
   *{box-sizing:border-box}
@@ -90,7 +118,7 @@
   }
   a{color:var(--text-link); text-decoration:none}
   a:hover{text-decoration:underline}
-  :focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  :focus-visible{outline:2px solid var(--text-link); outline-offset:2px}
 
   .foglio{max-width:960px; width:100%; margin:0 auto; padding:24px 24px 0}
   /* With a screenshot (see .schermata), the page widens and the top becomes two columns. */
@@ -109,14 +137,19 @@
   .blocco-scarica{display:flex; flex-direction:column; gap:10px; align-items:flex-start}
   .scarica{
     display:inline-flex; align-items:center; gap:10px;
-    background:var(--accent); color:var(--glyph);
-    font-size:16px; font-weight:500; padding:14px 24px; border-radius:12px;
+    background:var(--button-back); color:var(--button-ink);
+    font-size:16px; font-weight:600; padding:14px 24px; border-radius:12px;
     box-shadow:0 3px 6px rgba(0,0,0,0.18);
   }
   .scarica:hover{text-decoration:none; filter:brightness(1.06)}
   .tecnica{font-size:13px; color:var(--text-muted); font-variant-numeric:tabular-nums}
   .tecnica .minuta{opacity:0.72}
-  .installa{font-size:12px; line-height:1.5; color:var(--text-muted); opacity:0.7; max-width:52ch; margin:0}
+  .installa{font-size:14px; line-height:1.5; color:var(--text-muted); max-width:52ch; margin:8px 0 0}
+  .installa h2{font-size:14px; font-weight:600; color:var(--text-body); margin:0 0 4px}
+  .installa ol{margin:0; padding-left:1.3em}
+  .installa li{margin:2px 0}
+  .solo-mac{font-size:14px; color:var(--text-body); margin:0}
+  .solo-mac[hidden]{display:none}
 
   /* The screenshot slot: hidden until its picture has loaded, so a missing file never shows
      as a broken image. Expected files, one per language and theme (see the script):
@@ -139,6 +172,7 @@
     margin-top:calc((var(--titolo-corpo) * var(--titolo-interlinea) - var(--glifo)) / 2);
   }
   [data-theme="dark"] .fatto svg{color:var(--brand-glyph-dark)}
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .fatto svg{color:var(--brand-glyph-dark)} }
   .fatto .testi{display:flex; flex-direction:column; gap:3px}
   .fatto .titolo{font-size:var(--titolo-corpo); line-height:var(--titolo-interlinea); font-weight:500}
   .fatto .corpo{font-size:14px; line-height:1.5; color:var(--text-muted)}
@@ -154,7 +188,7 @@
   .piede-tasti{display:flex; flex:none; gap:16px; align-items:center}
   .lingua,.tema{
     font:inherit; font-size:13px; color:var(--text-muted); background:none; border:0;
-    border-bottom:1px dotted var(--outline); padding:0 0 1px; cursor:pointer;
+    border-bottom:1px dotted var(--outline); padding:4px 0 3px; min-height:24px; cursor:pointer;
   }
   .lingua:hover,.tema:hover{color:var(--text-body)}
 
@@ -164,7 +198,11 @@
     .scarica{font-size:18px; padding:16px 30px; border-radius:14px; align-self:center}
     .blocco-scarica{align-items:stretch}
     .tecnica{text-align:center; line-height:1.8}
-    .installa{text-align:center; align-self:center}
+    .installa{align-self:center}
+    .solo-mac{text-align:center}
+    /* The source link goes on its own line, without the separating dot. */
+    .sottotitolo .sorgente{display:block; margin-top:2px}
+    .sottotitolo .sorgente [aria-hidden]{display:none}
     .tecnica .sep{display:none}
     .tecnica .pezzo{display:block}
     .fatti{grid-template-columns:1fr; padding-top:40px}
@@ -184,56 +222,74 @@
     </picture>
     <div>
       <h1>Aomidori</h1>
-      <p class="sottotitolo"><span id="sottotitolo"></span> <span class="sorgente"><span aria-hidden="true">&middot;</span> <a id="sorgente" href="https://github.com/Roccobot/Aomidori" target="_blank" rel="noopener noreferrer"></a></span></p>
+      <p class="sottotitolo"><span id="sottotitolo">EPUB reader for macOS</span> <span class="sorgente"><span aria-hidden="true">&middot;</span> <a id="sorgente" href="https://github.com/Roccobot/Aomidori" target="_blank" rel="noopener noreferrer">source code</a></span></p>
     </div>
     <div class="parole">
-      <p class="claim" id="claim"></p>
+      <p class="claim" id="claim">A light, snappy EPUB reader that works like a web page: each chapter scrolls vertically, the arrow keys change chapter, and your CSS always has the last word.</p>
       <div class="blocco-scarica">
-        <a class="scarica" id="scarica" href="https://github.com/Roccobot/Aomidori/releases/latest" target="_blank" rel="noopener noreferrer">
+        <p class="solo-mac" id="solo-mac" hidden></p>
+        <a class="scarica" id="scarica" href="https://github.com/Roccobot/Aomidori/releases/latest">
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
             <path d="M12 3.5v11.2M12 15.6l4.4-4.4M12 15.6L7.6 11.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
             <path d="M4.4 18.8h15.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
           </svg>
-          <span id="scarica-testo"></span>
+          <span id="scarica-testo">Download Aomidori</span>
         </a>
-        <div class="tecnica" id="tecnica"></div>
-        <p class="installa" id="installa"></p>
+        <div class="tecnica" id="tecnica"><span class="pezzo minuta">macOS 27 or later, Apple Silicon only</span></div>
+        <section class="installa" aria-labelledby="installa-titolo">
+          <h2 id="installa-titolo">Installing</h2>
+          <ol>
+            <li id="passo-1">Unzip the download and drag Aomidori to Applications.</li>
+            <li id="passo-2">On first launch macOS stops it, as it doesn't come from the App Store: open System Settings &rsaquo; Privacy &amp; Security and choose Open Anyway.</li>
+            <li id="passo-3">From then on, updates arrive by themselves.</li>
+          </ol>
+        </section>
       </div>
     </div>
   </div>
-  <figure class="schermata" id="schermata" hidden><img id="schermata-img" alt=""></figure>
+  <figure class="schermata" id="schermata" hidden><img id="schermata-img" width="1600" height="1120" alt=""></figure>
   </div>
 
   <div class="fatti">
     <div class="fatto">
       <!-- A page that scrolls: a sheet with lines and a down arrow. -->
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.4" y="3.2" width="15.2" height="17.6" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.8"></rect><path d="M8 8h8M8 11.6h8M8 15.2h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
-      <div class="testi"><div class="titolo" data-t="f0"></div><div class="corpo" data-c="f0"></div></div>
+      <div class="testi"><div class="titolo" data-t="f0">One chapter, one page</div><div class="corpo" data-c="f0">Each chapter scrolls vertically like a web page, and the arrow keys change chapter. No pagination, no modes.</div></div>
     </div>
     <div class="fatto">
       <!-- Your CSS: braces. -->
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.4c-2 0-3 .8-3 2.6v2.4c0 1.4-.8 2.2-2 2.6 1.2.4 2 1.2 2 2.6V17c0 1.8 1 2.6 3 2.6M15 4.4c2 0 3 .8 3 2.6v2.4c0 1.4.8 2.2 2 2.6-1.2.4-2 1.2-2 2.6V17c0 1.8-1 2.6-3 2.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-      <div class="testi"><div class="titolo" data-t="f1"></div><div class="corpo" data-c="f1"></div></div>
+      <div class="testi"><div class="titolo" data-t="f1">Your CSS rules</div><div class="corpo" data-c="f1">Styles reload as soon as you save them, and one key lets them override the book's whole typography.</div></div>
     </div>
     <div class="fatto">
       <!-- Text size: a small and a large A. -->
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19l3.6-9 3.6 9M4.3 15.8h4.6M11.6 19L16 6l4.4 13M13.2 14.8h5.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-      <div class="testi"><div class="titolo" data-t="f2"></div><div class="corpo" data-c="f2"></div></div>
+      <div class="testi"><div class="titolo" data-t="f2">Text that really grows</div><div class="corpo" data-c="f2">Plus and minus win over any CSS limit; pictures stay as they are.</div></div>
     </div>
     <div class="fatto">
       <!-- Your font: a serif-less F with a weight slider. -->
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 15V4.4h8M7 9.6h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path><path d="M3.6 19.6h16.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><circle cx="14.4" cy="19.6" r="2" fill="currentColor"></circle></svg>
-      <div class="testi"><div class="titolo" data-t="f3"></div><div class="corpo" data-c="f3"></div></div>
+      <div class="testi"><div class="titolo" data-t="f3">Your font, all the way</div><div class="corpo" data-c="f3">Any installed family or a TTF, OTF or WOFF file, with weight, style, variable axes and typographic features.</div></div>
     </div>
     <div class="fatto">
       <!-- CSS Playground: two panes. -->
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.2" y="4.4" width="17.6" height="15.2" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.8"></rect><path d="M12 4.4v15.2M14.8 9h3.2M14.8 12.4h3.2M6 9h3.2M6 12.4h3.2M6 15.8h2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
-      <div class="testi"><div class="titolo" data-t="f4"></div><div class="corpo" data-c="f4"></div></div>
+      <div class="testi"><div class="titolo" data-t="f4">CSS Playground</div><div class="corpo" data-c="f4">Write a style with a live preview, and try it in the reader at once.</div></div>
     </div>
     <div class="fatto">
       <!-- Native and light: the AIV chip glyph. -->
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5.6" y="5.6" width="12.8" height="12.8" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.8"></rect><path d="M9.2 2.8v2.8M14.8 2.8v2.8M9.2 18.4v2.8M14.8 18.4v2.8M2.8 9.2h2.8M2.8 14.8h2.8M18.4 9.2h2.8M18.4 14.8h2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
-      <div class="testi"><div class="titolo" data-t="f5"></div><div class="corpo" data-c="f5"></div></div>
+      <div class="testi"><div class="titolo" data-t="f5">Native and light</div><div class="corpo" data-c="f5">Swift and AppKit for Apple Silicon, Liquid Glass, native tabs, light and dark themes.</div></div>
+    </div>
+    <div class="fatto">
+      <!-- Search and go back: a magnifier. -->
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.4" cy="10.4" r="6" fill="none" stroke="currentColor" stroke-width="1.8"></circle><path d="M14.8 14.8l5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      <div class="testi"><div class="titolo" data-t="f6">Find it, and come back</div><div class="corpo" data-c="f6">Search the whole book, keep bookmarks, and after a note go back to the exact line you were reading.</div></div>
+    </div>
+    <div class="fatto">
+      <!-- Offline pages: a closed book with a lock. -->
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5.2" y="10.4" width="13.6" height="10" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.8"></rect><path d="M8.4 10.4V7.6a3.6 3.6 0 0 1 7.2 0v2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      <div class="testi"><div class="titolo" data-t="f7">Your reading stays yours</div><div class="corpo" data-c="f7">Pages never load anything from the network: no book can tell anyone when or where you read it.</div></div>
     </div>
   </div>
 </main>
@@ -261,16 +317,26 @@
 
   var REPO = 'Roccobot/Aomidori';
 
-  // Draft copy, to be validated by the owner (rules: new interface texts are proposed first).
+  // The texts of both languages. New and changed ones are validated by the owner in the review
+  // round (rules: interface texts are written as a copywriter would, then validated).
   var TESTI = {
     it: {
       lang: 'it', loc: 'it-IT',
+      titolo: 'Aomidori - lettore EPUB per macOS',
+      descrizione: 'Aomidori: un lettore EPUB per macOS leggero e scattante. Ogni capitolo è una pagina che scorre, e il tuo CSS ha l\'ultima parola.',
       sottotitolo: 'Lettore EPUB per macOS',
       claim: 'Un lettore EPUB leggero e scattante, come una pagina web: ogni capitolo scorre in verticale, le frecce cambiano capitolo, e il tuo CSS ha sempre l\'ultima parola.',
       scarica: 'Scarica Aomidori',
-      sistema: 'macOS 27 o successivo, Apple Silicon',
+      sistema: 'macOS 27 o successivo, solo Apple Silicon',
+      versioni: 'tutte le versioni',
       sorgente: 'codice sorgente',
-      installa: 'Alla prima apertura, se macOS la blocca: Impostazioni di Sistema \u203A Privacy e sicurezza \u203A Apri comunque.',
+      soloMac: 'Aomidori è un\'app per Mac: scaricala da un Mac con Apple Silicon.',
+      installaTitolo: 'Come si installa',
+      passi: [
+        'Estrai lo ZIP e trascina Aomidori in Applicazioni.',
+        'Al primo avvio macOS la blocca, perché non viene dall\'App Store: apri Impostazioni di Sistema › Privacy e sicurezza e scegli Apri comunque.',
+        'Da lì in poi gli aggiornamenti arrivano da soli.'
+      ],
       schermata: 'Aomidori con un libro aperto',
       fatti: [
         ['Un capitolo, una pagina', 'Ogni capitolo scorre in verticale come una pagina web, e le frecce cambiano capitolo. Niente impaginazione, niente modalità.'],
@@ -278,7 +344,9 @@
         ['Il testo cresce davvero', 'Più e meno vincono su qualunque limite del CSS; le immagini restano come sono.'],
         ['Il tuo font, fino in fondo', 'Qualunque famiglia installata o un file TTF, OTF e WOFF, con peso, stile, assi variabili e opzioni tipografiche.'],
         ['Playground CSS', 'Scrivi uno stile con l\'anteprima dal vivo, e provalo subito nel lettore.'],
-        ['Nativo e leggero', 'Swift e AppKit per Apple Silicon, Liquid Glass, schede native, temi chiaro e scuro.']
+        ['Nativo e leggero', 'Swift e AppKit per Apple Silicon, Liquid Glass, schede native, temi chiaro e scuro.'],
+        ['Trova, e torna', 'Cerca in tutto il libro, tieni i segnalibri, e dopo una nota torna alla riga esatta in cui leggevi.'],
+        ['La lettura resta tua', 'Le pagine non caricano mai niente dalla rete: nessun libro può far sapere quando o dove lo leggi.']
       ],
       altra: 'English', titoloAltra: 'Read this page in English',
       temi: { light: 'Tema chiaro', dark: 'Tema scuro' },
@@ -286,12 +354,21 @@
     },
     en: {
       lang: 'en', loc: 'en-GB',
+      titolo: 'Aomidori - EPUB reader for macOS',
+      descrizione: 'Aomidori: a light, snappy EPUB reader for macOS. Each chapter is a page that scrolls, and your CSS has the last word.',
       sottotitolo: 'EPUB reader for macOS',
       claim: 'A light, snappy EPUB reader that works like a web page: each chapter scrolls vertically, the arrow keys change chapter, and your CSS always has the last word.',
       scarica: 'Download Aomidori',
-      sistema: 'macOS 27 or later, Apple Silicon',
+      sistema: 'macOS 27 or later, Apple Silicon only',
+      versioni: 'all versions',
       sorgente: 'source code',
-      installa: 'First launch: if macOS blocks it, System Settings \u203A Privacy & Security \u203A Open Anyway.',
+      soloMac: 'Aomidori is an app for the Mac: download it on a Mac with Apple Silicon.',
+      installaTitolo: 'Installing',
+      passi: [
+        'Unzip the download and drag Aomidori to Applications.',
+        'On first launch macOS stops it, as it doesn\'t come from the App Store: open System Settings › Privacy & Security and choose Open Anyway.',
+        'From then on, updates arrive by themselves.'
+      ],
       schermata: 'Aomidori with a book open',
       fatti: [
         ['One chapter, one page', 'Each chapter scrolls vertically like a web page, and the arrow keys change chapter. No pagination, no modes.'],
@@ -299,7 +376,9 @@
         ['Text that really grows', 'Plus and minus win over any CSS limit; pictures stay as they are.'],
         ['Your font, all the way', 'Any installed family or a TTF, OTF or WOFF file, with weight, style, variable axes and typographic features.'],
         ['CSS Playground', 'Write a style with a live preview, and try it in the reader at once.'],
-        ['Native and light', 'Swift and AppKit for Apple Silicon, Liquid Glass, native tabs, light and dark themes.']
+        ['Native and light', 'Swift and AppKit for Apple Silicon, Liquid Glass, native tabs, light and dark themes.'],
+        ['Find it, and come back', 'Search the whole book, keep bookmarks, and after a note go back to the exact line you were reading.'],
+        ['Your reading stays yours', 'Pages never load anything from the network: no book can tell anyone when or where you read it.']
       ],
       altra: 'Italiano', titoloAltra: 'Leggi questa pagina in italiano',
       temi: { light: 'Light theme', dark: 'Dark theme' },
@@ -330,43 +409,55 @@
   if (mqScuro.addEventListener) mqScuro.addEventListener('change', alSistema);
   else if (mqScuro.addListener) mqScuro.addListener(alSistema);
 
+  // Decimal megabytes, as GitHub and the Finder count them.
   function peso(byte, loc) {
-    return (byte / 1048576).toLocaleString(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' MB';
+    return (byte / 1e6).toLocaleString(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' MB';
   }
+
+  // A visitor on a phone or on Windows learns at once that this is an app for the Mac.
+  var suMac = /Macintosh|Mac OS X/.test(navigator.userAgent) && !(navigator.maxTouchPoints > 1);
 
   function disegna() {
     var T = TESTI[stato.lingua];
     var rel = stato.rel;
     var asset = rel && rel.asset;
     document.documentElement.lang = T.lang;
+    document.title = T.titolo;
+    var descrizione = document.querySelector('meta[name="description"]');
+    if (descrizione) descrizione.setAttribute('content', T.descrizione);
 
     el('sottotitolo').textContent = T.sottotitolo;
     el('claim').textContent = T.claim;
     el('sorgente').textContent = T.sorgente;
-    el('installa').textContent = T.installa;
+    el('installa-titolo').textContent = T.installaTitolo;
+    for (var p = 0; p < T.passi.length; p++) el('passo-' + (p + 1)).textContent = T.passi[p];
+    var soloMac = el('solo-mac');
+    soloMac.textContent = T.soloMac;
+    soloMac.hidden = suMac;
     mostraSchermata(T);
 
     var tasto = el('scarica');
     el('scarica-testo').textContent = T.scarica + (rel ? ' ' + rel.tag : '');
     tasto.href = asset ? asset.browser_download_url
       : (rel ? rel.pagina : 'https://github.com/' + REPO + '/releases/latest');
-    if (asset) tasto.setAttribute('download', ''); else tasto.removeAttribute('download');
 
     var tecnica = el('tecnica');
     svuota(tecnica);
-    var righe = [];
-    if (asset) righe.push([peso(asset.size, T.loc), '']);
-    righe.push([T.sistema, ' minuta']);
-    for (var r = 0; r < righe.length; r++) {
+    var pezzi = [];
+    if (asset) pezzi.push({ testo: peso(asset.size, T.loc) });
+    pezzi.push({ testo: T.sistema, classe: ' minuta' });
+    pezzi.push({ testo: T.versioni, href: 'https://github.com/' + REPO + '/releases', classe: ' minuta' });
+    for (var r = 0; r < pezzi.length; r++) {
       if (r) {
         var sep = document.createElement('span');
         sep.className = 'sep';
         sep.textContent = ' \u00B7 ';
         tecnica.appendChild(sep);
       }
-      var pz = document.createElement('span');
-      pz.className = 'pezzo' + righe[r][1];
-      pz.textContent = righe[r][0];
+      var pz = document.createElement(pezzi[r].href ? 'a' : 'span');
+      pz.className = 'pezzo' + (pezzi[r].classe || '');
+      pz.textContent = pezzi[r].testo;
+      if (pezzi[r].href) pz.href = pezzi[r].href;
       tecnica.appendChild(pz);
     }
 
@@ -409,8 +500,15 @@
     document.body.classList.remove('con-schermata');
   }
 
-  // One call: the latest main release (pre-releases and drafts excluded) and its ZIP.
+  // One call: the latest main release (pre-releases and drafts excluded) and its ZIP. The answer
+  // is kept for this visit (sessionStorage), so reloading does not spend GitHub's hourly quota;
+  // storage may be unavailable, and then the call is simply made again.
+  var CHIAVE = 'aomidori-release';
   function leggiRelease() {
+    try {
+      var tenuta = JSON.parse(sessionStorage.getItem(CHIAVE) || 'null');
+      if (tenuta && tenuta.tag) { stato.rel = tenuta; disegna(); return; }
+    } catch (e) { /* no storage: ask GitHub */ }
     fetch('https://api.github.com/repos/' + REPO + '/releases/latest', {
       headers: { Accept: 'application/vnd.github+json' }
     }).then(function (r) {
@@ -420,9 +518,13 @@
       var zip = null;
       var assets = ultima.assets || [];
       for (var i = 0; i < assets.length; i++) {
-        if (/^Aomidori-.*\.zip$/i.test(assets[i].name)) { zip = assets[i]; break; }
+        if (/^Aomidori-.*\.zip$/i.test(assets[i].name)) {
+          zip = { size: assets[i].size, browser_download_url: assets[i].browser_download_url };
+          break;
+        }
       }
       stato.rel = { tag: String(ultima.tag_name || '').replace(/^v/i, ''), asset: zip, pagina: ultima.html_url };
+      try { sessionStorage.setItem(CHIAVE, JSON.stringify(stato.rel)); } catch (e) { /* not kept */ }
       disegna();
     }).catch(function () { /* the button keeps pointing at the latest release page */ });
   }
