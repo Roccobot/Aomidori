@@ -3,7 +3,7 @@ import Foundation
 import FoundationXML
 #endif
 
-/// A comic book archive (CBZ: a ZIP of pictures) read as a publication with a single document,
+/// A comic book archive (CBZ, a ZIP of pictures, or CBR, a RAR) read as a publication with a single document,
 /// generated here, that shows every page one below the other: the reader scrolls it like a
 /// chapter, and its table of contents lists the pages. The pictures are served from the archive
 /// like any resource of a book.
@@ -16,12 +16,32 @@ public enum ComicArchive {
     /// The pages: the archive's pictures in the Finder's order (numbers compared as numbers, so
     /// `2` comes before `10`), leaving out macOS's `__MACOSX` copies and every hidden file.
     public static func pages(in paths: [String]) -> [String] {
-        paths.filter { path in
-            let components = path.split(separator: "/")
-            guard let name = components.last, !components.contains(where: { $0.hasPrefix(".") || $0 == "__MACOSX" }) else { return false }
-            return pictureExtensions.contains((name as NSString).pathExtension.lowercased())
+        paths.filter(isPage).sorted { $0.compare($1, options: [.numeric, .caseInsensitive]) == .orderedAscending }
+    }
+
+    static func isPage(_ path: String) -> Bool {
+        let components = path.split(separator: "/")
+        guard let name = components.last, !components.contains(where: { $0.hasPrefix(".") || $0 == "__MACOSX" }) else { return false }
+        return pictureExtensions.contains((name as NSString).pathExtension.lowercased())
+    }
+
+    /// What a comic needs from its archive: the pages and the `ComicInfo.xml` at its root.
+    static func isNeeded(_ path: String) -> Bool {
+        isPage(path) || path.lowercased() == "comicinfo.xml"
+    }
+
+    /// The archive's container: a ZIP is read lazily, a file at a time; anything else (RAR, RAR5,
+    /// 7z, whatever the extension says) goes to libarchive, on macOS.
+    static func container(at url: URL) throws -> any ResourceContainer {
+        do {
+            return try ZIPContainer(url: url)
+        } catch EPUBError.unreadableArchive {
+            #if canImport(CArchive)
+            return try LibArchiveContainer(url: url, keep: isNeeded)
+            #else
+            throw EPUBError.unreadableArchive
+            #endif
         }
-        .sorted { $0.compare($1, options: [.numeric, .caseInsensitive]) == .orderedAscending }
     }
 
     /// The title in a `ComicInfo.xml`: its `Title`, else its `Series` and `Number`, else nothing.
@@ -36,7 +56,7 @@ public enum ComicArchive {
     }
 
     /// The book (one spine item, the pages as table of contents) and its generated document.
-    static func publication(in container: ZIPContainer) throws -> (book: EPUBBook, document: EPUBResource) {
+    static func publication(in container: any ResourceContainer) throws -> (book: EPUBBook, document: EPUBResource) {
         let pages = pages(in: container.paths)
         guard !pages.isEmpty else { throw EPUBError.emptySpine }
         let info = container.storedPath(for: "ComicInfo.xml").flatMap { try? container.data(at: $0) }

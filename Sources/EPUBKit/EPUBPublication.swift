@@ -18,7 +18,7 @@ public final class EPUBPublication: Sendable {
     private let obfuscatedResources: [String: FontDeobfuscator]
     /// Documents made by the reader rather than stored in the archive (a comic's page list).
     private let generated: [String: EPUBResource]
-    /// Whether this is a comic book archive (CBZ) rather than an EPUB.
+    /// Whether this is a comic book archive (CBZ or CBR) rather than an EPUB.
     public let isComic: Bool
 
     public init(container: any ResourceContainer) throws {
@@ -36,9 +36,9 @@ public final class EPUBPublication: Sendable {
         try self.init(container: ZIPContainer(url: url))
     }
 
-    /// Opens the comic book archive (CBZ) at `url`: its pictures, one below the other.
+    /// Opens the comic book archive (CBZ or CBR) at `url`: its pictures, one below the other.
     public init(comicAt url: URL) throws {
-        let container = try ZIPContainer(url: url)
+        let container = try ComicArchive.container(at: url)
         let comic = try ComicArchive.publication(in: container)
         self.book = comic.book
         self.container = container

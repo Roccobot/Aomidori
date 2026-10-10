@@ -31,13 +31,15 @@ struct EmptyStateTests {
         #expect(RecentBooks.title(of: URL(fileURLWithPath: "/x/.epub")) == ".epub")
         // A comic loses its extension too.
         #expect(RecentBooks.title(of: URL(fileURLWithPath: "/x/Pinocchio n. 1.CBZ")) == "Pinocchio n. 1")
+        #expect(RecentBooks.title(of: URL(fileURLWithPath: "/x/Pinocchio n. 2.cbr")) == "Pinocchio n. 2")
     }
 
     @Test func formatsByExtension() {
         #expect(BookFormat(url: URL(fileURLWithPath: "/x/a.epub")) == .epub)
-        #expect(BookFormat(url: URL(fileURLWithPath: "/x/a.CBZ")) == .comic)
-        #expect(BookFormat(url: URL(fileURLWithPath: "/x/a.cbr")) == nil)
+        #expect(BookFormat(url: URL(fileURLWithPath: "/x/a.CBZ")) == .cbz)
+        #expect(BookFormat(url: URL(fileURLWithPath: "/x/a.cbr")) == .cbr)
         #expect(BookFormat(url: URL(fileURLWithPath: "/x/a.zip")) == nil)
+        #expect(BookFormat.allCases.filter(\.isComic) == [.cbz, .cbr])
     }
 
     @Test func artIsRecoloured() {

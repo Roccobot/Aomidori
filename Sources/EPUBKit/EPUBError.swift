@@ -1,9 +1,11 @@
 import Foundation
 
-/// Errors raised while opening or reading an EPUB publication.
+/// Errors raised while opening or reading an EPUB publication or a comic archive.
 public enum EPUBError: Error, Equatable, Sendable {
-    /// The file is not a readable ZIP archive.
+    /// The file is not a readable archive (ZIP, or for a comic also RAR or 7z).
     case unreadableArchive
+    /// A comic archive's files are protected by a password.
+    case passwordProtected
     /// `META-INF/container.xml` is missing or names no package document.
     case missingContainer
     /// The package document (OPF) named by the container is missing.

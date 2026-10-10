@@ -86,6 +86,9 @@
 "error.oversizedResource" = "Il file '%@' è troppo grande per un libro: l'archivio sembra danneggiato.";
 "error.emptySpine" = "Il libro non contiene capitoli leggibili.";
 "error.drmProtected" = "Il libro è protetto da DRM e Aomidori non può aprirlo.";
+"error.unreadableComic" = "Il file non è un fumetto valido: l'archivio non si può leggere.";
+"error.passwordProtected" = "Il fumetto è protetto da una password e Aomidori non può aprirlo.";
+"error.noPages" = "L'archivio non contiene immagini.";
 "menu.view.sidebar" = "Mostra/nascondi barra laterale";
 "menu.edit.find" = "Cerca…";
 "menu.go.addBookmark" = "Aggiungi segnalibro…";

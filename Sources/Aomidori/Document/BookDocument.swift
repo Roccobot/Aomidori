@@ -2,7 +2,7 @@ import AomidoriCore
 import AppKit
 import EPUBKit
 
-/// An open EPUB or comic (CBZ) file. Read-only: the reader never writes to the book.
+/// An open EPUB or comic (CBZ, CBR) file. Read-only: the reader never writes to the book.
 @objc(BookDocument)
 final class BookDocument: NSDocument {
     private var publication: EPUBPublication?
@@ -12,12 +12,11 @@ final class BookDocument: NSDocument {
     /// Opens the archive lazily: only its directory and the package and navigation documents are read.
     override nonisolated func read(from url: URL, ofType typeName: String) throws {
         let publication: EPUBPublication
+        let isComic = BookFormat(url: url)?.isComic == true
         do {
-            publication = BookFormat(url: url) == .comic
-                ? try EPUBPublication(comicAt: url)
-                : try EPUBPublication(contentsOf: url)
+            publication = isComic ? try EPUBPublication(comicAt: url) : try EPUBPublication(contentsOf: url)
         } catch let error as EPUBError {
-            throw error.userFacingError
+            throw error.userFacingError(isComic: isComic)
         }
         // Documents are read on the main thread (concurrent reading is not enabled).
         MainActor.assumeIsolated { self.publication = publication }
@@ -47,11 +46,14 @@ final class BookDocument: NSDocument {
 }
 
 extension EPUBError {
-    /// An `NSError` whose texts the document architecture shows in its alert.
-    var userFacingError: NSError {
+    /// An `NSError` whose texts the document architecture shows in its alert; a comic has its own
+    /// words where an EPUB's would be wrong (no ZIP to speak of, no chapters).
+    func userFacingError(isComic: Bool) -> NSError {
         let reason: String
         switch self {
-        case .unreadableArchive: reason = L10n.string("error.unreadableArchive")
+        case .unreadableArchive: reason = L10n.string(isComic ? "error.unreadableComic" : "error.unreadableArchive")
+        case .passwordProtected: reason = L10n.string("error.passwordProtected")
+        case .emptySpine where isComic: reason = L10n.string("error.noPages")
         case .missingContainer: reason = L10n.string("error.missingContainer")
         case .missingPackage(let path): reason = L10n.format("error.missingPackage", path)
         case .malformedXML(let path): reason = L10n.format("error.malformedXML", path)

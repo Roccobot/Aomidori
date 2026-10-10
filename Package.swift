@@ -9,13 +9,20 @@ var targets: [Target] = [
     // EPUB container and package parsing. No UI, no WebKit.
     .target(
         name: "EPUBKit",
-        dependencies: [.product(name: "ZIPFoundation", package: "ZIPFoundation")]
+        dependencies: [
+            .product(name: "ZIPFoundation", package: "ZIPFoundation"),
+            .target(name: "CArchive", condition: .when(platforms: [.macOS])),
+        ]
     ),
+    // macOS's own libarchive, for comic archives in RAR (CBR); see Sources/CArchive/CArchive.h.
+    .systemLibrary(name: "CArchive"),
     // Reader logic that does not need AppKit: styles, CSS analysis, settings models.
     .target(name: "AomidoriCore"),
     .testTarget(
         name: "EPUBKitTests",
-        dependencies: ["EPUBKit", .product(name: "ZIPFoundation", package: "ZIPFoundation")]
+        dependencies: ["EPUBKit", .product(name: "ZIPFoundation", package: "ZIPFoundation")],
+        // Three small RAR files from libarchive's own tests (see THIRD_PARTY.md).
+        resources: [.copy("Fixtures")]
     ),
     .testTarget(name: "AomidoriCoreTests", dependencies: ["AomidoriCore"]),
 ]

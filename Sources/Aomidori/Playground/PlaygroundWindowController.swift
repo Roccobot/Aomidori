@@ -383,7 +383,7 @@ final class PlaygroundWindowController: NSWindowController, NSWindowDelegate, NS
             let publication = try EPUBPublication(contentsOf: url)
             preview.show(.book(publication, title: publication.book.title ?? url.deletingPathExtension().lastPathComponent))
         } catch let error as EPUBError {
-            window.map { error.userFacingError.presentAsSheet(on: $0) }
+            window.map { error.userFacingError(isComic: false).presentAsSheet(on: $0) }
         } catch {
             window.map { (error as NSError).presentAsSheet(on: $0) }
         }

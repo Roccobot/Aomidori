@@ -98,7 +98,8 @@ final class EmptyReaderWindowController: NSWindowController, NSWindowDelegate, N
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
-        panel.allowedContentTypes = [UTType("org.idpf.epub-container"), UTType(filenameExtension: BookFormat.comic.fileExtension)]
+        panel.allowedContentTypes = ([UTType("org.idpf.epub-container")]
+            + BookFormat.allCases.filter(\.isComic).map { UTType(filenameExtension: $0.fileExtension) })
             .compactMap { $0 }
         let handler: @MainActor (NSApplication.ModalResponse) -> Void = { [weak self] response in
             guard response == .OK else { return }

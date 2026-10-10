@@ -86,6 +86,9 @@
 "error.oversizedResource" = "The file '%@' is too large for a book: the archive looks damaged.";
 "error.emptySpine" = "The book has no readable chapters.";
 "error.drmProtected" = "The book is DRM-protected and Aomidori can't open it.";
+"error.unreadableComic" = "The file is not a valid comic: its archive can't be read.";
+"error.passwordProtected" = "The comic is password-protected and Aomidori can't open it.";
+"error.noPages" = "The archive contains no pictures.";
 "menu.view.sidebar" = "Show/Hide Sidebar";
 "menu.edit.find" = "Find…";
 "menu.go.addBookmark" = "Add Bookmark…";

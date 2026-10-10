@@ -1,8 +1,11 @@
 import Foundation
 import ZIPFoundation
 
-/// Read-only access to the files of an OCF container, addressed by container-relative path.
+/// Read-only access to the files of an OCF container or a comic archive, addressed by
+/// container-relative path.
 public protocol ResourceContainer: Sendable {
+    /// Every file, by its stored path.
+    var paths: [String] { get }
     /// Returns the bytes of the file at `path` (exact match first, then case-insensitive).
     func data(at path: String) throws -> Data
     /// Whether a file exists at `path`.
@@ -50,7 +53,7 @@ public final class ZIPContainer: ResourceContainer, @unchecked Sendable {
         entry(for: path) != nil
     }
 
-    /// Every file of the archive, by its stored path, in no particular order.
+    /// In no particular order.
     public var paths: [String] { Array(entries.keys) }
 
     public func storedPath(for path: String) -> String? {
